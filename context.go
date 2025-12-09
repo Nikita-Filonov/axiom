@@ -2,6 +2,7 @@ package axiom
 
 import (
 	"context"
+	"fmt"
 )
 
 type Context struct {
@@ -24,6 +25,30 @@ func NewContext(options ...ContextOption) Context {
 	return c
 }
 
+func WithContextRaw(ctx context.Context) ContextOption {
+	return func(c *Context) {
+		c.Raw = ctx
+	}
+}
+
+func WithContextHTTP(ctx context.Context) ContextOption {
+	return func(c *Context) {
+		c.HTTP = ctx
+	}
+}
+
+func WithContextGRPC(ctx context.Context) ContextOption {
+	return func(c *Context) {
+		c.GRPC = ctx
+	}
+}
+
+func WithContextKafka(ctx context.Context) ContextOption {
+	return func(c *Context) {
+		c.Kafka = ctx
+	}
+}
+
 func WithContextData(key string, value any) ContextOption {
 	return func(c *Context) {
 		if c.Data == nil {
@@ -32,6 +57,25 @@ func WithContextData(key string, value any) ContextOption {
 
 		c.Data[key] = value
 	}
+}
+
+func GetContextValue[T any](c *Context, key string) (T, bool) {
+	v, ok := c.Data[key]
+	if !ok {
+		var zero T
+		return zero, false
+	}
+
+	out, ok := v.(T)
+	return out, ok
+}
+
+func MustContextValue[T any](c *Context, key string) T {
+	v, ok := GetContextValue[T](c, key)
+	if !ok {
+		panic(fmt.Sprintf("context: expected value for key %q of type %T", key, *new(T)))
+	}
+	return v
 }
 
 func (c *Context) Join(other Context) Context {

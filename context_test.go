@@ -110,3 +110,77 @@ func TestContextJoin_DataOverwrite(t *testing.T) {
 	assert.Equal(t, 100, result.Data["B"]) // overwritten
 	assert.Equal(t, 200, result.Data["C"])
 }
+
+func TestWithContextRaw(t *testing.T) {
+	raw := context.WithValue(context.Background(), "k", "v")
+
+	c := axiom.NewContext(
+		axiom.WithContextRaw(raw),
+	)
+
+	assert.Equal(t, raw, c.Raw)
+}
+
+func TestWithContextHTTP(t *testing.T) {
+	http := context.WithValue(context.Background(), "http", 1)
+
+	c := axiom.NewContext(
+		axiom.WithContextHTTP(http),
+	)
+
+	assert.Equal(t, http, c.HTTP)
+}
+
+func TestWithContextGRPC(t *testing.T) {
+	grpc := context.WithValue(context.Background(), "grpc", 2)
+
+	c := axiom.NewContext(
+		axiom.WithContextGRPC(grpc),
+	)
+
+	assert.Equal(t, grpc, c.GRPC)
+}
+
+func TestWithContextKafka(t *testing.T) {
+	kafka := context.WithValue(context.Background(), "kafka", 3)
+
+	c := axiom.NewContext(
+		axiom.WithContextKafka(kafka),
+	)
+
+	assert.Equal(t, kafka, c.Kafka)
+}
+
+func TestGetContextValue_FoundAndTyped(t *testing.T) {
+	c := axiom.NewContext(
+		axiom.WithContextData("n", 42),
+	)
+
+	v, ok := axiom.GetContextValue[int](&c, "n")
+	assert.True(t, ok)
+	assert.Equal(t, 42, v)
+}
+
+func TestGetContextValue_NotFound(t *testing.T) {
+	c := axiom.NewContext()
+
+	v, ok := axiom.GetContextValue[string](&c, "missing")
+	assert.False(t, ok)
+	assert.Equal(t, "", v)
+}
+
+func TestMustContextValue_Found(t *testing.T) {
+	c := axiom.NewContext(
+		axiom.WithContextData("x", "hello"),
+	)
+
+	assert.Equal(t, "hello", axiom.MustContextValue[string](&c, "x"))
+}
+
+func TestMustContextValue_PanicsOnMissing(t *testing.T) {
+	c := axiom.NewContext()
+
+	assert.Panics(t, func() {
+		axiom.MustContextValue[int](&c, "x")
+	})
+}
