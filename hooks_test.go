@@ -129,3 +129,90 @@ func TestHooks_Join(t *testing.T) {
 	merged.BeforeSubTest[0](cfg)
 	assert.Equal(t, 1, c)
 }
+
+func TestNewHooks_WithStepOptions(t *testing.T) {
+	var beforeCalled, afterCalled string
+
+	hooks := axiom.NewHooks(
+		axiom.WithBeforeStep(func(cfg *axiom.Config, name string) { beforeCalled = "before:" + name }),
+		axiom.WithAfterStep(func(cfg *axiom.Config, name string) { afterCalled = "after:" + name }),
+	)
+
+	assert.Len(t, hooks.BeforeStep, 1)
+	assert.Len(t, hooks.AfterStep, 1)
+
+	cfg := &axiom.Config{}
+	hooks.BeforeStep[0](cfg, "x")
+	hooks.AfterStep[0](cfg, "x")
+
+	assert.Equal(t, "before:x", beforeCalled)
+	assert.Equal(t, "after:x", afterCalled)
+}
+
+func TestNewHooks_WithSubTestOptions(t *testing.T) {
+	var beforeCount, afterCount int
+
+	h := axiom.NewHooks(
+		axiom.WithBeforeSubTest(func(cfg *axiom.Config) { beforeCount++ }),
+		axiom.WithAfterSubTest(func(cfg *axiom.Config) { afterCount++ }),
+	)
+
+	assert.Len(t, h.BeforeSubTest, 1)
+	assert.Len(t, h.AfterSubTest, 1)
+
+	cfg := &axiom.Config{}
+	h.BeforeSubTest[0](cfg)
+	h.AfterSubTest[0](cfg)
+
+	assert.Equal(t, 1, beforeCount)
+	assert.Equal(t, 1, afterCount)
+}
+
+func TestHooks_Join_StepAndSubTest(t *testing.T) {
+	var beforeStepCount, afterStepCount, afterSub int
+
+	h1 := axiom.Hooks{
+		BeforeStep: []axiom.StepHook{
+			func(cfg *axiom.Config, name string) { beforeStepCount++ },
+		},
+		AfterStep: []axiom.StepHook{
+			func(cfg *axiom.Config, name string) { afterStepCount++ },
+		},
+		AfterSubTest: []axiom.SubTestHook{
+			func(cfg *axiom.Config) { afterSub++ },
+		},
+	}
+
+	h2 := axiom.Hooks{
+		BeforeStep: []axiom.StepHook{
+			func(cfg *axiom.Config, name string) { beforeStepCount += 10 },
+		},
+		AfterStep: []axiom.StepHook{
+			func(cfg *axiom.Config, name string) { afterStepCount += 20 },
+		},
+		AfterSubTest: []axiom.SubTestHook{
+			func(cfg *axiom.Config) { afterSub += 100 },
+		},
+	}
+
+	m := h1.Join(h2)
+
+	assert.Len(t, m.BeforeStep, 2)
+	assert.Len(t, m.AfterStep, 2)
+	assert.Len(t, m.AfterSubTest, 2)
+
+	cfg := &axiom.Config{}
+
+	// simulate calls
+	m.BeforeStep[0](cfg, "x") // +1
+	m.BeforeStep[1](cfg, "x") // +10
+	assert.Equal(t, 11, beforeStepCount)
+
+	m.AfterStep[0](cfg, "x") // +1
+	m.AfterStep[1](cfg, "x") // +20
+	assert.Equal(t, 21, afterStepCount)
+
+	m.AfterSubTest[0](cfg) // +1
+	m.AfterSubTest[1](cfg) // +100
+	assert.Equal(t, 101, afterSub)
+}
