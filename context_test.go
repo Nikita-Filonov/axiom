@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type ctxKey string
+
 func TestNewContext_Defaults(t *testing.T) {
 	c := axiom.NewContext()
 
@@ -41,7 +43,7 @@ func TestContextNormalize_SetsDefaults(t *testing.T) {
 }
 
 func TestContextNormalize_DoesNotOverrideExisting(t *testing.T) {
-	raw := context.WithValue(context.Background(), "k", "v")
+	raw := context.WithValue(context.Background(), ctxKey("k"), "v")
 	c := axiom.Context{
 		Raw:   raw,
 		GRPC:  raw,
@@ -60,8 +62,8 @@ func TestContextNormalize_DoesNotOverrideExisting(t *testing.T) {
 }
 
 func TestContextJoin_OverrideOnlyNonNil(t *testing.T) {
-	baseRaw := context.WithValue(context.Background(), "a", 1)
-	otherRaw := context.WithValue(context.Background(), "b", 2)
+	baseRaw := context.WithValue(context.Background(), ctxKey("a"), 1)
+	otherRaw := context.WithValue(context.Background(), ctxKey("b"), 2)
 
 	base := axiom.Context{
 		Raw:   baseRaw,
@@ -112,7 +114,7 @@ func TestContextJoin_DataOverwrite(t *testing.T) {
 }
 
 func TestWithContextRaw(t *testing.T) {
-	raw := context.WithValue(context.Background(), "k", "v")
+	raw := context.WithValue(context.Background(), ctxKey("k"), "v")
 
 	c := axiom.NewContext(
 		axiom.WithContextRaw(raw),
@@ -122,7 +124,7 @@ func TestWithContextRaw(t *testing.T) {
 }
 
 func TestWithContextHTTP(t *testing.T) {
-	http := context.WithValue(context.Background(), "http", 1)
+	http := context.WithValue(context.Background(), ctxKey("http"), 1)
 
 	c := axiom.NewContext(
 		axiom.WithContextHTTP(http),
@@ -132,7 +134,7 @@ func TestWithContextHTTP(t *testing.T) {
 }
 
 func TestWithContextGRPC(t *testing.T) {
-	grpc := context.WithValue(context.Background(), "grpc", 2)
+	grpc := context.WithValue(context.Background(), ctxKey("grpc"), 2)
 
 	c := axiom.NewContext(
 		axiom.WithContextGRPC(grpc),
@@ -142,7 +144,7 @@ func TestWithContextGRPC(t *testing.T) {
 }
 
 func TestWithContextKafka(t *testing.T) {
-	kafka := context.WithValue(context.Background(), "kafka", 3)
+	kafka := context.WithValue(context.Background(), ctxKey("kafka"), 3)
 
 	c := axiom.NewContext(
 		axiom.WithContextKafka(kafka),
