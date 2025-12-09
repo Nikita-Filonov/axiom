@@ -1,0 +1,45 @@
+name: Go Lint
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        type: string
+        default: "1.25"
+        required: false
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run go fmt (verify)
+        run: |
+              FMT_OUTPUT=$(gofmt -l .)
+              if [ -n "$FMT_OUTPUT" ]; then
+                echo "Go files need formatting:"
+                echo "$FMT_OUTPUT"
+                exit 1
+              fi
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
