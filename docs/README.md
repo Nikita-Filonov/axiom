@@ -7,6 +7,7 @@ framework. Each subfolder provides focused reference material and examples.
 
 - [./runner](./runner) — global execution environment, hooks, shared fixtures, retries
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
+- [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers
 - [./parallel](./parallel) — parallel execution flags (Runner-level & Case-level overrides)
