@@ -78,6 +78,13 @@ func MustContextValue[T any](c *Context, key string) T {
 	return v
 }
 
+func (c *Context) SetData(key string, value any) {
+	if c.Data == nil {
+		c.Data = map[string]any{}
+	}
+	c.Data[key] = value
+}
+
 func (c *Context) Join(other Context) Context {
 	result := Context{
 		Raw:   c.Raw,

@@ -186,3 +186,26 @@ func TestMustContextValue_PanicsOnMissing(t *testing.T) {
 		axiom.MustContextValue[int](&c, "x")
 	})
 }
+
+func TestContext_SetData(t *testing.T) {
+	var c axiom.Context
+
+	assert.Nil(t, c.Data)
+
+	c.SetData("key1", 100)
+	assert.NotNil(t, c.Data)
+	assert.Equal(t, 100, c.Data["key1"])
+
+	c.SetData("key2", "value")
+	assert.Equal(t, "value", c.Data["key2"])
+
+	c.SetData("key1", 999)
+	assert.Equal(t, 999, c.Data["key1"])
+}
+
+func TestContext_SetData_ThenMustGet(t *testing.T) {
+	var c axiom.Context
+
+	c.SetData("x", 10)
+	assert.Equal(t, 10, axiom.MustContextValue[int](&c, "x"))
+}
