@@ -21,6 +21,16 @@ jobs:
         with:
           go-version: ${{ inputs.go-version }}
 
+      - name: Setup go.work
+        run: |
+          go work init .
+          go work use ./plugins/testtags
+          go work use ./plugins/teststats
+          go work use ./plugins/testallure
+
+      - name: Sync all modules
+        run: go work sync
+
       - name: Download dependencies
         run: go mod download
 
