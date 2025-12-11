@@ -209,6 +209,7 @@ following folders:
 
 - [./docs/runner](./docs/runner) — global execution environment, plugins, hooks, shared fixtures, retries
 - [./docs/case](./docs/case) — declarative test definitions, metadata, parameters, per-test configuration
+- [./docs/config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
 - [./docs/parallel](./docs/parallel) — parallel execution flags and merging behavior
