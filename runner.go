@@ -1,11 +1,15 @@
 package axiom
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
 
 type Runner struct {
+	beforeOnce sync.Once
+	afterOnce  sync.Once
+
 	Meta     Meta
 	Skip     Skip
 	Retry    Retry
@@ -18,10 +22,10 @@ type Runner struct {
 
 type RunnerOption func(*Runner)
 
-func NewRunner(options ...RunnerOption) Runner {
-	r := Runner{}
+func NewRunner(options ...RunnerOption) *Runner {
+	r := &Runner{}
 	for _, option := range options {
-		option(&r)
+		option(r)
 	}
 
 	r.Meta.Normalize()
@@ -89,7 +93,7 @@ func WithRunnerFixture(name string, fx Fixture) RunnerOption {
 	}
 }
 
-func (r *Runner) Join(other Runner) Runner {
+func (r *Runner) Join(other *Runner) Runner {
 	return Runner{
 		Meta:     r.Meta.Join(other.Meta),
 		Skip:     r.Skip.Join(other.Skip),
@@ -103,6 +107,9 @@ func (r *Runner) Join(other Runner) Runner {
 }
 
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
+	r.ApplyStart()
+	r.ApplyFinish(t)
+
 	baseCfg := r.BuildConfig(t, &c)
 	baseCfg.ApplyPlugins()
 	baseCfg.ApplyExecutionPolicy()
@@ -162,4 +169,14 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	cfg.Fixtures.Normalize()
 
 	return cfg
+}
+
+func (r *Runner) ApplyStart() {
+	r.beforeOnce.Do(func() { r.Hooks.ApplyBeforeAll(r) })
+}
+
+func (r *Runner) ApplyFinish(t *testing.T) {
+	t.Cleanup(func() {
+		r.afterOnce.Do(func() { r.Hooks.ApplyAfterAll(r) })
+	})
 }

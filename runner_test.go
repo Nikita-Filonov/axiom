@@ -168,7 +168,7 @@ func TestRunnerBuildConfig(t *testing.T) {
 	assert.True(t, cfg.Parallel.Enabled)
 
 	assert.Equal(t, &c, cfg.Case)
-	assert.Equal(t, r, *cfg.Runner)
+	assert.Equal(t, r, cfg.Runner)
 	assert.NotNil(t, cfg.RootT)
 }
 
@@ -190,7 +190,7 @@ func TestRunnerApplyPlugins(t *testing.T) {
 	)
 
 	cfg := &axiom.Config{
-		Runner: &r,
+		Runner: r,
 		Case:   &c,
 	}
 
@@ -277,4 +277,42 @@ func TestRunner_FixturesInsideRun(t *testing.T) {
 		v := axiom.GetFixture[int](cfg, "num")
 		assert.Equal(t, 42, v)
 	})
+}
+
+func TestRunner_BeforeAll_AfterAll_CalledOnce(t *testing.T) {
+	var beforeCount, afterCount int
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) { beforeCount++ }),
+			axiom.WithAfterAll(func(r *axiom.Runner) { afterCount++ }),
+		),
+	)
+
+	c := axiom.NewCase(axiom.WithCaseName("dummy"))
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {})
+	r.RunCase(t, c, func(cfg *axiom.Config) {})
+	r.RunCase(t, c, func(cfg *axiom.Config) {})
+
+	assert.Equal(t, 1, beforeCount, "BeforeAll should run once")
+}
+
+func TestRunner_BeforeAll_ExecutesBeforeTestLogic(t *testing.T) {
+	var order []string
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) { order = append(order, "before") }),
+		),
+	)
+
+	c := axiom.NewCase(axiom.WithCaseName("test"))
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		order = append(order, "action")
+	})
+
+	assert.Equal(t, "before", order[0])
+	assert.Equal(t, "action", order[1])
 }

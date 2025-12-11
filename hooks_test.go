@@ -154,3 +154,27 @@ func TestHooks_Join_Step(t *testing.T) {
 	m.AfterStep[1](cfg, "x") // +20
 	assert.Equal(t, 21, afterStepCount)
 }
+
+func TestHooks_Join_AllHooks(t *testing.T) {
+	var a, b int
+
+	h1 := axiom.Hooks{
+		BeforeAll: []axiom.AllHook{func(r *axiom.Runner) { a++ }},
+		AfterAll:  []axiom.AllHook{func(r *axiom.Runner) { b++ }},
+	}
+
+	h2 := axiom.Hooks{
+		BeforeAll: []axiom.AllHook{func(r *axiom.Runner) { a += 10 }},
+		AfterAll:  []axiom.AllHook{func(r *axiom.Runner) { b += 20 }},
+	}
+
+	merged := h1.Join(h2)
+
+	r := &axiom.Runner{}
+
+	merged.ApplyBeforeAll(r) // +1, +10
+	assert.Equal(t, 11, a)
+
+	merged.ApplyAfterAll(r) // +1, +20
+	assert.Equal(t, 21, b)
+}

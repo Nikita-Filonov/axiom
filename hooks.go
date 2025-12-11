@@ -1,9 +1,12 @@
 package axiom
 
+type AllHook func(r *Runner)
 type TestHook func(cfg *Config)
 type StepHook func(cfg *Config, name string)
 
 type Hooks struct {
+	BeforeAll  []AllHook
+	AfterAll   []AllHook
 	BeforeTest []TestHook
 	AfterTest  []TestHook
 	BeforeStep []StepHook
@@ -18,6 +21,18 @@ func NewHooks(options ...HooksOption) Hooks {
 		option(&h)
 	}
 	return h
+}
+
+func WithBeforeAll(hook AllHook) HooksOption {
+	return func(h *Hooks) {
+		h.BeforeAll = append(h.BeforeAll, hook)
+	}
+}
+
+func WithAfterAll(hook AllHook) HooksOption {
+	return func(h *Hooks) {
+		h.AfterAll = append(h.AfterAll, hook)
+	}
 }
 
 func WithBeforeTest(hook TestHook) HooksOption {
@@ -41,6 +56,18 @@ func WithBeforeStep(hook StepHook) HooksOption {
 func WithAfterStep(hook StepHook) HooksOption {
 	return func(h *Hooks) {
 		h.AfterStep = append(h.AfterStep, hook)
+	}
+}
+
+func (h *Hooks) ApplyBeforeAll(r *Runner) {
+	for _, hook := range h.BeforeAll {
+		hook(r)
+	}
+}
+
+func (h *Hooks) ApplyAfterAll(r *Runner) {
+	for _, hook := range h.AfterAll {
+		hook(r)
 	}
 }
 
@@ -70,6 +97,8 @@ func (h *Hooks) ApplyAfterTest(cfg *Config) {
 
 func (h *Hooks) Join(other Hooks) Hooks {
 	return Hooks{
+		BeforeAll:  append(h.BeforeAll, other.BeforeAll...),
+		AfterAll:   append(h.AfterAll, other.AfterAll...),
 		BeforeTest: append(h.BeforeTest, other.BeforeTest...),
 		AfterTest:  append(h.AfterTest, other.AfterTest...),
 		BeforeStep: append(h.BeforeStep, other.BeforeStep...),

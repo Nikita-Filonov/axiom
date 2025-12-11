@@ -103,7 +103,7 @@ func TestConfig_ApplyPlugins_OrderAndRunnerCase(t *testing.T) {
 	)
 
 	cfg := &axiom.Config{
-		Runner: &r,
+		Runner: r,
 		Case:   &c,
 	}
 
