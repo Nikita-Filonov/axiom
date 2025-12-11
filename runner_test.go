@@ -11,18 +11,23 @@ import (
 func TestNewRunner_Defaults(t *testing.T) {
 	r := axiom.NewRunner()
 
+	// Meta defaults
 	assert.NotNil(t, r.Meta.Labels)
 	assert.NotNil(t, r.Meta.Tags)
 
-	assert.Equal(t, "", r.Skip.Reason)
+	// Skip defaults
 	assert.False(t, r.Skip.Enabled)
+	assert.Equal(t, "", r.Skip.Reason)
 
+	// Retry defaults
 	assert.Equal(t, 3, r.Retry.Times)
-	assert.Equal(t, 2*time.Second, r.Retry.Delay)
+	assert.Equal(t, time.Second*2, r.Retry.Delay)
 
+	// Context defaults
 	assert.NotNil(t, r.Context.Raw)
 	assert.NotNil(t, r.Context.Data)
 
+	// Fixtures
 	assert.NotNil(t, r.Fixtures.Registry)
 	assert.NotNil(t, r.Fixtures.Cache)
 }
@@ -144,15 +149,19 @@ func TestRunnerBuildConfig(t *testing.T) {
 	assert.Equal(t, "CASE-ID", cfg.ID)
 	assert.Equal(t, "CaseName", cfg.Name)
 
+	// Meta merge
 	assert.Equal(t, "RunnerEpic", cfg.Meta.Epic)
 	assert.Equal(t, "Story", cfg.Meta.Story)
 
+	// Skip merge
 	assert.True(t, cfg.Skip.Enabled)
 	assert.Equal(t, "runner skip", cfg.Skip.Reason)
 
+	// Retry merge
 	assert.Equal(t, 10, cfg.Retry.Times)
 	assert.Equal(t, 7, int(cfg.Retry.Delay))
 
+	// Context merge
 	assert.Equal(t, 1, cfg.Context.Data["x"])
 	assert.Equal(t, 2, cfg.Context.Data["y"])
 
@@ -185,7 +194,7 @@ func TestRunnerApplyPlugins(t *testing.T) {
 		Case:   &c,
 	}
 
-	r.ApplyPlugins(cfg)
+	cfg.ApplyPlugins()
 
 	assert.Equal(t,
 		[]string{"runner1", "runner2", "case1", "case2"},
@@ -196,7 +205,7 @@ func TestRunnerApplyPlugins(t *testing.T) {
 func TestRunner_BuildConfigInsideRun(t *testing.T) {
 	r := axiom.NewRunner(
 		axiom.WithRunnerMeta(axiom.WithMetaEpic("EPIC")),
-		axiom.WithRunnerRetry(axiom.WithRetryTimes(2)),
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(1)),
 	)
 
 	c := axiom.NewCase(
@@ -213,7 +222,7 @@ func TestRunner_BuildConfigInsideRun(t *testing.T) {
 		assert.Equal(t, "EPIC", cfg.Meta.Epic)
 		assert.Equal(t, "STORY", cfg.Meta.Story)
 
-		assert.Equal(t, 2, cfg.Retry.Times)
+		assert.Equal(t, 1, cfg.Retry.Times)
 		assert.Equal(t, c, *cfg.Case)
 	})
 
@@ -245,11 +254,11 @@ func TestRunner_MergeMetaDuringRun(t *testing.T) {
 		axiom.WithRunnerMeta(axiom.WithMetaEpic("GLOBAL")),
 	)
 
-	caseMeta := axiom.NewCase(
+	c := axiom.NewCase(
 		axiom.WithCaseMeta(axiom.WithMetaFeature("CASE")),
 	)
 
-	r.RunCase(t, caseMeta, func(cfg *axiom.Config) {
+	r.RunCase(t, c, func(cfg *axiom.Config) {
 		assert.Equal(t, "GLOBAL", cfg.Meta.Epic)
 		assert.Equal(t, "CASE", cfg.Meta.Feature)
 	})

@@ -103,28 +103,25 @@ func (r *Runner) Join(other Runner) Runner {
 }
 
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
-	cfg := r.BuildConfig(t, &c)
-	r.ApplyPlugins(cfg)
-
-	if cfg.Skip.Enabled {
-		t.Skip(cfg.Skip.Reason)
-	}
-
-	if cfg.Parallel.Enabled {
-		t.Parallel()
-	}
-
-	cfg.Hooks.ApplyBeforeTest(cfg)
+	baseCfg := r.BuildConfig(t, &c)
+	baseCfg.ApplyPlugins()
+	baseCfg.ApplyExecutionPolicy()
 
 	var isSucceed bool
-	for attempt := 1; attempt <= cfg.Retry.Times; attempt++ {
-		if attempt > 1 && cfg.Retry.Delay > 0 {
-			time.Sleep(cfg.Retry.Delay)
+
+	for attempt := 1; attempt <= baseCfg.Retry.Times; attempt++ {
+		if attempt > 1 && baseCfg.Retry.Delay > 0 {
+			time.Sleep(baseCfg.Retry.Delay)
 		}
+
+		cfg := r.BuildConfig(t, &c)
+		cfg.ApplyPlugins()
 
 		t.Run(cfg.Name, func(st *testing.T) {
 			cfg.SubT = st
-			cfg.SubTest(action)
+			cfg.ApplyExecutionPolicy()
+			cfg.Test(action)
+
 			isSucceed = !st.Failed()
 		})
 
@@ -132,8 +129,6 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 			break
 		}
 	}
-
-	cfg.Hooks.ApplyAfterTest(cfg)
 }
 
 func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
@@ -167,13 +162,4 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	cfg.Fixtures.Normalize()
 
 	return cfg
-}
-
-func (r *Runner) ApplyPlugins(cfg *Config) {
-	for _, p := range cfg.Runner.Plugins {
-		p(cfg)
-	}
-	for _, p := range cfg.Case.Plugins {
-		p(cfg)
-	}
 }

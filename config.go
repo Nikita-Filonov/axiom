@@ -33,6 +33,17 @@ type Config struct {
 }
 
 func (c *Config) Step(name string, fn func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			if c.SubT != nil {
+				c.SubT.Helper()
+				c.SubT.Errorf("panic in step %q: %v", name, r)
+			}
+		}
+
+		c.Hooks.ApplyAfterStep(c, name)
+	}()
+
 	c.Hooks.ApplyBeforeStep(c, name)
 
 	wrapped := fn
@@ -41,12 +52,21 @@ func (c *Config) Step(name string, fn func()) {
 	}
 
 	wrapped()
-
-	c.Hooks.ApplyAfterStep(c, name)
 }
 
-func (c *Config) SubTest(action TestAction) {
-	c.Hooks.ApplyBeforeSubTest(c)
+func (c *Config) Test(action TestAction) {
+	defer func() {
+		if r := recover(); r != nil {
+			if c.SubT != nil {
+				c.SubT.Helper()
+				c.SubT.Errorf("panic in test %q: %v", c.Name, r)
+			}
+		}
+
+		c.Hooks.ApplyAfterTest(c)
+	}()
+
+	c.Hooks.ApplyBeforeTest(c)
 
 	wrapped := action
 	for i := len(c.TestWraps) - 1; i >= 0; i-- {
@@ -54,6 +74,28 @@ func (c *Config) SubTest(action TestAction) {
 	}
 
 	wrapped(c)
+}
 
-	c.Hooks.ApplyAfterSubTest(c)
+func (c *Config) ApplyPlugins() {
+	for _, p := range c.Runner.Plugins {
+		p(c)
+	}
+	for _, p := range c.Case.Plugins {
+		p(c)
+	}
+}
+
+func (c *Config) ApplyExecutionPolicy() {
+	t := c.RootT
+	if c.SubT != nil {
+		t = c.SubT
+	}
+
+	if c.Skip.Enabled {
+		t.Skip(c.Skip.Reason)
+	}
+
+	if c.Parallel.Enabled {
+		t.Parallel()
+	}
 }

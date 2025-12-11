@@ -99,8 +99,8 @@ func TestConfigExample(t *testing.T) {
 			fmt.Println("→ doing work")
 		})
 
-		// SubTest execution (middleware-aware)
-		cfg.SubTest(func(c *axiom.Config) {
+		// Test execution (middleware-aware)
+		cfg.Test(func(c *axiom.Config) {
 			fmt.Println("→ inside subtest")
 		})
 	})

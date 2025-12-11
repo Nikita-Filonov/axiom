@@ -1,22 +1,30 @@
 # 📘 Hooks
 
-`Hooks` provide lifecycle callbacks that run before and after key execution stages: tests, steps, and subtests. `Hooks`
-enable logging, reporting, tracing, instrumentation, metrics, and other side-effect integrations without modifying
-test code.
+`Hooks` provide lifecycle callbacks that run **before and after tests and steps**. They allow you to implement logging,
+tracing, reporting, metrics, debug output, dependency injection behaviors, and any other side effects
+— **without modifying test code**.
 
-Hooks may be defined at both Runner and Case level. Case-level hooks are appended after Runner hooks, forming a single
-ordered pipeline.
+`Hooks` may be defined at both `Runner` and `Case` level. Case-level hooks are appended after `Runner` hooks, forming a
+unified ordered execution pipeline.
 
-A hook does **not** alter control flow — it only observes execution.
+`Hooks` do **not** change control flow — they observe execution. They always fire, even if a step or test panics (Axiom
+guarantees this via internal `defer` recovery).
 
-Available hook types:
+## ✔ Available Hooks
 
-- `BeforeTest(cfg)`
-- `AfterTest(cfg)`
-- `BeforeStep(cfg, name)`
-- `AfterStep(cfg, name)`
-- `BeforeSubTest(cfg)`
-- `AfterSubTest(cfg)`
+### Test-level hooks
+
+| Hook              | When it fires                                       |
+|-------------------|-----------------------------------------------------|
+| `BeforeTest(cfg)` | right before executing the test body                |
+| `AfterTest(cfg)`  | after finishing the test body (even if it panicked) |
+
+### Step-level hooks
+
+| Hook                    | When it fires                                     |
+|-------------------------|---------------------------------------------------|
+| `BeforeStep(cfg, name)` | before executing a step                           |
+| `AfterStep(cfg, name)`  | after executing a step (always, even if panicked) |
 
 ## Example
 
@@ -38,8 +46,6 @@ func beforeTest(c *axiom.Config)           { fmt.Println("→ before test") }
 func afterTest(c *axiom.Config)            { fmt.Println("→ after test") }
 func beforeStep(c *axiom.Config, n string) { fmt.Println("→ before step:", n) }
 func afterStep(c *axiom.Config, n string)  { fmt.Println("→ after step:", n) }
-func beforeSub(c *axiom.Config)            { fmt.Println("→ before subtest") }
-func afterSub(c *axiom.Config)             { fmt.Println("→ after subtest") }
 
 // -----------------------------------------------------------------------------
 // Runner with global hooks
@@ -51,8 +57,6 @@ var runner = axiom.NewRunner(
 		axiom.WithAfterTest(afterTest),
 		axiom.WithBeforeStep(beforeStep),
 		axiom.WithAfterStep(afterStep),
-		axiom.WithBeforeSubTest(beforeSub),
-		axiom.WithAfterSubTest(afterSub),
 	),
 )
 
@@ -72,8 +76,8 @@ func TestHooksExample(t *testing.T) {
 			fmt.Println("doing prepare...")
 		})
 
-		cfg.SubTest(func(sub *axiom.Config) {
-			fmt.Println("inside subtest")
+		cfg.Test(func(inner *axiom.Config) {
+			fmt.Println("inside test body")
 		})
 
 		cfg.Step("finish", func() {
