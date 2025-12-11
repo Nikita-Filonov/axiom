@@ -17,20 +17,20 @@ func TestPlugin_RecordsPassedCase(t *testing.T) {
 		Name: "case1",
 		Meta: axiom.Meta{},
 		Hooks: axiom.Hooks{
-			BeforeSubTest: []axiom.SubTestHook{},
-			AfterSubTest:  []axiom.SubTestHook{},
+			BeforeTest: []axiom.TestHook{},
+			AfterTest:  []axiom.TestHook{},
 		},
 	}
 
 	plugin(cfg)
 
-	for _, h := range cfg.Hooks.BeforeSubTest {
+	for _, h := range cfg.Hooks.BeforeTest {
 		h(cfg)
 	}
 
 	cfg.SubT = &testing.T{}
 
-	for _, h := range cfg.Hooks.AfterSubTest {
+	for _, h := range cfg.Hooks.AfterTest {
 		h(cfg)
 	}
 
@@ -50,14 +50,14 @@ func TestPlugin_RecordsFailedCase(t *testing.T) {
 		Name: "case2",
 		Meta: axiom.Meta{},
 		Hooks: axiom.Hooks{
-			BeforeSubTest: []axiom.SubTestHook{},
-			AfterSubTest:  []axiom.SubTestHook{},
+			BeforeTest: []axiom.TestHook{},
+			AfterTest:  []axiom.TestHook{},
 		},
 	}
 
 	plugin(cfg)
 
-	for _, h := range cfg.Hooks.BeforeSubTest {
+	for _, h := range cfg.Hooks.BeforeTest {
 		h(cfg)
 	}
 
@@ -65,7 +65,7 @@ func TestPlugin_RecordsFailedCase(t *testing.T) {
 	fakeT.Fail()
 	cfg.SubT = fakeT
 
-	for _, h := range cfg.Hooks.AfterSubTest {
+	for _, h := range cfg.Hooks.AfterTest {
 		h(cfg)
 	}
 
@@ -82,20 +82,20 @@ func TestPlugin_RecordsSkippedCase(t *testing.T) {
 		Name: "case3",
 		Skip: axiom.Skip{Enabled: true},
 		Hooks: axiom.Hooks{
-			BeforeSubTest: []axiom.SubTestHook{},
-			AfterSubTest:  []axiom.SubTestHook{},
+			BeforeTest: []axiom.TestHook{},
+			AfterTest:  []axiom.TestHook{},
 		},
 	}
 
 	plugin(cfg)
 
-	for _, h := range cfg.Hooks.BeforeSubTest {
+	for _, h := range cfg.Hooks.BeforeTest {
 		h(cfg)
 	}
 
 	cfg.SubT = &testing.T{}
 
-	for _, h := range cfg.Hooks.AfterSubTest {
+	for _, h := range cfg.Hooks.AfterTest {
 		h(cfg)
 	}
 
@@ -112,21 +112,21 @@ func TestPlugin_RecordsFlakyCase(t *testing.T) {
 		Name: "case4",
 		Meta: axiom.Meta{},
 		Hooks: axiom.Hooks{
-			BeforeSubTest: []axiom.SubTestHook{},
-			AfterSubTest:  []axiom.SubTestHook{},
+			BeforeTest: []axiom.TestHook{},
+			AfterTest:  []axiom.TestHook{},
 		},
 	}
 
 	plugin(cfg)
 
-	for _, h := range cfg.Hooks.BeforeSubTest {
+	for _, h := range cfg.Hooks.BeforeTest {
 		h(cfg)
 		h(cfg)
 	}
 
 	cfg.SubT = &testing.T{}
 
-	for _, h := range cfg.Hooks.AfterSubTest {
+	for _, h := range cfg.Hooks.AfterTest {
 		h(cfg)
 	}
 

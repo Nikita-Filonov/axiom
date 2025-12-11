@@ -9,13 +9,13 @@ func Plugin(stats *Stats) axiom.Plugin {
 		result := NewCaseResult(cfg)
 		attempts := 0
 
-		cfg.Hooks.BeforeSubTest = append(
-			cfg.Hooks.BeforeSubTest,
+		cfg.Hooks.BeforeTest = append(
+			cfg.Hooks.BeforeTest,
 			func(_ *axiom.Config) { attempts++ },
 		)
 
-		cfg.Hooks.AfterSubTest = append(
-			cfg.Hooks.AfterSubTest,
+		cfg.Hooks.AfterTest = append(
+			cfg.Hooks.AfterTest,
 			func(c *axiom.Config) {
 				result.Finalize(c, attempts)
 				stats.Record(result)

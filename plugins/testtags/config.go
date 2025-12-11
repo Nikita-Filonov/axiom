@@ -2,6 +2,11 @@ package testtags
 
 import "os"
 
+const (
+	AxiomTestTagsExclude = "AXIOM_TEST_TAGS_EXCLUDE"
+	AxiomTestTagsInclude = "AXIOM_TEST_TAGS_INCLUDE"
+)
+
 type Config struct {
 	Include []string
 	Exclude []string
@@ -35,7 +40,7 @@ func WithConfigExclude(tags ...string) ConfigOption {
 
 func ConfigFromEnv() ConfigOption {
 	return func(c *Config) {
-		c.Include = append(c.Include, ParseList(os.Getenv("AXIOM_TEST_TAGS_INCLUDE"))...)
-		c.Exclude = append(c.Exclude, ParseList(os.Getenv("AXIOM_TEST_TAGS_EXCLUDE"))...)
+		c.Include = append(c.Include, ParseList(os.Getenv(AxiomTestTagsInclude))...)
+		c.Exclude = append(c.Exclude, ParseList(os.Getenv(AxiomTestTagsExclude))...)
 	}
 }
