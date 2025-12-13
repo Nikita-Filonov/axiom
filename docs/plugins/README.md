@@ -5,6 +5,7 @@
 ## 📑 Table of Contents
 
 - [Overview](#overview)
+- [Installing Plugins](#installing-plugins)
 - [Writing a Plugin](#writing-a-plugin)
 - [Built-in Plugins](#built-in-plugins)
     - [Allure Plugin (`testallure`)](#-allure-plugin-testallure)
@@ -28,6 +29,34 @@ A plugin is applied:
 Plugins form a deterministic mutation pipeline.
 
 A plugin does **not** execute tests or steps — it only decorates or influences execution via `Config`.
+
+---
+
+## Installing Plugins
+
+Axiom plugins are distributed as **regular Go modules**. There is no plugin manager, registry, or custom installation
+mechanism.
+
+Plugins are installed and versioned using standard Go tooling.
+
+### Installing a plugin
+
+Use `go get` with the plugin module path:
+
+```bash
+go get github.com/Nikita-Filonov/axiom/plugins/testtags@v0.1.0
+```
+
+This will add the plugin as a dependency to your `go.mod` file:
+
+```text
+require (
+	github.com/Nikita-Filonov/axiom v0.3.0
+	github.com/Nikita-Filonov/axiom/plugins/testtags v0.1.0
+)
+```
+
+Each plugin is **versioned** independently of the Axiom core.
 
 ---
 
