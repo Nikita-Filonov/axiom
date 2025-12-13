@@ -3,8 +3,12 @@
 This directory contains structured, minimal, and maintainable documentation for all core concepts of the Axiom testing
 framework. Each subfolder provides focused reference material and examples.
 
+---
+
 ## 📂 Documentation Index
 
+- [./usage](./usage) — realistic end-to-end example of building a test framework with Axiom
+- [./philosophy](./philosophy) — design principles and how Axiom fits into the Go testing ecosystem
 - [./runner](./runner) — global execution environment, hooks, shared fixtures, retries
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)

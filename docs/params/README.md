@@ -13,6 +13,8 @@ This model enables:
 - static configuration (`Runner`) + dynamic variation (Case-level params)
 - clear error reporting when types mismatch
 
+---
+
 ## Example
 
 ```go

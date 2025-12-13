@@ -13,6 +13,8 @@ This model enables:
 - isolated fixture lifecycles per attempt
 - configurable retry delays
 
+---
+
 ## Example
 
 ```go

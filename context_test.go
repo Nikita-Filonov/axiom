@@ -14,10 +14,9 @@ func TestNewContext_Defaults(t *testing.T) {
 	c := axiom.NewContext()
 
 	assert.Nil(t, c.Raw)
-	assert.Nil(t, c.GRPC)
-	assert.Nil(t, c.HTTP)
-	assert.Nil(t, c.Kafka)
-
+	assert.Nil(t, c.DB)
+	assert.Nil(t, c.MQ)
+	assert.Nil(t, c.RPC)
 	assert.Nil(t, c.Data)
 }
 
@@ -32,32 +31,32 @@ func TestNewContext_WithData(t *testing.T) {
 }
 
 func TestContextNormalize_SetsDefaults(t *testing.T) {
-	c := axiom.Context{}
+	var c axiom.Context
 	c.Normalize()
 
 	assert.NotNil(t, c.Raw)
-	assert.Equal(t, c.Raw, c.GRPC)
-	assert.Equal(t, c.Raw, c.HTTP)
-	assert.Equal(t, c.Raw, c.Kafka)
+	assert.Equal(t, c.Raw, c.DB)
+	assert.Equal(t, c.Raw, c.MQ)
+	assert.Equal(t, c.Raw, c.RPC)
 	assert.NotNil(t, c.Data)
 }
 
 func TestContextNormalize_DoesNotOverrideExisting(t *testing.T) {
 	raw := context.WithValue(context.Background(), ctxKey("k"), "v")
 	c := axiom.Context{
-		Raw:   raw,
-		GRPC:  raw,
-		HTTP:  raw,
-		Kafka: raw,
-		Data:  map[string]any{"x": 1},
+		Raw:  raw,
+		DB:   raw,
+		MQ:   raw,
+		RPC:  raw,
+		Data: map[string]any{"x": 1},
 	}
 
 	c.Normalize()
 
 	assert.Equal(t, raw, c.Raw)
-	assert.Equal(t, raw, c.GRPC)
-	assert.Equal(t, raw, c.HTTP)
-	assert.Equal(t, raw, c.Kafka)
+	assert.Equal(t, raw, c.DB)
+	assert.Equal(t, raw, c.MQ)
+	assert.Equal(t, raw, c.RPC)
 	assert.Equal(t, 1, c.Data["x"])
 }
 
@@ -66,34 +65,26 @@ func TestContextJoin_OverrideOnlyNonNil(t *testing.T) {
 	otherRaw := context.WithValue(context.Background(), ctxKey("b"), 2)
 
 	base := axiom.Context{
-		Raw:   baseRaw,
-		GRPC:  baseRaw,
-		HTTP:  baseRaw,
-		Kafka: baseRaw,
-		Data:  map[string]any{"x": 1},
+		Raw:  baseRaw,
+		DB:   baseRaw,
+		MQ:   baseRaw,
+		RPC:  baseRaw,
+		Data: map[string]any{"x": 1},
 	}
 
 	other := axiom.Context{
 		Raw:  otherRaw,
-		HTTP: otherRaw,
+		RPC:  otherRaw,
 		Data: map[string]any{"y": 2},
 	}
 
 	result := base.Join(other)
 
-	// Raw overridden
 	assert.Equal(t, otherRaw, result.Raw)
+	assert.Equal(t, baseRaw, result.DB)
+	assert.Equal(t, baseRaw, result.MQ)
+	assert.Equal(t, otherRaw, result.RPC)
 
-	// GRPC remains unchanged (other.GRPC == nil)
-	assert.Equal(t, baseRaw, result.GRPC)
-
-	// HTTP overridden
-	assert.Equal(t, otherRaw, result.HTTP)
-
-	// Kafka unchanged
-	assert.Equal(t, baseRaw, result.Kafka)
-
-	// Data merged
 	assert.Equal(t, 1, result.Data["x"])
 	assert.Equal(t, 2, result.Data["y"])
 }
@@ -123,34 +114,22 @@ func TestWithContextRaw(t *testing.T) {
 	assert.Equal(t, raw, c.Raw)
 }
 
-func TestWithContextHTTP(t *testing.T) {
-	http := context.WithValue(context.Background(), ctxKey("http"), 1)
-
-	c := axiom.NewContext(
-		axiom.WithContextHTTP(http),
-	)
-
-	assert.Equal(t, http, c.HTTP)
+func TestWithContextDB(t *testing.T) {
+	db := context.WithValue(context.Background(), ctxKey("db"), 1)
+	c := axiom.NewContext(axiom.WithContextDB(db))
+	assert.Equal(t, db, c.DB)
 }
 
-func TestWithContextGRPC(t *testing.T) {
-	grpc := context.WithValue(context.Background(), ctxKey("grpc"), 2)
-
-	c := axiom.NewContext(
-		axiom.WithContextGRPC(grpc),
-	)
-
-	assert.Equal(t, grpc, c.GRPC)
+func TestWithContextMQ(t *testing.T) {
+	mq := context.WithValue(context.Background(), ctxKey("mq"), 2)
+	c := axiom.NewContext(axiom.WithContextMQ(mq))
+	assert.Equal(t, mq, c.MQ)
 }
 
-func TestWithContextKafka(t *testing.T) {
-	kafka := context.WithValue(context.Background(), ctxKey("kafka"), 3)
-
-	c := axiom.NewContext(
-		axiom.WithContextKafka(kafka),
-	)
-
-	assert.Equal(t, kafka, c.Kafka)
+func TestWithContextRPC(t *testing.T) {
+	rpc := context.WithValue(context.Background(), ctxKey("rpc"), 3)
+	c := axiom.NewContext(axiom.WithContextRPC(rpc))
+	assert.Equal(t, rpc, c.RPC)
 }
 
 func TestGetContextValue_FoundAndTyped(t *testing.T) {

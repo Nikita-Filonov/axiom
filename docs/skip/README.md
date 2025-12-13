@@ -12,6 +12,8 @@ This model enables:
 - environment-based skipping
 - consistent merging (`Case` > `Runner`)
 
+---
+
 ## Example
 
 ```go

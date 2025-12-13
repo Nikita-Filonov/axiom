@@ -14,6 +14,8 @@ Metadata includes:
 
 A `Meta` object does not affect test execution logic. It is consumed by plugins (filters, reporters, tracers).
 
+---
+
 ## Example
 
 The following example demonstrates all metadata options and how Runner-level values are merged with Case-level

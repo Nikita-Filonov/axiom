@@ -93,8 +93,8 @@ func WithRunnerFixture(name string, fx Fixture) RunnerOption {
 	}
 }
 
-func (r *Runner) Join(other *Runner) Runner {
-	return Runner{
+func (r *Runner) Join(other *Runner) *Runner {
+	return &Runner{
 		Meta:     r.Meta.Join(other.Meta),
 		Skip:     r.Skip.Join(other.Skip),
 		Retry:    r.Retry.Join(other.Retry),
@@ -114,8 +114,6 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 	baseCfg.ApplyPlugins()
 	baseCfg.ApplyExecutionPolicy()
 
-	var isSucceed bool
-
 	for attempt := 1; attempt <= baseCfg.Retry.Times; attempt++ {
 		if attempt > 1 && baseCfg.Retry.Delay > 0 {
 			time.Sleep(baseCfg.Retry.Delay)
@@ -124,15 +122,13 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 		cfg := r.BuildConfig(t, &c)
 		cfg.ApplyPlugins()
 
-		t.Run(cfg.Name, func(st *testing.T) {
+		ok := t.Run(cfg.Name, func(st *testing.T) {
 			cfg.SubT = st
 			cfg.ApplyExecutionPolicy()
 			cfg.Test(action)
-
-			isSucceed = !st.Failed()
 		})
 
-		if isSucceed {
+		if ok {
 			break
 		}
 	}

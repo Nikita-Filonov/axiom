@@ -14,6 +14,8 @@ This model enables:
 - reusable shared resources
 - clean dependency injection via `GetFixture[T]`
 
+---
+
 ## Example
 
 The following example demonstrates fixture definition, dependency resolution, caching, cleanup, and the `GetFixture`

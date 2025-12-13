@@ -15,6 +15,8 @@ This model enables:
 - predictable merging (`Case` > `Runner`)
 - consistent behavior across retries and subtests
 
+---
+
 ## Example
 
 ```go

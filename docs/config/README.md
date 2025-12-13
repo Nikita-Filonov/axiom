@@ -14,6 +14,8 @@ Every retry attempt receives a **fresh** `Config`, ensuring deterministic test b
 
 `Config` is the primary object passed to the test body and to all plugins, steps, hooks, and wrap functions.
 
+---
+
 ## Why `Config` exists
 
 Axiom separates _declarative configuration_ from _runtime behavior_:
@@ -33,6 +35,8 @@ Axiom separates _declarative configuration_ from _runtime behavior_:
 - safe and typed resource access
 
 Everything that happens **during** a test run flows through `Config`.
+
+---
 
 ## Example
 
@@ -107,6 +111,8 @@ func TestConfigExample(t *testing.T) {
 }
 
 ```
+
+---
 
 ## How `Config` Is Built (Merging Model)
 

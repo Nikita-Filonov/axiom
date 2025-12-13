@@ -10,6 +10,8 @@ unified ordered execution pipeline.
 `Hooks` do **not** change control flow — they observe execution. They always fire, even if a step or test panics (Axiom
 guarantees this via internal `defer` recovery).
 
+---
+
 ## ✔ Available Hooks
 
 ### Suite-level hooks
@@ -44,6 +46,8 @@ testing lifecycle and ensures deterministic teardown.
 |-------------------------|---------------------------------------------------|
 | `BeforeStep(cfg, name)` | before executing a step                           |
 | `AfterStep(cfg, name)`  | after executing a step (always, even if panicked) |
+
+---
 
 ## Example
 
@@ -110,6 +114,8 @@ func TestHooksExample(t *testing.T) {
 }
 
 ```
+
+---
 
 ## Execution Order Overview
 

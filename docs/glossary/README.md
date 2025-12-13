@@ -3,6 +3,8 @@
 Core concepts used throughout Axiom. Each term is intentionally defined briefly. Detailed explanations live in dedicated
 documents ([/docs/case](./../../docs/case), [/docs/runner](./../../docs/runner), etc.).
 
+---
+
 ## Key Entities
 
 | Concept     | Description                                                                                                                                                              |

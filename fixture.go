@@ -90,5 +90,9 @@ func GetFixture[T any](cfg *Config, name string) T {
 		cfg.Hooks.AfterTest = append(cfg.Hooks.AfterTest, func(_ *Config) { cleanup() })
 	}
 
-	return val.(T)
+	out, ok := val.(T)
+	if !ok {
+		cfg.SubT.Fatalf("fixture %q has unexpected type", name)
+	}
+	return out
 }

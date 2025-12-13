@@ -11,7 +11,7 @@ _Made with ❤️ by [@NikitaFilonov](https://t.me/sound_right)_
 
 ---
 
-📑 Table of Contents
+## 📑 Table of Contents
 
 - ✨ [About](#-about)
 - 📦 [Installation](#-installation)
@@ -51,7 +51,7 @@ go get github.com/Nikita-Filonov/axiom
 For version pinning:
 
 ```bash
-go get github.com/Nikita-Filonov/axiom@v0.1.0
+go get github.com/Nikita-Filonov/axiom@v0.3.0
 ````
 
 ---
@@ -207,6 +207,8 @@ and _Allure_, but implemented the Go way: simple, explicit, and pragmatic.
 Axiom includes structured, minimal, and maintainable documentation for every core concept of the framework. See the
 following folders:
 
+- [./usage](./docs/usage) — realistic end-to-end example of building a test framework with Axiom
+- [./philosophy](./philosophy) — design principles and how Axiom fits into the Go testing ecosystem
 - [./docs/runner](./docs/runner) — global execution environment, plugins, hooks, shared fixtures, retries
 - [./docs/case](./docs/case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./docs/config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)

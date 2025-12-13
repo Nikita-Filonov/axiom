@@ -13,6 +13,8 @@ This layered model enables:
 - shared fixtures and context
 - unified plugin and reporting pipelines
 
+---
+
 ## Example
 
 The following example demonstrates every Runner option in a single, self-contained configuration.

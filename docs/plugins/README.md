@@ -1,6 +1,8 @@
-# Plugins
+# 📘 Plugins
 
-📑 Table of Contents
+---
+
+## 📑 Table of Contents
 
 - [Overview](#overview)
 - [Writing a Plugin](#writing-a-plugin)
@@ -9,6 +11,8 @@
     - [Stats Plugin (`teststats`)](#-stats-plugin-teststats)
     - [Tags Plugin (`testtags`)](#-tags-plugin-testtags)
 - [Writing Your Own Plugin](#writing-your-own-plugin)
+
+---
 
 ## Overview
 
@@ -24,6 +28,8 @@ A plugin is applied:
 Plugins form a deterministic mutation pipeline.
 
 A plugin does **not** execute tests or steps — it only decorates or influences execution via `Config`.
+
+---
 
 ## Writing a Plugin
 
@@ -65,6 +71,8 @@ Plugins commonly modify:
 - `cfg.Skip` — skip logic
 - `cfg.Context` — context injection
 - `cfg.Meta` — metadata modification
+
+---
 
 ## Built-in Plugins
 
@@ -214,6 +222,8 @@ func TestTagsExample(t *testing.T) {
 }
 
 ```
+
+---
 
 ## Writing Your Own Plugin
 

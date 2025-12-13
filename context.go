@@ -6,10 +6,11 @@ import (
 )
 
 type Context struct {
-	Raw   context.Context
-	GRPC  context.Context
-	HTTP  context.Context
-	Kafka context.Context
+	Raw context.Context
+
+	DB  context.Context
+	MQ  context.Context
+	RPC context.Context
 
 	Data map[string]any
 }
@@ -26,27 +27,19 @@ func NewContext(options ...ContextOption) Context {
 }
 
 func WithContextRaw(ctx context.Context) ContextOption {
-	return func(c *Context) {
-		c.Raw = ctx
-	}
+	return func(c *Context) { c.Raw = ctx }
 }
 
-func WithContextHTTP(ctx context.Context) ContextOption {
-	return func(c *Context) {
-		c.HTTP = ctx
-	}
+func WithContextDB(ctx context.Context) ContextOption {
+	return func(c *Context) { c.DB = ctx }
 }
 
-func WithContextGRPC(ctx context.Context) ContextOption {
-	return func(c *Context) {
-		c.GRPC = ctx
-	}
+func WithContextMQ(ctx context.Context) ContextOption {
+	return func(c *Context) { c.MQ = ctx }
 }
 
-func WithContextKafka(ctx context.Context) ContextOption {
-	return func(c *Context) {
-		c.Kafka = ctx
-	}
+func WithContextRPC(ctx context.Context) ContextOption {
+	return func(c *Context) { c.RPC = ctx }
 }
 
 func WithContextData(key string, value any) ContextOption {
@@ -87,11 +80,11 @@ func (c *Context) SetData(key string, value any) {
 
 func (c *Context) Join(other Context) Context {
 	result := Context{
-		Raw:   c.Raw,
-		GRPC:  c.GRPC,
-		HTTP:  c.HTTP,
-		Kafka: c.Kafka,
-		Data:  map[string]any{},
+		Raw:  c.Raw,
+		DB:   c.DB,
+		MQ:   c.MQ,
+		RPC:  c.RPC,
+		Data: map[string]any{},
 	}
 	for k, v := range c.Data {
 		result.Data[k] = v
@@ -100,14 +93,14 @@ func (c *Context) Join(other Context) Context {
 	if other.Raw != nil {
 		result.Raw = other.Raw
 	}
-	if other.GRPC != nil {
-		result.GRPC = other.GRPC
+	if other.DB != nil {
+		result.DB = other.DB
 	}
-	if other.HTTP != nil {
-		result.HTTP = other.HTTP
+	if other.MQ != nil {
+		result.MQ = other.MQ
 	}
-	if other.Kafka != nil {
-		result.Kafka = other.Kafka
+	if other.RPC != nil {
+		result.RPC = other.RPC
 	}
 
 	for k, v := range other.Data {
@@ -121,14 +114,14 @@ func (c *Context) Normalize() {
 	if c.Raw == nil {
 		c.Raw = context.Background()
 	}
-	if c.GRPC == nil {
-		c.GRPC = c.Raw
+	if c.DB == nil {
+		c.DB = c.Raw
 	}
-	if c.HTTP == nil {
-		c.HTTP = c.Raw
+	if c.MQ == nil {
+		c.MQ = c.Raw
 	}
-	if c.Kafka == nil {
-		c.Kafka = c.Raw
+	if c.RPC == nil {
+		c.RPC = c.Raw
 	}
 	if c.Data == nil {
 		c.Data = map[string]any{}
