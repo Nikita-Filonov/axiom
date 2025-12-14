@@ -1,6 +1,6 @@
-module github.com/Nikita-Filonov/axiom/plugins/teststats
+module github.com/Nikita-Filonov/axiom/plugins/testlogger
 
-go 1.25.2
+go 1.25.5
 
 require (
 	github.com/Nikita-Filonov/axiom v0.4.0

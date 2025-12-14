@@ -9,17 +9,16 @@ import (
 )
 
 func TestPlugin_AddsTestWrapAndCallsNext(t *testing.T) {
-	cfg := &axiom.Config{
-		SubT: t,
-	}
+	cfg := &axiom.Config{SubT: t}
 	p := testallure.Plugin()
 
 	p(cfg)
 
-	assert.Len(t, cfg.TestWraps, 1)
+	assert.Len(t, cfg.Runtime.TestWraps, 1)
 
 	called := false
-	wrapped := cfg.TestWraps[0](func(c *axiom.Config) {
+
+	wrapped := cfg.Runtime.TestWraps[0](func(c *axiom.Config) {
 		called = true
 	})
 
@@ -34,13 +33,24 @@ func TestPlugin_AddsStepWrapAndCallsNext(t *testing.T) {
 
 	p(cfg)
 
-	assert.Len(t, cfg.StepWraps, 1)
+	assert.Len(t, cfg.Runtime.StepWraps, 1)
 
 	called := false
-	wrapped := cfg.StepWraps[0]("step-name", func() {
+
+	wrapped := cfg.Runtime.StepWraps[0]("step-name", func() {
 		called = true
 	})
 
 	wrapped()
+
 	assert.True(t, called, "step next() must be called")
+}
+
+func TestPlugin_AddsArtefactSink(t *testing.T) {
+	cfg := &axiom.Config{}
+	p := testallure.Plugin()
+
+	p(cfg)
+
+	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
 }
