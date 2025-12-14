@@ -115,3 +115,114 @@ func TestWithCaseFixture(t *testing.T) {
 	assert.NotNil(t, c.Fixtures.Registry)
 	assert.Contains(t, c.Fixtures.Registry, "user")
 }
+
+func TestWithCaseRuntime(t *testing.T) {
+	c := axiom.NewCase(
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+	)
+
+	assert.Len(t, c.Runtime.LogSinks, 1)
+}
+
+func TestWithCaseRuntime_MultipleOptions(t *testing.T) {
+	c := axiom.NewCase(
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitArtefactSink(func(a axiom.Artefact) {})
+		}),
+	)
+
+	assert.Len(t, c.Runtime.LogSinks, 1)
+	assert.Len(t, c.Runtime.ArtefactSinks, 1)
+}
+
+func TestCaseRuntime_AppliedToConfig(t *testing.T) {
+	r := axiom.NewRunner()
+
+	c := axiom.NewCase(
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+	)
+
+	cfg := r.BuildConfig(&testing.T{}, &c)
+
+	assert.Len(t, cfg.Runtime.LogSinks, 1)
+}
+
+func TestCaseRuntime_JoinWithRunnerRuntime(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitArtefactSink(func(a axiom.Artefact) {})
+		}),
+	)
+
+	cfg := r.BuildConfig(&testing.T{}, &c)
+
+	assert.Len(t, cfg.Runtime.LogSinks, 1)
+	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
+}
+
+func TestCaseRuntime_UsedDuringRun(t *testing.T) {
+	var logCalled bool
+	var artefactCalled bool
+
+	r := axiom.NewRunner()
+
+	c := axiom.NewCase(
+		axiom.WithCaseName("runtime"),
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {
+				logCalled = true
+			})
+			rt.EmitArtefactSink(func(a axiom.Artefact) {
+				artefactCalled = true
+			})
+		}),
+	)
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		cfg.Log(axiom.Log{Text: "hello"})
+		cfg.Artefact(axiom.Artefact{Name: "file"})
+	})
+
+	assert.True(t, logCalled)
+	assert.True(t, artefactCalled)
+}
+
+func TestCaseRuntime_IsolatedBetweenCases(t *testing.T) {
+	var count int
+
+	r := axiom.NewRunner()
+
+	c1 := axiom.NewCase(
+		axiom.WithCaseName("A"),
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {
+				count++
+			})
+		}),
+	)
+
+	c2 := axiom.NewCase(
+		axiom.WithCaseName("B"),
+	)
+
+	r.RunCase(t, c1, func(cfg *axiom.Config) {
+		cfg.Log(axiom.Log{})
+	})
+
+	r.RunCase(t, c2, func(cfg *axiom.Config) {})
+
+	assert.Equal(t, 1, count)
+}

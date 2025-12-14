@@ -207,13 +207,16 @@ and _Allure_, but implemented the Go way: simple, explicit, and pragmatic.
 Axiom includes structured, minimal, and maintainable documentation for every core concept of the framework. See the
 following folders:
 
-- [./usage](./docs/usage) — realistic end-to-end example of building a test framework with Axiom
-- [./philosophy](./philosophy) — design principles and how Axiom fits into the Go testing ecosystem
+- [./docs/usage](./docs/usage) — realistic end-to-end example of building a test framework with Axiom
+- [./docs/philosophy](./docs/philosophy) — design principles and how Axiom fits into the Go testing ecosystem
 - [./docs/runner](./docs/runner) — global execution environment, plugins, hooks, shared fixtures, retries
 - [./docs/case](./docs/case) — declarative test definitions, metadata, parameters, per-test configuration
-- [./docs/config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
+- [./docs/config](./docs/config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
+- [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
+- [./docs/log](./docs/log) — structured logging via Runtime log sinks
+- [./docs/artefacts](./docs/artefact) — binary and structured test outputs
 - [./docs/parallel](./docs/parallel) — parallel execution flags and merging behavior
 - [./docs/retry](./docs/retry) — retry policies, isolated attempts, override rules
 - [./docs/skip](./docs/skip) — static & dynamic skip rules with reasons

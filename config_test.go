@@ -33,25 +33,68 @@ func TestConfig_Step_HooksOrder(t *testing.T) {
 func TestConfig_Step_WrapsCalled(t *testing.T) {
 	var order []string
 
-	cfg := &axiom.Config{
-		StepWraps: []axiom.WrapStepAction{
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeStepWrap(
 			func(name string, next axiom.StepAction) axiom.StepAction {
 				return func() {
 					order = append(order, "wrap1")
 					next()
 				}
 			},
+		),
+		axiom.WithRuntimeStepWrap(
 			func(name string, next axiom.StepAction) axiom.StepAction {
 				return func() {
 					order = append(order, "wrap2")
 					next()
 				}
 			},
-		},
-		SubT: t,
+		),
+	)
+
+	cfg := &axiom.Config{
+		Runtime: rt,
+		SubT:    t,
 	}
 
 	cfg.Step("A", func() {
+		order = append(order, "body")
+	})
+
+	assert.Equal(t,
+		[]string{"wrap1", "wrap2", "body"},
+		order,
+	)
+}
+
+func TestConfig_Test_WrapsCalled(t *testing.T) {
+	var order []string
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeTestWrap(
+			func(next axiom.TestAction) axiom.TestAction {
+				return func(c *axiom.Config) {
+					order = append(order, "wrap1")
+					next(c)
+				}
+			},
+		),
+		axiom.WithRuntimeTestWrap(
+			func(next axiom.TestAction) axiom.TestAction {
+				return func(c *axiom.Config) {
+					order = append(order, "wrap2")
+					next(c)
+				}
+			},
+		),
+	)
+
+	cfg := &axiom.Config{
+		Runtime: rt,
+		SubT:    t,
+	}
+
+	cfg.Test(func(_ *axiom.Config) {
 		order = append(order, "body")
 	})
 
@@ -115,6 +158,7 @@ func TestConfig_ApplyPlugins_OrderAndRunnerCase(t *testing.T) {
 func TestConfig_ApplyExecutionPolicy_Parallel_DoesNotPanic(t *testing.T) {
 	cfg := &axiom.Config{
 		RootT:    t,
+		Runtime:  axiom.NewRuntime(),
 		Parallel: axiom.Parallel{Enabled: true},
 	}
 

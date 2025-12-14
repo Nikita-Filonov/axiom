@@ -12,8 +12,11 @@ framework. Each subfolder provides focused reference material and examples.
 - [./runner](./runner) — global execution environment, hooks, shared fixtures, retries
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
+- [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers
+- [./log](./log) — structured logging via Runtime log sinks
+- [./artefact](./artefact) — binary and structured test outputs
 - [./parallel](./parallel) — parallel execution flags (Runner-level & Case-level overrides)
 - [./retry](./retry) — retry policies, overrides, and isolated execution attempts
 - [./skip](./skip) — static and dynamic skip rules with reasons

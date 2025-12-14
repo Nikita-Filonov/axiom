@@ -4,12 +4,6 @@ import (
 	"testing"
 )
 
-type TestAction func(cfg *Config)
-type StepAction func()
-
-type WrapTestAction func(next TestAction) TestAction
-type WrapStepAction func(name string, next StepAction) StepAction
-
 type Config struct {
 	RootT *testing.T
 	SubT  *testing.T
@@ -25,12 +19,12 @@ type Config struct {
 	Hooks    Hooks
 	Params   any
 	Context  Context
+	Runtime  Runtime
 	Parallel Parallel
 	Fixtures Fixtures
-
-	TestWraps []WrapTestAction
-	StepWraps []WrapStepAction
 }
+
+func (c *Config) Log(l Log) { c.Runtime.Log(l) }
 
 func (c *Config) Step(name string, fn func()) {
 	defer func() {
@@ -45,13 +39,7 @@ func (c *Config) Step(name string, fn func()) {
 	}()
 
 	c.Hooks.ApplyBeforeStep(c, name)
-
-	wrapped := fn
-	for i := len(c.StepWraps) - 1; i >= 0; i-- {
-		wrapped = c.StepWraps[i](name, wrapped)
-	}
-
-	wrapped()
+	c.Runtime.Step(name, fn)
 }
 
 func (c *Config) Test(action TestAction) {
@@ -67,14 +55,10 @@ func (c *Config) Test(action TestAction) {
 	}()
 
 	c.Hooks.ApplyBeforeTest(c)
-
-	wrapped := action
-	for i := len(c.TestWraps) - 1; i >= 0; i-- {
-		wrapped = c.TestWraps[i](wrapped)
-	}
-
-	wrapped(c)
+	c.Runtime.Test(c, action)
 }
+
+func (c *Config) Artefact(a Artefact) { c.Runtime.Artefact(a) }
 
 func (c *Config) ApplyPlugins() {
 	for _, p := range c.Runner.Plugins {

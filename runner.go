@@ -15,6 +15,7 @@ type Runner struct {
 	Retry    Retry
 	Hooks    Hooks
 	Context  Context
+	Runtime  Runtime
 	Plugins  []Plugin
 	Parallel Parallel
 	Fixtures Fixtures
@@ -72,6 +73,13 @@ func WithRunnerContext(options ...ContextOption) RunnerOption {
 	}
 }
 
+func WithRunnerRuntime(options ...RuntimeOption) RunnerOption {
+	return func(r *Runner) {
+		c := NewRuntime(options...)
+		r.Runtime = r.Runtime.Join(c)
+	}
+}
+
 func WithRunnerPlugins(plugins ...Plugin) RunnerOption {
 	return func(r *Runner) {
 		r.Plugins = append(r.Plugins, plugins...)
@@ -100,6 +108,7 @@ func (r *Runner) Join(other *Runner) *Runner {
 		Retry:    r.Retry.Join(other.Retry),
 		Hooks:    r.Hooks.Join(other.Hooks),
 		Context:  r.Context.Join(other.Context),
+		Runtime:  r.Runtime.Join(other.Runtime),
 		Plugins:  append(r.Plugins, other.Plugins...),
 		Fixtures: r.Fixtures.Join(other.Fixtures),
 		Parallel: r.Parallel.Join(other.Parallel),
@@ -140,6 +149,7 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	retry := r.Retry.Join(c.Retry)
 	hooks := r.Hooks.Join(c.Hooks)
 	context := r.Context.Join(c.Context)
+	runtime := r.Runtime.Join(c.Runtime)
 	parallel := r.Parallel.Join(c.Parallel)
 	fixtures := r.Fixtures.Join(c.Fixtures)
 
@@ -155,6 +165,7 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 		Params:   c.Params,
 		Runner:   r,
 		Context:  context,
+		Runtime:  runtime,
 		Parallel: parallel,
 		Fixtures: fixtures,
 	}

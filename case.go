@@ -9,6 +9,7 @@ type Case struct {
 	Hooks    Hooks
 	Params   any
 	Context  Context
+	Runtime  Runtime
 	Plugins  []Plugin
 	Parallel Parallel
 	Fixtures Fixtures
@@ -62,6 +63,13 @@ func WithCaseContext(opts ...ContextOption) CaseOption {
 	return func(c *Case) {
 		ctx := NewContext(opts...)
 		c.Context = c.Context.Join(ctx)
+	}
+}
+
+func WithCaseRuntime(opts ...RuntimeOption) CaseOption {
+	return func(c *Case) {
+		r := NewRuntime(opts...)
+		c.Runtime = c.Runtime.Join(r)
 	}
 }
 

@@ -110,6 +110,28 @@ var runner = axiom.NewRunner(
 
 	// Global fixtures shared across all tests
 	axiom.WithRunnerFixture("db", DBFixture),
+
+	// Global runtime behavior
+	axiom.WithRunnerRuntime(
+
+		// Wrap every test
+		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
+			return func(c *axiom.Config) {
+				fmt.Println("[runner] before test")
+				next(c)
+				fmt.Println("[runner] after test")
+			}
+		}),
+
+		// Wrap every step
+		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+			return func() {
+				fmt.Println("[runner] step:", name)
+				next()
+			}
+		}),
+	),
+
 )
 
 // -----------------------------------------------------------------------------

@@ -82,6 +82,27 @@ func TestCaseExample(t *testing.T) {
 
 		// Case-local fixtures
 		axiom.WithCaseFixture("user", UserFixture),
+
+		// Case-specific runtime behavior
+		axiom.WithCaseRuntime(
+
+			// Wrap test execution
+			axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
+				return func(c *axiom.Config) {
+					fmt.Println("before test")
+					next(c)
+					fmt.Println("after test")
+				}
+			}),
+
+			// Wrap steps
+			axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+				return func() {
+					fmt.Println(">> step:", name)
+					next()
+				}
+			}),
+		),
 	)
 
 	// -------------------------------------------------------------------------

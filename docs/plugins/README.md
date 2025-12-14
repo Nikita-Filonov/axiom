@@ -17,7 +17,7 @@
 
 ## Overview
 
-A `Plugin` is a function that modifies the runtime `Config` during test execution. Plugins extend Axiom without
+A `Plugin` is a function that configures test execution via `Config` and its `Runtime`. Plugins extend Axiom without
 changing its core. They may attach hooks, wraps, context values, reporting integrations, filtering logic, or custom
 instrumentation.
 
@@ -28,7 +28,8 @@ A plugin is applied:
 
 Plugins form a deterministic mutation pipeline.
 
-A plugin does **not** execute tests or steps — it only decorates or influences execution via `Config`.
+A plugin does **not** execute tests or steps — it only decorates execution by registering behavior in `Config` and
+`Runtime`.
 
 ---
 
@@ -71,7 +72,7 @@ type Plugin func (cfg *axiom.Config)
 A minimal plugin:
 
 ```go
-package main
+package myplugin
 
 import (
 	"fmt"
@@ -79,9 +80,9 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
-func MyPlugin() axiom.Plugin {
+func Plugin() axiom.Plugin {
 	return func(cfg *axiom.Config) {
-		cfg.TestWraps = append(cfg.TestWraps, func(next axiom.TestAction) axiom.TestAction {
+		cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
 			return func(c *axiom.Config) {
 				fmt.Println("before test")
 				next(c)
@@ -92,11 +93,13 @@ func MyPlugin() axiom.Plugin {
 
 ```
 
-Plugins commonly modify:
+Plugins commonly interact with:
 
-- `cfg.Hooks.*` — before/after hooks
-- `cfg.TestWraps` — wrapper middleware around the whole test
-- `cfg.StepWraps` — wrapper middleware around steps
+- `cfg.Runtime.EmitTestWrap(...)` — wrap test execution
+- `cfg.Runtime.EmitStepWrap(...)` — wrap step execution
+- `cfg.Runtime.EmitLogSink(...)` — consume logs
+- `cfg.Runtime.EmitArtefactSink(...)` — consume artefacts
+- `cfg.Hooks.*` — lifecycle hooks
 - `cfg.Skip` — skip logic
 - `cfg.Context` — context injection
 - `cfg.Meta` — metadata modification
@@ -113,8 +116,9 @@ Generates Allure reporting via `dailymotion/allure-go`.
 
 The plugin wraps:
 
-- test execution via `cfg.TestWraps`
-- steps via `cfg.StepWraps`
+- test execution via runtime test wraps
+- step execution via runtime step wraps
+- artefacts emitted during execution
 
 Tags, epic, story, labels, severity, and other metadata are converted into Allure options.
 
@@ -271,7 +275,7 @@ import (
 func Plugin() axiom.Plugin {
 	return func(cfg *axiom.Config) {
 
-		cfg.StepWraps = append(cfg.StepWraps, func(name string, next axiom.StepAction) axiom.StepAction {
+		cfg.Runtime.EmitStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
 			return func() {
 				start := time.Now()
 				next()

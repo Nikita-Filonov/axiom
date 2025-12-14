@@ -316,3 +316,109 @@ func TestRunner_BeforeAll_ExecutesBeforeTestLogic(t *testing.T) {
 	assert.Equal(t, "before", order[0])
 	assert.Equal(t, "action", order[1])
 }
+
+func TestRunner_WithRunnerRuntime(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+	)
+
+	assert.Len(t, r.Runtime.LogSinks, 1)
+}
+
+func TestRunner_BuildConfig_IncludesRuntime(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+	)
+
+	c := axiom.NewCase()
+
+	cfg := r.BuildConfig(&testing.T{}, &c)
+
+	assert.Len(t, cfg.Runtime.LogSinks, 1)
+}
+
+func TestRunner_BuildConfig_RuntimeJoin(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {})
+		}),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitArtefactSink(func(a axiom.Artefact) {})
+		}),
+	)
+
+	cfg := r.BuildConfig(&testing.T{}, &c)
+
+	assert.Len(t, cfg.Runtime.LogSinks, 1)
+	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
+}
+
+func TestRunner_RunCase_UsesRuntime(t *testing.T) {
+	var logCalled bool
+	var artefactCalled bool
+	var testWrapCalled bool
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+
+			rt.EmitLogSink(func(l axiom.Log) {
+				logCalled = true
+			})
+
+			rt.EmitArtefactSink(func(a axiom.Artefact) {
+				artefactCalled = true
+			})
+
+			rt.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
+				return func(cfg *axiom.Config) {
+					testWrapCalled = true
+					next(cfg)
+				}
+			})
+		}),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseName("runtime"),
+	)
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		cfg.Log(axiom.Log{Text: "log"})
+		cfg.Artefact(axiom.Artefact{Name: "a"})
+	})
+
+	assert.True(t, testWrapCalled)
+	assert.True(t, logCalled)
+	assert.True(t, artefactCalled)
+}
+
+func TestRunner_RuntimeIsolationBetweenRuns(t *testing.T) {
+	var count int
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+			rt.EmitLogSink(func(l axiom.Log) {
+				count++
+			})
+		}),
+	)
+
+	c := axiom.NewCase()
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		cfg.Log(axiom.Log{})
+	})
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		cfg.Log(axiom.Log{})
+	})
+
+	assert.Equal(t, 2, count)
+}
