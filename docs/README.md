@@ -16,6 +16,7 @@ framework. Each subfolder provides focused reference material and examples.
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers
 - [./log](./log) — structured logging via Runtime log sinks
+- [./assert](./assert) — structured assertion events and runtime assert sinks
 - [./artefact](./artefact) — binary and structured test outputs
 - [./parallel](./parallel) — parallel execution flags (Runner-level & Case-level overrides)
 - [./retry](./retry) — retry policies, overrides, and isolated execution attempts

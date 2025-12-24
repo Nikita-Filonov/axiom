@@ -58,6 +58,8 @@ func (c *Config) Test(action TestAction) {
 	c.Runtime.Test(c, action)
 }
 
+func (c *Config) Assert(a Assert) { c.Runtime.Assert(a) }
+
 func (c *Config) Artefact(a Artefact) { c.Runtime.Artefact(a) }
 
 func (c *Config) ApplyPlugins() {

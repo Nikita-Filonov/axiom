@@ -216,6 +216,7 @@ following folders:
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
 - [./docs/log](./docs/log) — structured logging via Runtime log sinks
+- [./docs/assert](./docs/assert) — structured assertion events and runtime assert sinks
 - [./docs/artefacts](./docs/artefact) — binary and structured test outputs
 - [./docs/parallel](./docs/parallel) — parallel execution flags and merging behavior
 - [./docs/retry](./docs/retry) — retry policies, isolated attempts, override rules

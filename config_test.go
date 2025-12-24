@@ -164,3 +164,48 @@ func TestConfig_ApplyExecutionPolicy_Parallel_DoesNotPanic(t *testing.T) {
 
 	cfg.ApplyExecutionPolicy()
 }
+
+func TestConfig_Log_DelegatesToRuntimeSink(t *testing.T) {
+	var received axiom.Log
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeLogSink(func(l axiom.Log) { received = l }),
+	)
+	cfg := &axiom.Config{Runtime: rt}
+	log := axiom.Log{Text: "hello"}
+
+	cfg.Log(log)
+
+	assert.Equal(t, log, received)
+}
+
+func TestConfig_Assert_DelegatesToRuntimeSink(t *testing.T) {
+	var received axiom.Assert
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeAssertSink(func(a axiom.Assert) { received = a }),
+	)
+	cfg := &axiom.Config{Runtime: rt}
+	input := axiom.Assert{
+		Type:    axiom.AssertEqual,
+		Message: "test",
+	}
+
+	cfg.Assert(input)
+
+	assert.Equal(t, input, received)
+}
+
+func TestConfig_Artefact_DelegatesToRuntimeSink(t *testing.T) {
+	var received axiom.Artefact
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) { received = a }),
+	)
+	cfg := &axiom.Config{Runtime: rt}
+	art := axiom.Artefact{Name: "file"}
+
+	cfg.Artefact(art)
+
+	assert.Equal(t, art, received)
+}

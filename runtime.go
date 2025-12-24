@@ -7,6 +7,7 @@ type WrapTestAction func(next TestAction) TestAction
 type WrapStepAction func(name string, next StepAction) StepAction
 
 type SinkLogAction func(l Log)
+type SinkAssertAction func(a Assert)
 type SinkArtefactAction func(a Artefact)
 
 type Runtime struct {
@@ -14,6 +15,7 @@ type Runtime struct {
 	StepWraps []WrapStepAction
 
 	LogSinks      []SinkLogAction
+	AssertSinks   []SinkAssertAction
 	ArtefactSinks []SinkArtefactAction
 }
 
@@ -40,6 +42,10 @@ func WithRuntimeLogSink(s SinkLogAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitLogSink(s) }
 }
 
+func WithRuntimeAssertSink(s SinkAssertAction) RuntimeOption {
+	return func(r *Runtime) { r.EmitAssertSink(s) }
+}
+
 func WithRuntimeArtefactSink(s SinkArtefactAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitArtefactSink(s) }
 }
@@ -63,6 +69,13 @@ func (r *Runtime) EmitLogSink(s SinkLogAction) {
 		return
 	}
 	r.LogSinks = append(r.LogSinks, s)
+}
+
+func (r *Runtime) EmitAssertSink(s SinkAssertAction) {
+	if s == nil {
+		return
+	}
+	r.AssertSinks = append(r.AssertSinks, s)
 }
 
 func (r *Runtime) EmitArtefactSink(s SinkArtefactAction) {
@@ -96,6 +109,12 @@ func (r *Runtime) Test(c *Config, action TestAction) {
 	wrapped(c)
 }
 
+func (r *Runtime) Assert(a Assert) {
+	for _, sink := range r.AssertSinks {
+		sink(a)
+	}
+}
+
 func (r *Runtime) Artefact(a Artefact) {
 	for _, sink := range r.ArtefactSinks {
 		sink(a)
@@ -107,6 +126,7 @@ func (r *Runtime) Join(other Runtime) Runtime {
 		TestWraps:     append(r.TestWraps, other.TestWraps...),
 		StepWraps:     append(r.StepWraps, other.StepWraps...),
 		LogSinks:      append(r.LogSinks, other.LogSinks...),
+		AssertSinks:   append(r.AssertSinks, other.AssertSinks...),
 		ArtefactSinks: append(r.ArtefactSinks, other.ArtefactSinks...),
 	}
 }

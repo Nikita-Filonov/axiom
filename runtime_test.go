@@ -13,6 +13,7 @@ func TestNewRuntime_Defaults(t *testing.T) {
 	assert.Empty(t, rt.TestWraps)
 	assert.Empty(t, rt.StepWraps)
 	assert.Empty(t, rt.LogSinks)
+	assert.Empty(t, rt.AssertSinks)
 	assert.Empty(t, rt.ArtefactSinks)
 }
 
@@ -50,6 +51,16 @@ func TestWithRuntimeLogSink(t *testing.T) {
 	assert.Len(t, rt.LogSinks, 1)
 }
 
+func TestWithRuntimeAssertSink(t *testing.T) {
+	sink := func(a axiom.Assert) {}
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeAssertSink(sink),
+	)
+
+	assert.Len(t, rt.AssertSinks, 1)
+}
+
 func TestWithRuntimeArtefactSink(t *testing.T) {
 	sink := func(a axiom.Artefact) {}
 
@@ -66,11 +77,13 @@ func TestRuntime_EmitIgnoresNil(t *testing.T) {
 	rt.EmitTestWrap(nil)
 	rt.EmitStepWrap(nil)
 	rt.EmitLogSink(nil)
+	rt.EmitAssertSink(nil)
 	rt.EmitArtefactSink(nil)
 
 	assert.Empty(t, rt.TestWraps)
 	assert.Empty(t, rt.StepWraps)
 	assert.Empty(t, rt.LogSinks)
+	assert.Empty(t, rt.AssertSinks)
 	assert.Empty(t, rt.ArtefactSinks)
 }
 
@@ -83,6 +96,19 @@ func TestRuntime_LogCallsAllSinks(t *testing.T) {
 	)
 
 	rt.Log(axiom.Log{Text: "hello"})
+
+	assert.Equal(t, 2, calls)
+}
+
+func TestRuntime_AssertCallsAllSinks(t *testing.T) {
+	var calls int
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeAssertSink(func(a axiom.Assert) { calls++ }),
+		axiom.WithRuntimeAssertSink(func(a axiom.Assert) { calls++ }),
+	)
+
+	rt.Assert(axiom.Assert{Type: axiom.AssertEqual})
 
 	assert.Equal(t, 2, calls)
 }
@@ -178,11 +204,13 @@ func TestRuntimeJoin(t *testing.T) {
 	rt1 := axiom.NewRuntime(
 		axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
+		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
 	)
 
 	rt2 := axiom.NewRuntime(
 		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) {}),
 		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
+		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
 	)
 
 	joined := rt1.Join(rt2)
@@ -191,4 +219,17 @@ func TestRuntimeJoin(t *testing.T) {
 	assert.Len(t, joined.TestWraps, 1)
 	assert.Len(t, joined.ArtefactSinks, 1)
 	assert.Len(t, joined.StepWraps, 1)
+	assert.Len(t, joined.AssertSinks, 2)
+}
+
+func TestRuntime_Emitters_DoNotMutateRuntime(t *testing.T) {
+	rt := axiom.NewRuntime()
+
+	rt.Log(axiom.Log{Text: "log"})
+	rt.Assert(axiom.Assert{Type: axiom.AssertTrue})
+	rt.Artefact(axiom.Artefact{Name: "file"})
+
+	assert.Empty(t, rt.LogSinks)
+	assert.Empty(t, rt.AssertSinks)
+	assert.Empty(t, rt.ArtefactSinks)
 }

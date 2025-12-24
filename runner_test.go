@@ -346,9 +346,15 @@ func TestRunner_BuildConfig_RuntimeJoin(t *testing.T) {
 		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
 			rt.EmitLogSink(func(l axiom.Log) {})
 		}),
+		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
+			rt.EmitAssertSink(func(l axiom.Assert) {})
+		}),
 	)
 
 	c := axiom.NewCase(
+		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
+			rt.EmitAssertSink(func(l axiom.Assert) {})
+		}),
 		axiom.WithCaseRuntime(func(rt *axiom.Runtime) {
 			rt.EmitArtefactSink(func(a axiom.Artefact) {})
 		}),
@@ -357,11 +363,13 @@ func TestRunner_BuildConfig_RuntimeJoin(t *testing.T) {
 	cfg := r.BuildConfig(&testing.T{}, &c)
 
 	assert.Len(t, cfg.Runtime.LogSinks, 1)
+	assert.Len(t, cfg.Runtime.AssertSinks, 2)
 	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
 }
 
 func TestRunner_RunCase_UsesRuntime(t *testing.T) {
 	var logCalled bool
+	var assertCalled bool
 	var artefactCalled bool
 	var testWrapCalled bool
 
@@ -370,6 +378,10 @@ func TestRunner_RunCase_UsesRuntime(t *testing.T) {
 
 			rt.EmitLogSink(func(l axiom.Log) {
 				logCalled = true
+			})
+
+			rt.EmitAssertSink(func(a axiom.Assert) {
+				assertCalled = true
 			})
 
 			rt.EmitArtefactSink(func(a axiom.Artefact) {
@@ -391,11 +403,13 @@ func TestRunner_RunCase_UsesRuntime(t *testing.T) {
 
 	r.RunCase(t, c, func(cfg *axiom.Config) {
 		cfg.Log(axiom.Log{Text: "log"})
+		cfg.Assert(axiom.Assert{Type: axiom.AssertEqual})
 		cfg.Artefact(axiom.Artefact{Name: "a"})
 	})
 
 	assert.True(t, testWrapCalled)
 	assert.True(t, logCalled)
+	assert.True(t, assertCalled)
 	assert.True(t, artefactCalled)
 }
 
