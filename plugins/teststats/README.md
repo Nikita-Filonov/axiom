@@ -1,5 +1,18 @@
 # 📊 Stats Plugin (`teststats`)
 
+---
+
+## 📑 Table of Contents
+
+- [Overview](#overview)
+- [What the plugin does](#what-the-plugin-does)
+- [Installation](#installation)
+- [Example](#example)
+
+---
+
+## Overview
+
 Collects execution statistics for test cases by observing the Axiom runtime lifecycle.
 
 The plugin records aggregated information about each test case, including retries, duration, final status, and
@@ -22,6 +35,29 @@ At runtime, the plugin:
     - flaky (passed after retries)
 - captures test metadata and timestamps
 - aggregates results into an in-memory statistics structure
+
+---
+
+## Installation
+
+The plugin is distributed as a regular Go module and installed using standard Go tooling.
+
+Add the plugin dependency using `go get`:
+
+```shell
+go get github.com/Nikita-Filonov/axiom/plugins/teststats
+```
+
+This will add the plugin to your `go.mod` file:
+
+```text
+require (
+	github.com/Nikita-Filonov/axiom v0.3.0
+	github.com/Nikita-Filonov/axiom/plugins/teststats v0.1.0
+)
+```
+
+Each plugin is versioned independently from the Axiom core.
 
 ---
 
@@ -76,5 +112,4 @@ func TestStatsExample(t *testing.T) {
 		_ = result.Meta
 	}
 }
-
 ```

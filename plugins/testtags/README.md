@@ -1,5 +1,20 @@
 # 🏷 Tags Plugin (`testtags`)
 
+---
+
+## 📑 Table of Contents
+
+- [Overview](#overview)
+- [What the plugin does](#what-the-plugin-does)
+- [Configuration](#configuration)
+- [Environment variables](#environment-variables)
+- [Installation](#installation)
+- [Example](#example)
+
+---
+
+## Overview
+
 Filters test execution based on metadata tags using include and exclude rules.
 
 The plugin evaluates test metadata at runtime and decides whether a test should be executed or skipped. It does not
@@ -57,8 +72,30 @@ Example:
 ```shell
 export AXIOM_TEST_TAGS_INCLUDE=smoke,critical
 export AXIOM_TEST_TAGS_EXCLUDE=slow
-
 ```
+
+---
+
+## Installation
+
+The plugin is distributed as a regular Go module and installed using standard Go tooling.
+
+Add the plugin dependency using `go get`:
+
+```shell
+go get github.com/Nikita-Filonov/axiom/plugins/testtags
+```
+
+This will add the plugin to your `go.mod` file:
+
+```text
+require (
+	github.com/Nikita-Filonov/axiom v0.3.0
+	github.com/Nikita-Filonov/axiom/plugins/testtags v0.1.0
+)
+```
+
+Each plugin is versioned independently from the Axiom core.
 
 ---
 
@@ -106,5 +143,4 @@ func TestTagsExample(t *testing.T) {
 		})
 	})
 }
-
 ```

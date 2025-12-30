@@ -21,6 +21,9 @@ func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	if cfg.Meta.Epic != "" {
 		options = append(options, allure.Epic(cfg.Meta.Epic))
 	}
+	if cfg.Meta.Suite != "" {
+		options = append(options, allure.Suite(cfg.Meta.Suite))
+	}
 	if cfg.Meta.Story != "" {
 		options = append(options, allure.Story(cfg.Meta.Story))
 	}
@@ -32,6 +35,12 @@ func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	}
 	if cfg.Meta.Severity != "" {
 		options = append(options, allure.Severity(severity.Severity(cfg.Meta.Severity)))
+	}
+	if cfg.Meta.SubSuite != "" {
+		options = append(options, allure.SubSuite(cfg.Meta.SubSuite))
+	}
+	if cfg.Meta.ParentSuite != "" {
+		options = append(options, allure.ParentSuite(cfg.Meta.ParentSuite))
 	}
 
 	for k, v := range cfg.Meta.Labels {

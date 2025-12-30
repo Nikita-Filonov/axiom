@@ -1,9 +1,44 @@
 # 📝 Logger Plugin (`testlogger`)
 
+---
+
+## 📑 Table of Contents
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Example](#example)
+
+---
+
+## Overview
+
 Provides structured logging for tests using Go’s standard `log/slog` package. The plugin consumes logs emitted via
 `cfg.Log(...)` and forwards them to a `slog.Logger` with appropriate log levels.
 
 This allows plugins and test code to emit structured logs without coupling to a specific logging backend.
+
+---
+
+## Installation
+
+The plugin is distributed as a regular Go module and installed using standard Go tooling.
+
+Add the plugin dependency using `go get`:
+
+```shell
+go get github.com/Nikita-Filonov/axiom/plugins/testlogger
+```
+
+This will add the plugin to your `go.mod` file:
+
+```text
+require (
+	github.com/Nikita-Filonov/axiom v0.3.0
+	github.com/Nikita-Filonov/axiom/plugins/testlogger v0.1.0
+)
+```
+
+Each plugin is versioned independently from the Axiom core.
 
 ---
 
@@ -56,5 +91,4 @@ func TestLoggerExample(t *testing.T) {
 		})
 	})
 }
-
 ```

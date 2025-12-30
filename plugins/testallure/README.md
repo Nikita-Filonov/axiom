@@ -1,5 +1,18 @@
 # 🟣 Allure Plugin (`testallure`)
 
+---
+
+## 📑 Table of Contents
+
+- [Overview](#overview)
+- [What the plugin does](#what-the-plugin-does)
+- [Installation](#installation)
+- [Example](#example)
+
+---
+
+## Overview
+
 Generates Allure reports by projecting Axiom runtime events into the Allure execution model using
 `dailymotion/allure-go`.
 
@@ -22,6 +35,29 @@ At runtime, the plugin:
 - wraps each `cfg.Step(...)` in `allure.Step(...)`
 - converts Axiom metadata into Allure options
 - attaches emitted artefacts to the current test
+
+---
+
+## Installation
+
+The plugin is distributed as a regular Go module and installed using standard Go tooling.
+
+Add the plugin dependency using `go get`:
+
+```shell
+go get github.com/Nikita-Filonov/axiom/plugins/testallure
+```
+
+This will add the plugin to your `go.mod` file:
+
+```text
+require (
+	github.com/Nikita-Filonov/axiom v0.3.0
+	github.com/Nikita-Filonov/axiom/plugins/testallure v0.1.0
+)
+```
+
+Each plugin is versioned independently from the Axiom core.
 
 ---
 
@@ -85,5 +121,4 @@ func TestAllureExample(t *testing.T) {
 		})
 	})
 }
-
 ```
