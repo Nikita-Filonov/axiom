@@ -11,13 +11,18 @@ const (
 )
 
 type Meta struct {
-	Epic     string
-	Tags     []string
-	Story    string
-	Layer    string
-	Labels   map[string]string
-	Feature  string
-	Severity Severity
+	Epic        string
+	Tags        []string
+	Suite       string
+	Story       string
+	Layer       string
+	Issues      []string
+	Labels      map[string]string
+	Feature     string
+	Severity    Severity
+	SubSuite    string
+	TestCases   []string
+	ParentSuite string
 }
 
 type MetaOption func(*Meta)
@@ -33,6 +38,10 @@ func NewMeta(options ...MetaOption) Meta {
 
 func WithMetaEpic(epic string) MetaOption {
 	return func(m *Meta) { m.Epic = epic }
+}
+
+func WithMetaSuite(suite string) MetaOption {
+	return func(m *Meta) { m.Suite = suite }
 }
 
 func WithMetaStory(story string) MetaOption {
@@ -51,16 +60,28 @@ func WithMetaSeverity(severity Severity) MetaOption {
 	return func(m *Meta) { m.Severity = severity }
 }
 
+func WithMetaSubSuite(subSuite string) MetaOption {
+	return func(m *Meta) { m.SubSuite = subSuite }
+}
+
+func WithMetaParentSuite(parentSuite string) MetaOption {
+	return func(m *Meta) { m.ParentSuite = parentSuite }
+}
+
 func WithMetaTag(tag string) MetaOption {
-	return func(m *Meta) {
-		m.Tags = append(m.Tags, tag)
-	}
+	return func(m *Meta) { m.Tags = append(m.Tags, tag) }
 }
 
 func WithMetaTags(tags ...string) MetaOption {
-	return func(m *Meta) {
-		m.Tags = append(m.Tags, tags...)
-	}
+	return func(m *Meta) { m.Tags = append(m.Tags, tags...) }
+}
+
+func WithMetaIssue(issue string) MetaOption {
+	return func(m *Meta) { m.Issues = append(m.Issues, issue) }
+}
+
+func WithMetaIssues(issues ...string) MetaOption {
+	return func(m *Meta) { m.Issues = append(m.Issues, issues...) }
 }
 
 func WithMetaLabel(key, value string) MetaOption {
@@ -83,15 +104,28 @@ func WithMetaLabels(labels map[string]string) MetaOption {
 	}
 }
 
+func WithMetaTestCase(testCase string) MetaOption {
+	return func(m *Meta) { m.TestCases = append(m.TestCases, testCase) }
+}
+
+func WithMetaTestCases(testCases []string) MetaOption {
+	return func(m *Meta) { m.TestCases = append(m.TestCases, testCases...) }
+}
+
 func (m *Meta) Join(other Meta) Meta {
 	result := Meta{
-		Epic:     m.Epic,
-		Tags:     append([]string{}, m.Tags...),
-		Story:    m.Story,
-		Layer:    m.Layer,
-		Labels:   map[string]string{},
-		Feature:  m.Feature,
-		Severity: m.Severity,
+		Epic:        m.Epic,
+		Tags:        append([]string{}, m.Tags...),
+		Suite:       m.Suite,
+		Story:       m.Story,
+		Layer:       m.Layer,
+		Issues:      append([]string{}, m.Issues...),
+		Labels:      map[string]string{},
+		Feature:     m.Feature,
+		Severity:    m.Severity,
+		SubSuite:    m.SubSuite,
+		TestCases:   append([]string{}, m.TestCases...),
+		ParentSuite: m.ParentSuite,
 	}
 	for k, v := range m.Labels {
 		result.Labels[k] = v
@@ -99,6 +133,9 @@ func (m *Meta) Join(other Meta) Meta {
 
 	if other.Epic != "" {
 		result.Epic = other.Epic
+	}
+	if other.Suite != "" {
+		result.Suite = other.Suite
 	}
 	if other.Story != "" {
 		result.Story = other.Story
@@ -112,8 +149,16 @@ func (m *Meta) Join(other Meta) Meta {
 	if other.Severity != "" {
 		result.Severity = other.Severity
 	}
+	if other.SubSuite != "" {
+		result.SubSuite = other.SubSuite
+	}
+	if other.ParentSuite != "" {
+		result.ParentSuite = other.ParentSuite
+	}
 
 	result.Tags = append(result.Tags, other.Tags...)
+	result.Issues = append(result.Issues, other.Issues...)
+	result.TestCases = append(result.TestCases, other.TestCases...)
 
 	for k, v := range other.Labels {
 		result.Labels[k] = v
@@ -126,10 +171,16 @@ func (m *Meta) Normalize() {
 	if m.Tags == nil {
 		m.Tags = []string{}
 	}
+	if m.Issues == nil {
+		m.Issues = []string{}
+	}
 	if m.Labels == nil {
 		m.Labels = map[string]string{}
 	}
 	if m.Severity == "" {
 		m.Severity = SeverityNormal
+	}
+	if m.TestCases == nil {
+		m.TestCases = []string{}
 	}
 }
