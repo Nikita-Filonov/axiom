@@ -19,6 +19,7 @@ type Meta struct {
 	Issues      []string
 	Labels      map[string]string
 	Feature     string
+	Platform    string
 	Severity    Severity
 	SubSuite    string
 	TestCases   []string
@@ -54,6 +55,10 @@ func WithMetaLayer(layer string) MetaOption {
 
 func WithMetaFeature(feature string) MetaOption {
 	return func(m *Meta) { m.Feature = feature }
+}
+
+func WithMetaPlatform(platform string) MetaOption {
+	return func(m *Meta) { m.Platform = platform }
 }
 
 func WithMetaSeverity(severity Severity) MetaOption {
@@ -122,6 +127,7 @@ func (m *Meta) Join(other Meta) Meta {
 		Issues:      append([]string{}, m.Issues...),
 		Labels:      map[string]string{},
 		Feature:     m.Feature,
+		Platform:    m.Platform,
 		Severity:    m.Severity,
 		SubSuite:    m.SubSuite,
 		TestCases:   append([]string{}, m.TestCases...),
@@ -145,6 +151,9 @@ func (m *Meta) Join(other Meta) Meta {
 	}
 	if other.Feature != "" {
 		result.Feature = other.Feature
+	}
+	if other.Platform != "" {
+		result.Platform = other.Platform
 	}
 	if other.Severity != "" {
 		result.Severity = other.Severity

@@ -41,6 +41,7 @@ func TestMetaExample(t *testing.T) {
 		axiom.WithRunnerMeta(
 			axiom.WithMetaEpic("authentication"),
 			axiom.WithMetaFeature("login"),
+			axiom.WithMetaPlatform("backend"),
 			axiom.WithMetaSeverity(axiom.SeverityCritical),
 			axiom.WithMetaTag("regression"),
 			axiom.WithMetaLabel("team", "backend"),
@@ -68,6 +69,7 @@ func TestMetaExample(t *testing.T) {
 
 		fmt.Println("Epic:", meta.Epic)
 		fmt.Println("Feature:", meta.Feature)
+		fmt.Println("Platform:", meta.Platform)
 		fmt.Println("Story:", meta.Story)
 		fmt.Println("Layer:", meta.Layer)
 		fmt.Println("Severity:", meta.Severity)

@@ -22,6 +22,7 @@ func TestNewMeta_Defaults(t *testing.T) {
 	assert.Empty(t, m.Story)
 	assert.Empty(t, m.Layer)
 	assert.Empty(t, m.Feature)
+	assert.Empty(t, m.Platform)
 
 	assert.Equal(t, axiom.Severity(""), m.Severity)
 }
@@ -35,6 +36,7 @@ func TestNewMeta_WithOptions(t *testing.T) {
 		axiom.WithMetaStory("User can send money"),
 		axiom.WithMetaLayer("Integration"),
 		axiom.WithMetaFeature("Transfer"),
+		axiom.WithMetaPlatform("Backend"),
 		axiom.WithMetaSeverity(axiom.SeverityCritical),
 		axiom.WithMetaTag("smoke"),
 		axiom.WithMetaTags("fast", "api"),
@@ -53,6 +55,7 @@ func TestNewMeta_WithOptions(t *testing.T) {
 	assert.Equal(t, "User can send money", m.Story)
 	assert.Equal(t, "Integration", m.Layer)
 	assert.Equal(t, "Transfer", m.Feature)
+	assert.Equal(t, "Backend", m.Platform)
 	assert.Equal(t, axiom.SeverityCritical, m.Severity)
 
 	assert.ElementsMatch(t, []string{"smoke", "fast", "api"}, m.Tags)
@@ -107,6 +110,7 @@ func TestMetaJoin_OverridesSimpleFields(t *testing.T) {
 		Story:    "BaseStory",
 		Layer:    "BaseLayer",
 		Feature:  "BaseFeature",
+		Platform: "BasePlatform",
 		Severity: axiom.SeverityNormal,
 		Labels:   map[string]string{"a": "1"},
 	}
@@ -116,6 +120,7 @@ func TestMetaJoin_OverridesSimpleFields(t *testing.T) {
 		Story:    "NewStory",
 		Layer:    "NewLayer",
 		Feature:  "NewFeature",
+		Platform: "NewPlatform",
 		Severity: axiom.SeverityCritical,
 		Labels:   map[string]string{"b": "2"},
 	}
@@ -126,6 +131,7 @@ func TestMetaJoin_OverridesSimpleFields(t *testing.T) {
 	assert.Equal(t, "NewStory", result.Story)
 	assert.Equal(t, "NewLayer", result.Layer)
 	assert.Equal(t, "NewFeature", result.Feature)
+	assert.Equal(t, "NewPlatform", result.Platform)
 	assert.Equal(t, axiom.SeverityCritical, result.Severity)
 
 	assert.Equal(t, "1", result.Labels["a"])
@@ -191,15 +197,11 @@ func TestMetaJoin_IssuesAndTestCasesAreAppended(t *testing.T) {
 
 func TestMetaJoin_LabelOverrideNewKeys(t *testing.T) {
 	base := axiom.Meta{
-		Labels: map[string]string{
-			"foo": "1",
-		},
+		Labels: map[string]string{"foo": "1"},
 	}
 
 	other := axiom.Meta{
-		Labels: map[string]string{
-			"bar": "2",
-		},
+		Labels: map[string]string{"bar": "2"},
 	}
 
 	result := base.Join(other)
@@ -210,15 +212,11 @@ func TestMetaJoin_LabelOverrideNewKeys(t *testing.T) {
 
 func TestMetaJoin_LabelOverridesExistingKeys(t *testing.T) {
 	base := axiom.Meta{
-		Labels: map[string]string{
-			"env": "dev",
-		},
+		Labels: map[string]string{"env": "dev"},
 	}
 
 	other := axiom.Meta{
-		Labels: map[string]string{
-			"env": "prod",
-		},
+		Labels: map[string]string{"env": "prod"},
 	}
 
 	result := base.Join(other)
@@ -232,6 +230,7 @@ func TestMetaJoin_DoesNotOverrideEmptyFields(t *testing.T) {
 		Story:    "B",
 		Layer:    "C",
 		Feature:  "D",
+		Platform: "E",
 		Severity: axiom.SeverityMinor,
 		Labels:   map[string]string{},
 	}
@@ -247,6 +246,7 @@ func TestMetaJoin_DoesNotOverrideEmptyFields(t *testing.T) {
 	assert.Equal(t, "B", result.Story)
 	assert.Equal(t, "C", result.Layer)
 	assert.Equal(t, "D", result.Feature)
+	assert.Equal(t, "E", result.Platform)
 	assert.Equal(t, axiom.SeverityMinor, result.Severity)
 }
 
