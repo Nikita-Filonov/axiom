@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRunner_Defaults(t *testing.T) {
@@ -282,20 +283,53 @@ func TestRunner_FixturesInsideRun(t *testing.T) {
 func TestRunner_BeforeAll_AfterAll_CalledOnce(t *testing.T) {
 	var beforeCount, afterCount int
 
+	t.Run("all cases", func(t *testing.T) {
+		r := axiom.NewRunner(
+			axiom.WithRunnerHooks(
+				axiom.WithBeforeAll(func(r *axiom.Runner) { beforeCount++ }),
+				axiom.WithAfterAll(func(r *axiom.Runner) { afterCount++ }),
+			),
+		)
+
+		c := axiom.NewCase(axiom.WithCaseName("dummy"))
+
+		r.RunCase(t, c, func(cfg *axiom.Config) {})
+		r.RunCase(t, c, func(cfg *axiom.Config) {})
+		r.RunCase(t, c, func(cfg *axiom.Config) {})
+	})
+
+	assert.Equal(t, 1, afterCount, "AfterAll should run once")
+	assert.Equal(t, 1, beforeCount, "BeforeAll should run once")
+}
+
+func TestRunner_AfterAll_NotCalledUntil_T_Cleanup(t *testing.T) {
+	var afterCount int
+
 	r := axiom.NewRunner(
 		axiom.WithRunnerHooks(
-			axiom.WithBeforeAll(func(r *axiom.Runner) { beforeCount++ }),
 			axiom.WithAfterAll(func(r *axiom.Runner) { afterCount++ }),
 		),
 	)
-
 	c := axiom.NewCase(axiom.WithCaseName("dummy"))
 
 	r.RunCase(t, c, func(cfg *axiom.Config) {})
-	r.RunCase(t, c, func(cfg *axiom.Config) {})
-	r.RunCase(t, c, func(cfg *axiom.Config) {})
+	require.Equal(t, 0, afterCount)
+}
 
-	assert.Equal(t, 1, beforeCount, "BeforeAll should run once")
+func TestRunner_AfterAll_PerEachTestingT(t *testing.T) {
+	var afterCount int
+	r := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithAfterAll(func(r *axiom.Runner) { afterCount++ }),
+		),
+	)
+	c := axiom.NewCase(axiom.WithCaseName("dummy"))
+
+	t.Run("a", func(t *testing.T) { r.RunCase(t, c, func(cfg *axiom.Config) {}) })
+	t.Run("b", func(t *testing.T) { r.RunCase(t, c, func(cfg *axiom.Config) {}) })
+	t.Run("c", func(t *testing.T) { r.RunCase(t, c, func(cfg *axiom.Config) {}) })
+
+	assert.Equal(t, 1, afterCount)
 }
 
 func TestRunner_BeforeAll_ExecutesBeforeTestLogic(t *testing.T) {
