@@ -52,7 +52,7 @@ For version pinning:
 
 ```bash
 go get github.com/Nikita-Filonov/axiom@v0.3.0
-````
+```
 
 ---
 
