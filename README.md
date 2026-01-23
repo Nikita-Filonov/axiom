@@ -15,7 +15,7 @@ _Made with ❤️ by [@NikitaFilonov](https://t.me/sound_right)_
 
 - ✨ [About](#-about)
 - 📦 [Installation](#-installation)
-- 🚀 [Quick Start](#-installation)
+- 🚀 [Quick Start](#-quick-start)
 - ❓ [Why Axiom?](#-why-axiom)
 - 📘 [Documentation](#-documentation)
 
