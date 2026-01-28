@@ -3,7 +3,7 @@ module github.com/Nikita-Filonov/axiom/plugins/teststats
 go 1.25.2
 
 require (
-	github.com/Nikita-Filonov/axiom v0.8.0
+	github.com/Nikita-Filonov/axiom v0.9.0
 	github.com/stretchr/testify v1.11.1
 )
 
