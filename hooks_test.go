@@ -178,3 +178,35 @@ func TestHooks_Join_AllHooks(t *testing.T) {
 	merged.ApplyAfterAll(r) // +1, +20
 	assert.Equal(t, 21, b)
 }
+
+func TestHooks_BeforeTest_UseFixtures_RegistersCleanup(t *testing.T) {
+	cleanupCalled := false
+	fixtureCalled := 0
+
+	cfg := &axiom.Config{
+		SubT: t,
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{
+				"fx": func(cfg *axiom.Config) (any, func(), error) {
+					fixtureCalled++
+					return struct{}{}, func() { cleanupCalled = true }, nil
+				},
+			},
+			Cache: map[string]axiom.FixtureResult{},
+		},
+		Hooks: axiom.Hooks{},
+	}
+
+	h := axiom.NewHooks(
+		axiom.WithBeforeTest(axiom.UseFixtures("fx")),
+	)
+
+	h.ApplyBeforeTest(cfg)
+
+	assert.Equal(t, 1, fixtureCalled)
+	assert.Contains(t, cfg.Fixtures.Cache, "fx")
+	assert.Len(t, cfg.Hooks.AfterTest, 1)
+
+	cfg.Hooks.ApplyAfterTest(cfg)
+	assert.True(t, cleanupCalled)
+}

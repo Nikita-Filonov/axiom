@@ -16,6 +16,22 @@ This model enables:
 
 ---
 
+## Preloading fixtures with `UseFixtures`
+
+In some cases, a test requires certain fixtures to be available before any test logic or steps are executed. For
+example, data fixtures that must be loaded upfront, or side-effect-only fixtures whose return value is not used
+directly.
+
+For this purpose, Axiom provides `UseFixtures`, which can be attached as a test hook. `UseFixtures` eagerly evaluates
+the specified fixtures at the beginning of the test, while preserving all standard fixture guarantees:
+
+- lazy execution (only once per test attempt)
+- caching
+- automatic cleanup
+- retry isolation
+
+---
+
 ## Example
 
 The following example demonstrates fixture definition, dependency resolution, caching, cleanup, and the `GetFixture`
@@ -49,6 +65,22 @@ func UserFixture(cfg *axiom.Config) (any, func(), error) {
 	return user, nil, nil
 }
 
+// Data fixtures — side-effect-only fixtures that are typically preloaded.
+
+func MongoDataFixture(cfg *axiom.Config) (any, func(), error) {
+	fmt.Println("loading mongo data")
+	return struct{}{}, func() {
+		fmt.Println("cleanup mongo data")
+	}, nil
+}
+
+func PostgresDataFixture(cfg *axiom.Config) (any, func(), error) {
+	fmt.Println("loading postgres data")
+	return struct{}{}, func() {
+		fmt.Println("cleanup postgres data")
+	}, nil
+}
+
 // -----------------------------------------------------------------------------
 // Test using fixtures
 // -----------------------------------------------------------------------------
@@ -57,6 +89,18 @@ func TestFixtureExample(t *testing.T) {
 
 	runner := axiom.NewRunner(
 		axiom.WithRunnerFixture("db", DBFixture), // global fixture
+
+		// Data fixtures registered at Runner level.
+		axiom.WithRunnerFixture("mongo-data", MongoDataFixture),
+		axiom.WithRunnerFixture("postgres-data", PostgresDataFixture),
+
+		// Preload fixtures before test execution.
+		// This triggers fixture evaluation early while preserving caching and cleanup semantics.
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeTest(
+				axiom.UseFixtures("mongo-data", "postgres-data"),
+			),
+		),
 	)
 
 	c := axiom.NewCase(

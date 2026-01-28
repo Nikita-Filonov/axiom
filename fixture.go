@@ -96,3 +96,11 @@ func GetFixture[T any](cfg *Config, name string) T {
 	}
 	return out
 }
+
+func UseFixtures(names ...string) func(cfg *Config) {
+	return func(cfg *Config) {
+		for _, name := range names {
+			GetFixture[any](cfg, name)
+		}
+	}
+}

@@ -101,3 +101,88 @@ func TestGetFixture_HappyPath(t *testing.T) {
 	cfg.Hooks.AfterTest[0](cfg)
 	assert.True(t, cleanupCalled, "cleanup must be executed")
 }
+
+func TestUseFixtures_ExecutesAllAndCaches(t *testing.T) {
+	calls := map[string]int{}
+
+	fixtures := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"a": func(cfg *axiom.Config) (any, func(), error) {
+				calls["a"]++
+				return "A", nil, nil
+			},
+			"b": func(cfg *axiom.Config) (any, func(), error) {
+				calls["b"]++
+				return "B", nil, nil
+			},
+		},
+		Cache: map[string]axiom.FixtureResult{},
+	}
+
+	cfg := &axiom.Config{
+		Fixtures: fixtures,
+		Hooks:    axiom.Hooks{},
+		SubT:     t,
+	}
+
+	hook := axiom.UseFixtures("a", "b")
+	hook(cfg)
+
+	assert.Equal(t, 1, calls["a"])
+	assert.Equal(t, 1, calls["b"])
+	assert.Contains(t, cfg.Fixtures.Cache, "a")
+	assert.Contains(t, cfg.Fixtures.Cache, "b")
+}
+
+func TestUseFixtures_DoesNotExecuteTwice(t *testing.T) {
+	callCount := 0
+
+	fixtures := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"num": func(cfg *axiom.Config) (any, func(), error) {
+				callCount++
+				return 42, nil, nil
+			},
+		},
+		Cache: map[string]axiom.FixtureResult{},
+	}
+
+	cfg := &axiom.Config{
+		Fixtures: fixtures,
+		Hooks:    axiom.Hooks{},
+		SubT:     t,
+	}
+
+	hook := axiom.UseFixtures("num")
+
+	hook(cfg)
+	hook(cfg)
+
+	assert.Equal(t, 1, callCount, "fixture must be executed only once due to cache")
+}
+
+func TestUseFixtures_AddsCleanupToAfterTest(t *testing.T) {
+	cleanupCalled := false
+
+	fixtures := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"x": func(cfg *axiom.Config) (any, func(), error) {
+				return "X", func() { cleanupCalled = true }, nil
+			},
+		},
+		Cache: map[string]axiom.FixtureResult{},
+	}
+
+	cfg := &axiom.Config{
+		Fixtures: fixtures,
+		Hooks:    axiom.Hooks{},
+		SubT:     t,
+	}
+
+	axiom.UseFixtures("x")(cfg)
+
+	assert.Len(t, cfg.Hooks.AfterTest, 1, "cleanup hook must be registered")
+
+	cfg.Hooks.AfterTest[0](cfg)
+	assert.True(t, cleanupCalled, "cleanup must be executed")
+}
