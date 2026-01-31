@@ -100,9 +100,7 @@ func TestGetResource_HappyPath(t *testing.T) {
 }
 
 func TestGetResource_Dependency_NoDeadlock(t *testing.T) {
-	runner := axiom.NewRunner()
-
-	runner = axiom.NewRunner(
+	runner := axiom.NewRunner(
 		axiom.WithRunnerResource("a", func(r *axiom.Runner) (any, func(), error) {
 			return "A", nil, nil
 		}),
