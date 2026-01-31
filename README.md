@@ -4,7 +4,7 @@
   <img src="./docs/assets/logo.png" alt="Axiom logo" width="220" />
 </p>
 
-Modern, extensible, and composable Go test framework.
+🚀 Modern, extensible, and composable Go test framework.
 
 [![CI](https://github.com/Nikita-Filonov/axiom/actions/workflows/workflow-test.yml/badge.svg)](https://github.com/Nikita-Filonov/axiom/actions/workflows/workflow-test.yml)
 [![codecov](https://codecov.io/gh/Nikita-Filonov/axiom/branch/main/graph/badge.svg)](https://codecov.io/gh/Nikita-Filonov/axiom)
