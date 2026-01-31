@@ -10,15 +10,16 @@ type Runner struct {
 	beforeOnce sync.Once
 	afterOnce  sync.Once
 
-	Meta     Meta
-	Skip     Skip
-	Retry    Retry
-	Hooks    Hooks
-	Context  Context
-	Runtime  Runtime
-	Plugins  []Plugin
-	Parallel Parallel
-	Fixtures Fixtures
+	Meta      Meta
+	Skip      Skip
+	Retry     Retry
+	Hooks     Hooks
+	Context   Context
+	Runtime   Runtime
+	Plugins   []Plugin
+	Parallel  Parallel
+	Fixtures  Fixtures
+	Resources Resources
 }
 
 type RunnerOption func(*Runner)
@@ -33,6 +34,7 @@ func NewRunner(options ...RunnerOption) *Runner {
 	r.Retry.Normalize()
 	r.Context.Normalize()
 	r.Fixtures.Normalize()
+	r.Resources.Normalize()
 
 	return r
 }
@@ -101,17 +103,27 @@ func WithRunnerFixture(name string, fx Fixture) RunnerOption {
 	}
 }
 
+func WithRunnerResource(name string, rs Resource) RunnerOption {
+	return func(r *Runner) {
+		if r.Resources.Registry == nil {
+			r.Resources.Registry = map[string]Resource{}
+		}
+		r.Resources.Registry[name] = rs
+	}
+}
+
 func (r *Runner) Join(other *Runner) *Runner {
 	return &Runner{
-		Meta:     r.Meta.Join(other.Meta),
-		Skip:     r.Skip.Join(other.Skip),
-		Retry:    r.Retry.Join(other.Retry),
-		Hooks:    r.Hooks.Join(other.Hooks),
-		Context:  r.Context.Join(other.Context),
-		Runtime:  r.Runtime.Join(other.Runtime),
-		Plugins:  append(r.Plugins, other.Plugins...),
-		Fixtures: r.Fixtures.Join(other.Fixtures),
-		Parallel: r.Parallel.Join(other.Parallel),
+		Meta:      r.Meta.Join(other.Meta),
+		Skip:      r.Skip.Join(other.Skip),
+		Retry:     r.Retry.Join(other.Retry),
+		Hooks:     r.Hooks.Join(other.Hooks),
+		Context:   r.Context.Join(other.Context),
+		Runtime:   r.Runtime.Join(other.Runtime),
+		Plugins:   append(r.Plugins, other.Plugins...),
+		Fixtures:  r.Fixtures.Join(other.Fixtures),
+		Parallel:  r.Parallel.Join(other.Parallel),
+		Resources: r.Resources.Join(other.Resources),
 	}
 }
 

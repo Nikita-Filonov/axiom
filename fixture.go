@@ -83,8 +83,7 @@ func GetFixture[T any](cfg *Config, name string) T {
 		cfg.SubT.Fatalf("fixture %q failed: %v", name, err)
 	}
 
-	result := FixtureResult{Value: val, Cleanup: cleanup}
-	cfg.Fixtures.Cache[name] = result
+	cfg.Fixtures.Cache[name] = FixtureResult{Value: val, Cleanup: cleanup}
 
 	if cleanup != nil {
 		cfg.Hooks.AfterTest = append(cfg.Hooks.AfterTest, func(_ *Config) { cleanup() })

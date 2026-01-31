@@ -14,6 +14,7 @@ framework. Each subfolder provides focused reference material and examples.
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
+- [./resource](./resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers
 - [./log](./log) — structured logging via Runtime log sinks
 - [./assert](./assert) — structured assertion events and runtime assert sinks

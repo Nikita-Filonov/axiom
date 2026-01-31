@@ -214,6 +214,7 @@ following folders:
 - [./docs/config](./docs/config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup
+- [./docs/resource](./docs/resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
 - [./docs/log](./docs/log) — structured logging via Runtime log sinks
 - [./docs/assert](./docs/assert) — structured assertion events and runtime assert sinks

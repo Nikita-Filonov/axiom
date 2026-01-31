@@ -470,3 +470,98 @@ func TestRunner_RuntimeIsolationBetweenRuns(t *testing.T) {
 
 	assert.Equal(t, 2, count)
 }
+
+func TestRunner_BeforeAll_Once_WithJoin(t *testing.T) {
+	var count int
+
+	r1 := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) { count++ }),
+		),
+	)
+
+	r2 := axiom.NewRunner()
+
+	r := r1.Join(r2)
+
+	c := axiom.NewCase()
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {})
+	r.RunCase(t, c, func(cfg *axiom.Config) {})
+
+	assert.Equal(t, 1, count)
+}
+
+func TestRunner_ResourcesSharedBetweenCases(t *testing.T) {
+	var calls int
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			calls++
+			return 100, nil, nil
+		}),
+	)
+
+	c1 := axiom.NewCase(axiom.WithCaseName("A"))
+	c2 := axiom.NewCase(axiom.WithCaseName("B"))
+
+	r.RunCase(t, c1, func(cfg *axiom.Config) {
+		v := axiom.MustResource[int](cfg.Runner, "x")
+		assert.Equal(t, 100, v)
+	})
+
+	r.RunCase(t, c2, func(cfg *axiom.Config) {
+		v := axiom.MustResource[int](cfg.Runner, "x")
+		assert.Equal(t, 100, v)
+	})
+
+	assert.Equal(t, 1, calls, "resource must be created once per runner")
+}
+
+func TestRunner_ResourceCleanup_AfterAllOnly(t *testing.T) {
+	var cleanupCalled bool
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			return "X", func() { cleanupCalled = true }, nil
+		}),
+	)
+
+	c := axiom.NewCase()
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		_ = axiom.MustResource[string](cfg.Runner, "x")
+		assert.False(t, cleanupCalled)
+	})
+
+	assert.False(t, cleanupCalled, "cleanup must not run before AfterAll")
+}
+
+func TestRunner_Join_ResourcesRegistryMergedButCacheIsolated(t *testing.T) {
+	var callsA, callsB int
+
+	r1 := axiom.NewRunner(
+		axiom.WithRunnerResource("a", func(r *axiom.Runner) (any, func(), error) {
+			callsA++
+			return "A", nil, nil
+		}),
+	)
+
+	r2 := axiom.NewRunner(
+		axiom.WithRunnerResource("b", func(r *axiom.Runner) (any, func(), error) {
+			callsB++
+			return "B", nil, nil
+		}),
+	)
+
+	r := r1.Join(r2)
+	c := axiom.NewCase()
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		assert.Equal(t, "A", axiom.MustResource[string](cfg.Runner, "a"))
+		assert.Equal(t, "B", axiom.MustResource[string](cfg.Runner, "b"))
+	})
+
+	assert.Equal(t, 1, callsA)
+	assert.Equal(t, 1, callsB)
+}

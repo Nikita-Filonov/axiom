@@ -1,6 +1,6 @@
 package axiom
 
-type TestAction func(c *Config)
+type TestAction func(cfg *Config)
 type StepAction func()
 
 type WrapTestAction func(next TestAction) TestAction
