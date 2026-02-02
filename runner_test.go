@@ -21,8 +21,8 @@ func TestNewRunner_Defaults(t *testing.T) {
 	assert.Equal(t, "", r.Skip.Reason)
 
 	// Retry defaults
-	assert.Equal(t, 3, r.Retry.Times)
-	assert.Equal(t, time.Second*2, r.Retry.Delay)
+	assert.Equal(t, 1, r.Retry.Times)
+	assert.Equal(t, time.Duration(0), r.Retry.Delay)
 
 	// Context defaults
 	assert.NotNil(t, r.Context.Raw)

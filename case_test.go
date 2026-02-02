@@ -2,6 +2,7 @@ package axiom_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
@@ -225,4 +226,53 @@ func TestCaseRuntime_IsolatedBetweenCases(t *testing.T) {
 	r.RunCase(t, c2, func(cfg *axiom.Config) {})
 
 	assert.Equal(t, 1, count)
+}
+
+func TestRetry_CaseOverridesRunner_InBuildConfig(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRetry(
+			axiom.WithRetryTimes(5),
+			axiom.WithRetryDelay(10),
+		),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseRetry(
+			axiom.WithRetryTimes(2),
+		),
+	)
+
+	cfg := r.BuildConfig(t, &c)
+	cfg.Retry.Normalize()
+
+	assert.Equal(t, 2, cfg.Retry.Times)
+	assert.Equal(t, time.Duration(10), cfg.Retry.Delay)
+}
+
+func TestRetry_CaseCanDisableRunnerRetry(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(5)),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseRetry(axiom.WithRetryTimes(1)),
+	)
+
+	cfg := r.BuildConfig(t, &c)
+	cfg.Retry.Normalize()
+
+	assert.Equal(t, 1, cfg.Retry.Times)
+}
+
+func TestRetry_RunnerUsedWhenCaseRetryNotSet(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(3)),
+	)
+
+	c := axiom.NewCase() // без retry
+
+	cfg := r.BuildConfig(t, &c)
+	cfg.Retry.Normalize()
+
+	assert.Equal(t, 3, cfg.Retry.Times)
 }

@@ -7,6 +7,9 @@ import (
 type Retry struct {
 	Times int
 	Delay time.Duration
+
+	TimesSet bool
+	DelaySet bool
 }
 
 type RetryOption func(*Retry)
@@ -23,36 +26,48 @@ func NewRetry(options ...RetryOption) Retry {
 func WithRetryTimes(times int) RetryOption {
 	return func(r *Retry) {
 		r.Times = times
+		r.TimesSet = true
 	}
 }
 
 func WithRetryDelay(delay time.Duration) RetryOption {
 	return func(r *Retry) {
 		r.Delay = delay
+		r.DelaySet = true
 	}
 }
 
 func (r *Retry) Join(other Retry) Retry {
 	result := Retry{
-		Times: r.Times,
-		Delay: r.Delay,
+		Times:    r.Times,
+		Delay:    r.Delay,
+		TimesSet: r.TimesSet,
+		DelaySet: r.DelaySet,
 	}
 
-	if other.Times != 0 {
+	if other.TimesSet {
 		result.Times = other.Times
+		result.TimesSet = true
 	}
-	if other.Delay != 0 {
+	if other.DelaySet {
 		result.Delay = other.Delay
+		result.DelaySet = true
 	}
 
 	return result
 }
 
 func (r *Retry) Normalize() {
-	if r.Times <= 0 {
-		r.Times = 3
+	if r.TimesSet && r.Times < 1 {
+		r.Times = 1
 	}
-	if r.Delay <= 0 {
-		r.Delay = 2 * time.Second
+	if !r.TimesSet {
+		r.Times = 1
+	}
+	if r.DelaySet && r.Delay < 0 {
+		r.Delay = 0
+	}
+	if !r.DelaySet {
+		r.Delay = 0
 	}
 }

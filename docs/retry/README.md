@@ -15,6 +15,19 @@ This model enables:
 
 ---
 
+## Semantics
+
+- Retry is **disabled by default** (`Times = 1`, `Delay = 0`)
+- `Times` is always normalized to a minimum of `1`
+- `Delay` is always normalized to a minimum of `0`
+- Case-level retry settings override Runner-level settings **per field**
+- Unset fields inherit values from the Runner
+
+Normalization guarantees that retries are always safe and deterministic, even when invalid values are explicitly
+provided.
+
+---
+
 ## Example
 
 ```go
