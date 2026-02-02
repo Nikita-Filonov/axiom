@@ -58,6 +58,32 @@ func (c *Config) Test(action TestAction) {
 	c.Runtime.Test(c, action)
 }
 
+func (c *Config) Setup(name string, fn func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			if c.SubT != nil {
+				c.SubT.Helper()
+				c.SubT.Errorf("panic in setup %q: %v", name, r)
+			}
+		}
+	}()
+
+	c.Runtime.Setup(name, fn)
+}
+
+func (c *Config) Teardown(name string, fn func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			if c.SubT != nil {
+				c.SubT.Helper()
+				c.SubT.Errorf("panic in teardown %q: %v", name, r)
+			}
+		}
+	}()
+
+	c.Runtime.Teardown(name, fn)
+}
+
 func (c *Config) Assert(a Assert) { c.Runtime.Assert(a) }
 
 func (c *Config) Artefact(a Artefact) { c.Runtime.Artefact(a) }

@@ -209,3 +209,98 @@ func TestConfig_Artefact_DelegatesToRuntimeSink(t *testing.T) {
 
 	assert.Equal(t, art, received)
 }
+
+func TestConfig_Setup_WrapsCalled(t *testing.T) {
+	var order []string
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeSetupWrap(
+			func(name string, next axiom.SetupAction) axiom.SetupAction {
+				return func() {
+					order = append(order, "wrap1")
+					next()
+				}
+			},
+		),
+		axiom.WithRuntimeSetupWrap(
+			func(name string, next axiom.SetupAction) axiom.SetupAction {
+				return func() {
+					order = append(order, "wrap2")
+					next()
+				}
+			},
+		),
+	)
+
+	cfg := &axiom.Config{
+		Runtime: rt,
+		SubT:    t,
+	}
+
+	cfg.Setup("S", func() {
+		order = append(order, "body")
+	})
+
+	assert.Equal(t,
+		[]string{"wrap1", "wrap2", "body"},
+		order,
+	)
+}
+
+func TestConfig_Teardown_WrapsCalled(t *testing.T) {
+	var order []string
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeTeardownWrap(
+			func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+				return func() {
+					order = append(order, "wrap1")
+					next()
+				}
+			},
+		),
+		axiom.WithRuntimeTeardownWrap(
+			func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+				return func() {
+					order = append(order, "wrap2")
+					next()
+				}
+			},
+		),
+	)
+
+	cfg := &axiom.Config{
+		Runtime: rt,
+		SubT:    t,
+	}
+
+	cfg.Teardown("T", func() {
+		order = append(order, "body")
+	})
+
+	assert.Equal(t,
+		[]string{"wrap1", "wrap2", "body"},
+		order,
+	)
+}
+
+func TestConfig_Setup_DoesNotCallStepHooks(t *testing.T) {
+	var called bool
+
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(),
+		Hooks: axiom.Hooks{
+			BeforeStep: []axiom.StepHook{
+				func(_ *axiom.Config, _ string) { called = true },
+			},
+			AfterStep: []axiom.StepHook{
+				func(_ *axiom.Config, _ string) { called = true },
+			},
+		},
+		SubT: t,
+	}
+
+	cfg.Setup("setup", func() {})
+
+	assert.False(t, called)
+}
