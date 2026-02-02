@@ -33,6 +33,8 @@ At runtime, the plugin:
 
 - wraps each test attempt in `allure.Test(...)`
 - wraps each `cfg.Step(...)` in `allure.Step(...)`
+- wraps each `cfg.Setup(...)` in `allure.BeforeTest(...)`
+- wraps each `cfg.Teardown(...)` in `allure.AfterTest(...)`
 - converts Axiom metadata into Allure options
 - attaches emitted artefacts to the current test
 
@@ -98,6 +100,9 @@ func TestAllureExample(t *testing.T) {
 	)
 
 	runner.RunCase(t, c, func(cfg *axiom.Config) {
+		cfg.Setup("prepare test data", func() {
+			// Appears in Allure as a "before test" section
+		})
 
 		cfg.Step("prepare request", func() {
 			// This step appears as an Allure step
@@ -118,6 +123,10 @@ func TestAllureExample(t *testing.T) {
 
 			artefact, _ := axiom.NewJSONArtefact("response.json", payload)
 			cfg.Artefact(artefact)
+		})
+
+		cfg.Teardown("cleanup test data", func() {
+			// Appears in Allure as an "after test" section
 		})
 	})
 }

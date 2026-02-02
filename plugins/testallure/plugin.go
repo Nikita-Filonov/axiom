@@ -20,6 +20,18 @@ func Plugin() axiom.Plugin {
 			}
 		})
 
+		cfg.Runtime.EmitSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction {
+			return func() {
+				allure.BeforeTest(cfg.SubT, allure.Description(name), allure.Action(next))
+			}
+		})
+
+		cfg.Runtime.EmitTeardownWrap(func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+			return func() {
+				allure.AfterTest(cfg.SubT, allure.Description(name), allure.Action(next))
+			}
+		})
+
 		cfg.Runtime.EmitArtefactSink(func(a axiom.Artefact) { HandleArtefact(cfg, a) })
 	}
 }

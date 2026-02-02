@@ -54,3 +54,63 @@ func TestPlugin_AddsArtefactSink(t *testing.T) {
 
 	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
 }
+
+func TestPlugin_AddsSetupWrapAndCallsNext(t *testing.T) {
+	cfg := &axiom.Config{SubT: t}
+	p := testallure.Plugin()
+	p(cfg)
+
+	assert.Len(t, cfg.Runtime.TestWraps, 1)
+	assert.Len(t, cfg.Runtime.SetupWraps, 1)
+
+	test := cfg.Runtime.TestWraps[0](func(c *axiom.Config) {})
+	test(cfg)
+
+	called := false
+	setup := cfg.Runtime.SetupWraps[0]("setup", func() {
+		called = true
+	})
+	setup()
+
+	assert.True(t, called, "setup next() must be called")
+}
+
+func TestPlugin_AddsTeardownWrapAndCallsNext(t *testing.T) {
+	cfg := &axiom.Config{SubT: t}
+	p := testallure.Plugin()
+	p(cfg)
+
+	assert.Len(t, cfg.Runtime.TestWraps, 1)
+	assert.Len(t, cfg.Runtime.TeardownWraps, 1)
+
+	test := cfg.Runtime.TestWraps[0](func(c *axiom.Config) {})
+	test(cfg)
+
+	called := false
+	td := cfg.Runtime.TeardownWraps[0]("teardown", func() {
+		called = true
+	})
+	td()
+
+	assert.True(t, called, "teardown next() must be called")
+}
+
+func TestPlugin_DoesNotPanic_WhenSubTIsNil(t *testing.T) {
+	cfg := &axiom.Config{} // SubT == nil
+	p := testallure.Plugin()
+
+	assert.NotPanics(t, func() { p(cfg) })
+}
+
+func TestPlugin_AddsAllExpectedRuntimeHooks(t *testing.T) {
+	cfg := &axiom.Config{SubT: t}
+	p := testallure.Plugin()
+
+	p(cfg)
+
+	assert.Len(t, cfg.Runtime.TestWraps, 1)
+	assert.Len(t, cfg.Runtime.StepWraps, 1)
+	assert.Len(t, cfg.Runtime.SetupWraps, 1)
+	assert.Len(t, cfg.Runtime.TeardownWraps, 1)
+	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
+}
