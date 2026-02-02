@@ -3,7 +3,7 @@ module github.com/Nikita-Filonov/axiom/plugins/testlogger
 go 1.25.5
 
 require (
-	github.com/Nikita-Filonov/axiom v0.10.0
+	github.com/Nikita-Filonov/axiom v0.11.0
 	github.com/stretchr/testify v1.11.1
 )
 
