@@ -39,6 +39,7 @@ func TestCaseExample(t *testing.T) {
 		// Identification
 		axiom.WithCaseID("AUTH-001"),
 		axiom.WithCaseName("user can log in"),
+		axiom.WithCaseDescription("Verify that a user can log in with valid credentials."),
 
 		// Metadata
 		axiom.WithCaseMeta(

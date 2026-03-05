@@ -13,8 +13,7 @@ func TestPlugin_RecordsPassedCase(t *testing.T) {
 	plugin := teststats.Plugin(stats)
 
 	cfg := &axiom.Config{
-		ID:   "id1",
-		Name: "case1",
+		Case: &axiom.Case{ID: "id1", Name: "case1"},
 		Meta: axiom.Meta{},
 		Hooks: axiom.Hooks{
 			BeforeTest: []axiom.TestHook{},
@@ -46,8 +45,7 @@ func TestPlugin_RecordsFailedCase(t *testing.T) {
 	plugin := teststats.Plugin(stats)
 
 	cfg := &axiom.Config{
-		ID:   "id2",
-		Name: "case2",
+		Case: &axiom.Case{ID: "id2", Name: "case2"},
 		Meta: axiom.Meta{},
 		Hooks: axiom.Hooks{
 			BeforeTest: []axiom.TestHook{},
@@ -78,8 +76,7 @@ func TestPlugin_RecordsSkippedCase(t *testing.T) {
 	plugin := teststats.Plugin(stats)
 
 	cfg := &axiom.Config{
-		ID:   "id3",
-		Name: "case3",
+		Case: &axiom.Case{ID: "id3", Name: "case3"},
 		Skip: axiom.Skip{Enabled: true},
 		Hooks: axiom.Hooks{
 			BeforeTest: []axiom.TestHook{},
@@ -108,8 +105,7 @@ func TestPlugin_RecordsFlakyCase(t *testing.T) {
 	plugin := teststats.Plugin(stats)
 
 	cfg := &axiom.Config{
-		ID:   "id4",
-		Name: "case4",
+		Case: &axiom.Case{ID: "id4", Name: "case4"},
 		Meta: axiom.Meta{},
 		Hooks: axiom.Hooks{
 			BeforeTest: []axiom.TestHook{},

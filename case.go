@@ -1,18 +1,19 @@
 package axiom
 
 type Case struct {
-	ID       string
-	Name     string
-	Skip     Skip
-	Meta     Meta
-	Retry    Retry
-	Hooks    Hooks
-	Params   any
-	Context  Context
-	Runtime  Runtime
-	Plugins  []Plugin
-	Parallel Parallel
-	Fixtures Fixtures
+	ID          string
+	Name        string
+	Skip        Skip
+	Meta        Meta
+	Retry       Retry
+	Hooks       Hooks
+	Params      any
+	Context     Context
+	Runtime     Runtime
+	Plugins     []Plugin
+	Parallel    Parallel
+	Fixtures    Fixtures
+	Description string
 }
 
 type CaseOption func(*Case)
@@ -74,21 +75,15 @@ func WithCaseRuntime(opts ...RuntimeOption) CaseOption {
 }
 
 func WithCasePlugins(plugins ...Plugin) CaseOption {
-	return func(c *Case) {
-		c.Plugins = append(c.Plugins, plugins...)
-	}
+	return func(c *Case) { c.Plugins = append(c.Plugins, plugins...) }
 }
 
 func WithCaseParallel() CaseOption {
-	return func(c *Case) {
-		c.Parallel.Enabled = true
-	}
+	return func(c *Case) { c.Parallel.Enabled = true }
 }
 
 func WithCaseSequential() CaseOption {
-	return func(c *Case) {
-		c.Parallel.Enabled = false
-	}
+	return func(c *Case) { c.Parallel.Enabled = false }
 }
 
 func WithCaseFixture(name string, fx Fixture) CaseOption {
@@ -98,4 +93,8 @@ func WithCaseFixture(name string, fx Fixture) CaseOption {
 		}
 		c.Fixtures.Registry[name] = fx
 	}
+}
+
+func WithCaseDescription(desc string) CaseOption {
+	return func(c *Case) { c.Description = desc }
 }

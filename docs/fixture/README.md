@@ -53,7 +53,7 @@ import (
 
 // DBFixture — created once per test attempt, cleaned up automatically.
 func DBFixture(cfg *axiom.Config) (any, func(), error) {
-	db := fmt.Sprintf("db-%s", cfg.ID)
+	db := fmt.Sprintf("db-%s", cfg.Case.ID)
 	cleanup := func() { fmt.Println("closing:", db) }
 	return db, cleanup, nil
 }

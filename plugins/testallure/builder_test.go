@@ -11,8 +11,6 @@ import (
 
 func TestBuildAllureOptions_AllFields(t *testing.T) {
 	cfg := &axiom.Config{
-		ID:   "ID123",
-		Name: "MyTest",
 		Meta: axiom.Meta{
 			Tags:        []string{"fast", "api"},
 			Epic:        "Epic1",
@@ -28,6 +26,7 @@ func TestBuildAllureOptions_AllFields(t *testing.T) {
 				"owner": "nikita",
 			},
 		},
+		Case: &axiom.Case{ID: "ID123", Name: "MyTest"},
 	}
 
 	opts := testallure.BuildAllureOptions(cfg)

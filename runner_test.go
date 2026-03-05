@@ -139,6 +139,7 @@ func TestRunnerBuildConfig(t *testing.T) {
 	c := axiom.NewCase(
 		axiom.WithCaseID("CASE-ID"),
 		axiom.WithCaseName("CaseName"),
+		axiom.WithCaseDescription("CaseDescription"),
 		axiom.WithCaseMeta(axiom.WithMetaStory("Story")),
 		axiom.WithCaseSkip(axiom.WithSkipEnabled(true)),
 		axiom.WithCaseRetry(axiom.WithRetryDelay(7)),
@@ -147,8 +148,9 @@ func TestRunnerBuildConfig(t *testing.T) {
 
 	cfg := r.BuildConfig(&testing.T{}, &c)
 
-	assert.Equal(t, "CASE-ID", cfg.ID)
-	assert.Equal(t, "CaseName", cfg.Name)
+	assert.Equal(t, "CASE-ID", cfg.Case.ID)
+	assert.Equal(t, "CaseName", cfg.Case.Name)
+	assert.Equal(t, "CaseDescription", cfg.Case.Description)
 
 	// Meta merge
 	assert.Equal(t, "RunnerEpic", cfg.Meta.Epic)
@@ -219,7 +221,7 @@ func TestRunner_BuildConfigInsideRun(t *testing.T) {
 	r.RunCase(t, c, func(cfg *axiom.Config) {
 		called = true
 
-		assert.Equal(t, "MyCase", cfg.Name)
+		assert.Equal(t, "MyCase", cfg.Case.Name)
 		assert.Equal(t, "EPIC", cfg.Meta.Epic)
 		assert.Equal(t, "STORY", cfg.Meta.Story)
 
@@ -243,7 +245,7 @@ func TestRunner_MultipleCases(t *testing.T) {
 
 	for _, tc := range tests {
 		r.RunCase(t, tc, func(cfg *axiom.Config) {
-			visited = append(visited, cfg.Name)
+			visited = append(visited, cfg.Case.Name)
 		})
 	}
 
@@ -564,4 +566,21 @@ func TestRunner_Join_ResourcesRegistryMergedButCacheIsolated(t *testing.T) {
 
 	assert.Equal(t, 1, callsA)
 	assert.Equal(t, 1, callsB)
+}
+
+func TestRunner_BuildConfig_PanicsWithMessageOnNilTestingT(t *testing.T) {
+	r := axiom.NewRunner()
+	c := axiom.NewCase()
+
+	assert.PanicsWithValue(t, "config: nil *testing.T", func() {
+		r.BuildConfig(nil, &c)
+	})
+}
+
+func TestRunner_BuildConfig_PanicsWithMessageOnNilCase(t *testing.T) {
+	r := axiom.NewRunner()
+
+	assert.PanicsWithValue(t, "config: nil *Case", func() {
+		r.BuildConfig(&testing.T{}, nil)
+	})
 }

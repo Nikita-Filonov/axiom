@@ -9,11 +9,11 @@ import (
 func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	var options []allure.Option
 
-	if cfg.ID != "" {
-		options = append(options, allure.ID(cfg.ID))
+	if cfg.Case != nil && cfg.Case.ID != "" {
+		options = append(options, allure.ID(cfg.Case.ID))
 	}
-	if cfg.Name != "" {
-		options = append(options, allure.Name(cfg.Name))
+	if cfg.Case != nil && cfg.Case.Name != "" {
+		options = append(options, allure.Name(cfg.Case.Name))
 	}
 	if len(cfg.Meta.Tags) > 0 {
 		options = append(options, allure.Tags(cfg.Meta.Tags...))

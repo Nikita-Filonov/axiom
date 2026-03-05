@@ -35,7 +35,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func DBFixture(cfg *axiom.Config) (any, func(), error) {
-	db := fmt.Sprintf("db-%s", cfg.ID)
+	db := fmt.Sprintf("db-%s", cfg.Case.ID)
 	cleanup := func() { fmt.Println("closing:", db) }
 	return db, cleanup, nil
 }
@@ -46,7 +46,7 @@ func DBFixture(cfg *axiom.Config) (any, func(), error) {
 
 func LoggingPlugin() axiom.Plugin {
 	return func(cfg *axiom.Config) {
-		cfg.TestWraps = append(cfg.TestWraps, func(next axiom.TestAction) axiom.TestAction {
+		cfg.Runtime.TestWraps = append(cfg.Runtime.TestWraps, func(next axiom.TestAction) axiom.TestAction {
 			return func(c *axiom.Config) {
 				start := time.Now()
 				next(c)

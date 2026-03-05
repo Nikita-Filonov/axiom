@@ -27,8 +27,8 @@ type CaseResult struct {
 
 func NewCaseResult(cfg *axiom.Config) *CaseResult {
 	return &CaseResult{
-		ID:    cfg.ID,
-		Name:  cfg.Name,
+		ID:    cfg.Case.ID,
+		Name:  cfg.Case.Name,
 		Meta:  cfg.Meta,
 		Start: time.Now(),
 	}

@@ -62,7 +62,7 @@ func TestConfigExample(t *testing.T) {
 			axiom.WithMetaTag("example"),
 		),
 		axiom.WithRunnerFixture("db", func(cfg *axiom.Config) (any, func(), error) {
-			db := "db-" + cfg.ID
+			db := "db-" + cfg.Case.ID
 			return db, func() { fmt.Println("cleanup:", db) }, nil
 		}),
 		axiom.WithRunnerRetry(

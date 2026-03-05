@@ -11,9 +11,8 @@ import (
 
 func TestCaseResult_Finalize_Skipped(t *testing.T) {
 	cfg := &axiom.Config{
-		ID:   "1",
-		Name: "TestSkip",
 		Skip: axiom.Skip{Enabled: true},
+		Case: &axiom.Case{ID: "1", Name: "TestSkip"},
 	}
 
 	cr := teststats.NewCaseResult(cfg)
@@ -27,10 +26,9 @@ func TestCaseResult_Finalize_Skipped(t *testing.T) {
 
 func TestCaseResult_Finalize_Passed_SingleAttempt(t *testing.T) {
 	cfg := &axiom.Config{
-		ID:   "2",
-		Name: "TestPass",
 		SubT: t,
 		Skip: axiom.Skip{},
+		Case: &axiom.Case{ID: "2", Name: "TestPass"},
 	}
 
 	cr := teststats.NewCaseResult(cfg)
@@ -43,9 +41,8 @@ func TestCaseResult_Finalize_Passed_SingleAttempt(t *testing.T) {
 
 func TestCaseResult_Finalize_Flaky_MultipleAttempts(t *testing.T) {
 	cfg := &axiom.Config{
-		ID:   "3",
-		Name: "TestFlaky",
 		SubT: t,
+		Case: &axiom.Case{ID: "3", Name: "TestFlaky"},
 	}
 
 	cr := teststats.NewCaseResult(cfg)
@@ -58,13 +55,9 @@ func TestCaseResult_Finalize_Flaky_MultipleAttempts(t *testing.T) {
 
 func TestCaseResult_StoresMetaAndFields(t *testing.T) {
 	cfg := &axiom.Config{
-		ID:   "55",
-		Name: "MetaCheck",
-		Meta: axiom.Meta{
-			Epic:  "E1",
-			Story: "S1",
-		},
 		SubT: t,
+		Meta: axiom.Meta{Epic: "E1", Story: "S1"},
+		Case: &axiom.Case{ID: "55", Name: "MetaCheck"},
 	}
 
 	cr := teststats.NewCaseResult(cfg)

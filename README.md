@@ -85,7 +85,7 @@ import (
 // DBFixture simulates a database connection with automatic teardown.
 func DBFixture(cfg *axiom.Config) (any, func(), error) {
 	// setup
-	db := fmt.Sprintf("db-connection-%s", cfg.ID)
+	db := fmt.Sprintf("db-connection-%s", cfg.Case.ID)
 
 	// teardown
 	cleanup := func() {

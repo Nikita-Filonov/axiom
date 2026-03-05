@@ -14,7 +14,9 @@ type sampleParams struct {
 
 func TestGetParams_ValueSuccess(t *testing.T) {
 	cfg := &axiom.Config{
-		Params: sampleParams{Foo: "hello", Bar: 123},
+		Case: &axiom.Case{
+			Params: sampleParams{Foo: "hello", Bar: 123},
+		},
 	}
 
 	p := axiom.GetParams[sampleParams](cfg)
@@ -25,7 +27,9 @@ func TestGetParams_ValueSuccess(t *testing.T) {
 
 func TestGetParams_PointerSuccess(t *testing.T) {
 	cfg := &axiom.Config{
-		Params: &sampleParams{Foo: "hi", Bar: 999},
+		Case: &axiom.Case{
+			Params: &sampleParams{Foo: "hi", Bar: 999},
+		},
 	}
 
 	p := axiom.GetParams[*sampleParams](cfg)
@@ -36,7 +40,9 @@ func TestGetParams_PointerSuccess(t *testing.T) {
 
 func TestGetParams_Panic_WrongType(t *testing.T) {
 	cfg := &axiom.Config{
-		Params: "not the right type",
+		Case: &axiom.Case{
+			Params: "not the right type",
+		},
 	}
 
 	assert.Panics(t, func() {
@@ -46,7 +52,9 @@ func TestGetParams_Panic_WrongType(t *testing.T) {
 
 func TestGetParams_Panic_Nil(t *testing.T) {
 	cfg := &axiom.Config{
-		Params: nil,
+		Case: &axiom.Case{
+			Params: nil,
+		},
 	}
 
 	assert.Panics(t, func() {
@@ -56,7 +64,9 @@ func TestGetParams_Panic_Nil(t *testing.T) {
 
 func TestGetParams_Panic_ValueProvidedButPointerExpected(t *testing.T) {
 	cfg := &axiom.Config{
-		Params: sampleParams{Foo: "x"},
+		Case: &axiom.Case{
+			Params: sampleParams{Foo: "x"},
+		},
 	}
 
 	assert.Panics(t, func() {
@@ -66,7 +76,9 @@ func TestGetParams_Panic_ValueProvidedButPointerExpected(t *testing.T) {
 
 func TestGetParams_Panic_PointerProvidedButValueExpected(t *testing.T) {
 	cfg := &axiom.Config{
-		Params: &sampleParams{Foo: "x"},
+		Case: &axiom.Case{
+			Params: &sampleParams{Foo: "x"},
+		},
 	}
 
 	assert.Panics(t, func() {

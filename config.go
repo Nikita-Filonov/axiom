@@ -11,13 +11,10 @@ type Config struct {
 	Runner *Runner
 	Case   *Case
 
-	ID       string
-	Name     string
 	Meta     Meta
 	Skip     Skip
 	Retry    Retry
 	Hooks    Hooks
-	Params   any
 	Context  Context
 	Runtime  Runtime
 	Parallel Parallel
@@ -47,7 +44,7 @@ func (c *Config) Test(action TestAction) {
 		if r := recover(); r != nil {
 			if c.SubT != nil {
 				c.SubT.Helper()
-				c.SubT.Errorf("panic in test %q: %v", c.Name, r)
+				c.SubT.Errorf("panic in test %q: %v", c.Case.Name, r)
 			}
 		}
 

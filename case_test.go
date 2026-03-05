@@ -104,6 +104,12 @@ func TestWithCaseSequential(t *testing.T) {
 	assert.False(t, c.Parallel.Enabled)
 }
 
+func TestWithCaseDescription(t *testing.T) {
+	c := axiom.NewCase(axiom.WithCaseDescription("test-description"))
+
+	assert.Equal(t, "test-description", c.Description)
+}
+
 func TestWithCaseFixture(t *testing.T) {
 	fx := func(cfg *axiom.Config) (any, func(), error) {
 		return 100, nil, nil

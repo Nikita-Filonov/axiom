@@ -108,7 +108,7 @@ func TestConfig_Test_HooksOrder(t *testing.T) {
 	var calls []string
 
 	cfg := &axiom.Config{
-		Name: "T",
+		Case: &axiom.Case{Name: "T"},
 		Hooks: axiom.Hooks{
 			BeforeTest: []axiom.TestHook{
 				func(_ *axiom.Config) { calls = append(calls, "before") },

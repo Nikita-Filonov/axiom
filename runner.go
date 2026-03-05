@@ -143,7 +143,7 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 		cfg := r.BuildConfig(t, &c)
 		cfg.ApplyPlugins()
 
-		ok := t.Run(cfg.Name, func(st *testing.T) {
+		ok := t.Run(cfg.Case.Name, func(st *testing.T) {
 			cfg.SubT = st
 			cfg.ApplyExecutionPolicy()
 			cfg.Test(action)
@@ -156,6 +156,13 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 }
 
 func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
+	if t == nil {
+		panic("config: nil *testing.T")
+	}
+	if c == nil {
+		panic("config: nil *Case")
+	}
+
 	meta := r.Meta.Join(c.Meta)
 	skip := r.Skip.Join(c.Skip)
 	retry := r.Retry.Join(c.Retry)
@@ -166,15 +173,12 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	fixtures := r.Fixtures.Join(c.Fixtures)
 
 	cfg := &Config{
-		ID:       c.ID,
-		Name:     c.Name,
 		Case:     c,
 		Skip:     skip,
 		Meta:     meta,
 		Retry:    retry,
 		Hooks:    hooks,
 		RootT:    t,
-		Params:   c.Params,
 		Runner:   r,
 		Context:  context,
 		Runtime:  runtime,
