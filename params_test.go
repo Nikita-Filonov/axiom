@@ -85,3 +85,17 @@ func TestGetParams_Panic_PointerProvidedButValueExpected(t *testing.T) {
 		_ = axiom.GetParams[sampleParams](cfg) // expecting value, but got pointer
 	})
 }
+
+func TestGetParams_Panic_NilConfig(t *testing.T) {
+	assert.PanicsWithValue(t, "params: nil config", func() {
+		_ = axiom.GetParams[sampleParams](nil)
+	})
+}
+
+func TestGetParams_Panic_NilCase(t *testing.T) {
+	cfg := &axiom.Config{}
+
+	assert.PanicsWithValue(t, "params: nil case", func() {
+		_ = axiom.GetParams[sampleParams](cfg)
+	})
+}

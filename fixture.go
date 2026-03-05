@@ -69,6 +69,12 @@ func (f *Fixtures) Normalize() {
 }
 
 func GetFixture[T any](cfg *Config, name string) T {
+	var zero T
+
+	if cfg == nil {
+		panic("fixture: nil config")
+	}
+
 	if res, ok := cfg.Fixtures.Cache[name]; ok {
 		return res.Value.(T)
 	}
@@ -76,11 +82,17 @@ func GetFixture[T any](cfg *Config, name string) T {
 	fx, ok := cfg.Fixtures.Registry[name]
 	if !ok {
 		cfg.SubT.Fatalf("fixture %q not found", name)
+		return zero
+	}
+	if fx == nil {
+		cfg.SubT.Fatalf("fixture %q is nil", name)
+		return zero
 	}
 
 	val, cleanup, err := fx(cfg)
 	if err != nil {
 		cfg.SubT.Fatalf("fixture %q failed: %v", name, err)
+		return zero
 	}
 
 	cfg.Fixtures.Cache[name] = FixtureResult{Value: val, Cleanup: cleanup}
@@ -92,6 +104,7 @@ func GetFixture[T any](cfg *Config, name string) T {
 	out, ok := val.(T)
 	if !ok {
 		cfg.SubT.Fatalf("fixture %q has unexpected type", name)
+		return zero
 	}
 	return out
 }

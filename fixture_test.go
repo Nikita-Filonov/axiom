@@ -186,3 +186,9 @@ func TestUseFixtures_AddsCleanupToAfterTest(t *testing.T) {
 	cfg.Hooks.AfterTest[0](cfg)
 	assert.True(t, cleanupCalled, "cleanup must be executed")
 }
+
+func TestGetFixture_Panic_NilConfig(t *testing.T) {
+	assert.PanicsWithValue(t, "fixture: nil config", func() {
+		_ = axiom.GetFixture[string](nil, "x")
+	})
+}
