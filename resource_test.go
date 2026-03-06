@@ -71,7 +71,7 @@ func TestResourcesJoin(t *testing.T) {
 	assert.Equal(t, "B2", b)
 	assert.Equal(t, "C", c)
 
-	assert.Len(t, result.Cache, 3)
+	assert.Len(t, runner.Resources.Cache, 3)
 }
 
 func TestGetResource_HappyPath(t *testing.T) {
@@ -305,4 +305,76 @@ func TestResourcesJoin_MergesRegistryAndCache(t *testing.T) {
 	assert.Equal(t, "X1", joined.Cache["x"].Value)
 	assert.Equal(t, "Y2", joined.Cache["y"].Value)
 	assert.Equal(t, "Z2", joined.Cache["z"].Value)
+}
+
+func TestResourcesJoin_DoesNotMutateSources(t *testing.T) {
+	r1 := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"a": func(rr *axiom.Runner) (any, func(), error) { return "A1", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"x": {Value: "X1"},
+		},
+	}
+	r2 := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"b": func(rr *axiom.Runner) (any, func(), error) { return "B2", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"y": {Value: "Y2"},
+		},
+	}
+
+	joined := r1.Join(r2)
+	joined.Registry["c"] = func(rr *axiom.Runner) (any, func(), error) { return "C3", nil, nil }
+	joined.Cache["z"] = axiom.ResourceResult{Value: "Z3"}
+
+	assert.NotContains(t, r1.Registry, "c")
+	assert.NotContains(t, r2.Registry, "c")
+	assert.NotContains(t, r1.Cache, "z")
+	assert.NotContains(t, r2.Cache, "z")
+}
+
+func TestGetResource_UsesPrewarmedCacheWithoutFactoryCall(t *testing.T) {
+	calls := 0
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(rr *axiom.Runner) (any, func(), error) {
+			calls++
+			return "from-factory", nil, nil
+		}),
+	)
+	r.Resources.Cache["x"] = axiom.ResourceResult{Value: "from-cache"}
+
+	v, err := axiom.GetResource[string](r, "x")
+	assert.NoError(t, err)
+	assert.Equal(t, "from-cache", v)
+	assert.Equal(t, 0, calls, "factory must not run when cache already has value")
+}
+
+func TestGetResource_JoinedCacheOverrideVisibleViaAPI(t *testing.T) {
+	r1 := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"x": func(rr *axiom.Runner) (any, func(), error) { return "A", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"x": {Value: "A-cached"},
+		},
+	}
+	r2 := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"x": func(rr *axiom.Runner) (any, func(), error) { return "B", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"x": {Value: "B-cached"},
+		},
+	}
+
+	joined := r1.Join(r2)
+	runner := axiom.NewRunner()
+	runner.Resources = joined
+
+	v, err := axiom.GetResource[string](runner, "x")
+	assert.NoError(t, err)
+	assert.Equal(t, "B-cached", v, "other cache value must override base during join")
 }

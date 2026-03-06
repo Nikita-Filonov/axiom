@@ -50,16 +50,19 @@ func WithResourcesMap(resources map[string]Resource) ResourcesOption {
 }
 
 func (r *Resources) Copy() Resources {
-	result := Resources{
-		mu:       &sync.Mutex{},
-		Registry: map[string]Resource{},
-		Cache:    map[string]ResourceResult{},
+	result := Resources{mu: &sync.Mutex{}}
+
+	if r.Registry != nil {
+		result.Registry = make(map[string]Resource, len(r.Registry))
+		for k, v := range r.Registry {
+			result.Registry[k] = v
+		}
 	}
-	for k, v := range r.Cache {
-		result.Cache[k] = v
-	}
-	for k, v := range r.Registry {
-		result.Registry[k] = v
+	if r.Cache != nil {
+		result.Cache = make(map[string]ResourceResult, len(r.Cache))
+		for k, v := range r.Cache {
+			result.Cache[k] = v
+		}
 	}
 
 	return result
@@ -68,11 +71,22 @@ func (r *Resources) Copy() Resources {
 func (r *Resources) Join(other Resources) Resources {
 	result := r.Copy()
 
-	for k, v := range other.Cache {
-		result.Cache[k] = v
+	if len(other.Registry) > 0 {
+		if result.Registry == nil {
+			result.Registry = make(map[string]Resource, len(other.Registry))
+		}
+		for k, v := range other.Registry {
+			result.Registry[k] = v
+		}
 	}
-	for k, v := range other.Registry {
-		result.Registry[k] = v
+
+	if len(other.Cache) > 0 {
+		if result.Cache == nil {
+			result.Cache = make(map[string]ResourceResult, len(other.Cache))
+		}
+		for k, v := range other.Cache {
+			result.Cache[k] = v
+		}
 	}
 
 	return result
