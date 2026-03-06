@@ -259,3 +259,15 @@ func TestRetryNormalize_DoesNotOverrideTimes_WhenTimesSet_OneIsValid(t *testing.
 	assert.Equal(t, 1, r.Times)
 	assert.True(t, r.TimesSet)
 }
+
+func TestRetryCopy(t *testing.T) {
+	r := axiom.Retry{
+		Times:    3,
+		Delay:    10 * time.Millisecond,
+		TimesSet: true,
+		DelaySet: true,
+	}
+	cp := r.Copy()
+
+	assert.Equal(t, r, cp)
+}

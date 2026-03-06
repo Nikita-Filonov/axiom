@@ -37,13 +37,17 @@ func WithRetryDelay(delay time.Duration) RetryOption {
 	}
 }
 
-func (r *Retry) Join(other Retry) Retry {
-	result := Retry{
+func (r *Retry) Copy() Retry {
+	return Retry{
 		Times:    r.Times,
 		Delay:    r.Delay,
 		TimesSet: r.TimesSet,
 		DelaySet: r.DelaySet,
 	}
+}
+
+func (r *Retry) Join(other Retry) Retry {
+	result := r.Copy()
 
 	if other.TimesSet {
 		result.Times = other.Times
