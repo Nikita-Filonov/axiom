@@ -27,8 +27,12 @@ func WithParallelDisabled() func(*Parallel) {
 	}
 }
 
+func (p *Parallel) Copy() Parallel {
+	return Parallel{Enabled: p.Enabled}
+}
+
 func (p *Parallel) Join(other Parallel) Parallel {
-	result := Parallel{Enabled: p.Enabled}
+	result := p.Copy()
 
 	if other.Enabled {
 		result.Enabled = true

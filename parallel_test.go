@@ -79,3 +79,10 @@ func TestParallelJoin_TrueWithTrue(t *testing.T) {
 
 	assert.True(t, result.Enabled)
 }
+
+func TestParallelCopy(t *testing.T) {
+	p := axiom.Parallel{Enabled: true}
+	cp := p.Copy()
+
+	assert.Equal(t, p, cp)
+}
