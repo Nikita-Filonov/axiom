@@ -7,6 +7,8 @@ type FixtureResult struct {
 	Cleanup func()
 }
 
+func (r FixtureResult) Copy() FixtureResult { return r }
+
 type Fixtures struct {
 	Registry map[string]Fixture
 	Cache    map[string]FixtureResult
@@ -43,18 +45,34 @@ func WithFixturesMap(fixtures map[string]Fixture) FixturesOption {
 	}
 }
 
-func (f *Fixtures) Join(other Fixtures) Fixtures {
-	result := Fixtures{
-		Registry: map[string]Fixture{},
-		Cache:    map[string]FixtureResult{},
-	}
+func (f *Fixtures) Copy() Fixtures {
+	result := Fixtures{}
 
-	for k, v := range f.Registry {
-		result.Registry[k] = v
+	if f.Registry != nil {
+		result.Registry = make(map[string]Fixture, len(f.Registry))
+		for k, v := range f.Registry {
+			result.Registry[k] = v
+		}
+	}
+	if f.Cache != nil {
+		result.Cache = make(map[string]FixtureResult, len(f.Cache))
+		for k, v := range f.Cache {
+			result.Cache[k] = v.Copy()
+		}
+	}
+	return result
+}
+
+func (f *Fixtures) Join(other Fixtures) Fixtures {
+	result := f.Copy()
+
+	if result.Registry == nil {
+		result.Registry = map[string]Fixture{}
 	}
 	for k, v := range other.Registry {
 		result.Registry[k] = v
 	}
+	result.Cache = map[string]FixtureResult{}
 
 	return result
 }

@@ -68,6 +68,59 @@ func TestFixturesJoin(t *testing.T) {
 	assert.Empty(t, result.Cache)
 }
 
+func TestFixturesJoin_ResetsCacheFromBothSides(t *testing.T) {
+	f1 := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"a": func(cfg *axiom.Config) (any, func(), error) { return "A", nil, nil },
+		},
+		Cache: map[string]axiom.FixtureResult{
+			"a": {Value: "cached-A"},
+		},
+	}
+	f2 := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"b": func(cfg *axiom.Config) (any, func(), error) { return "B", nil, nil },
+		},
+		Cache: map[string]axiom.FixtureResult{
+			"b": {Value: "cached-B"},
+		},
+	}
+
+	result := f1.Join(f2)
+
+	assert.Contains(t, result.Registry, "a")
+	assert.Contains(t, result.Registry, "b")
+	assert.Empty(t, result.Cache)
+}
+
+func TestFixturesJoin_DoesNotMutateOriginalFixtures(t *testing.T) {
+	f1 := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"a": func(cfg *axiom.Config) (any, func(), error) { return "A", nil, nil },
+		},
+		Cache: map[string]axiom.FixtureResult{
+			"a": {Value: "cached-A"},
+		},
+	}
+	f2 := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"b": func(cfg *axiom.Config) (any, func(), error) { return "B", nil, nil },
+		},
+		Cache: map[string]axiom.FixtureResult{
+			"b": {Value: "cached-B"},
+		},
+	}
+
+	result := f1.Join(f2)
+	result.Cache["x"] = axiom.FixtureResult{Value: "X"}
+	result.Registry["c"] = func(cfg *axiom.Config) (any, func(), error) { return "C", nil, nil }
+
+	assert.NotContains(t, f1.Registry, "c")
+	assert.NotContains(t, f2.Registry, "c")
+	assert.NotContains(t, f1.Cache, "x")
+	assert.NotContains(t, f2.Cache, "x")
+}
+
 func TestGetFixture_HappyPath(t *testing.T) {
 	callCount := 0
 	cleanupCalled := false
@@ -191,4 +244,30 @@ func TestGetFixture_Panic_NilConfig(t *testing.T) {
 	assert.PanicsWithValue(t, "fixture: nil config", func() {
 		_ = axiom.GetFixture[string](nil, "x")
 	})
+}
+
+func TestFixtureResultCopy(t *testing.T) {
+	r := axiom.FixtureResult{Value: "x", Cleanup: func() {}}
+	cp := r.Copy()
+
+	assert.Equal(t, r.Value, cp.Value)
+	assert.NotNil(t, cp.Cleanup)
+}
+
+func TestFixturesCopy_DeepCopyMaps(t *testing.T) {
+	f := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"x": func(cfg *axiom.Config) (any, func(), error) { return 1, nil, nil },
+		},
+		Cache: map[string]axiom.FixtureResult{
+			"x": {Value: 1},
+		},
+	}
+
+	cp := f.Copy()
+	cp.Registry["y"] = func(cfg *axiom.Config) (any, func(), error) { return 2, nil, nil }
+	cp.Cache["y"] = axiom.FixtureResult{Value: 2}
+
+	assert.NotContains(t, f.Registry, "y")
+	assert.NotContains(t, f.Cache, "y")
 }
