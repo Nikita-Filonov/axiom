@@ -268,3 +268,25 @@ func TestMetaJoin_DoesNotOverrideEmptySuites(t *testing.T) {
 	assert.Equal(t, "B", result.SubSuite)
 	assert.Equal(t, "C", result.ParentSuite)
 }
+
+func TestMetaCopy_DeepCopyCollections(t *testing.T) {
+	m := axiom.Meta{
+		Epic:      "E",
+		Tags:      []string{"a"},
+		Issues:    []string{"i"},
+		TestCases: []string{"tc"},
+		Labels:    map[string]string{"owner": "team-a"},
+	}
+
+	cp := m.Copy()
+	cp.Tags[0] = "b"
+	cp.Issues[0] = "j"
+	cp.TestCases[0] = "tc2"
+	cp.Labels["owner"] = "team-b"
+
+	assert.Equal(t, "a", m.Tags[0])
+	assert.Equal(t, "i", m.Issues[0])
+	assert.Equal(t, "tc", m.TestCases[0])
+	assert.Equal(t, "team-a", m.Labels["owner"])
+	assert.Equal(t, "E", cp.Epic)
+}

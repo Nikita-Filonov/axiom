@@ -117,25 +117,40 @@ func WithMetaTestCases(testCases []string) MetaOption {
 	return func(m *Meta) { m.TestCases = append(m.TestCases, testCases...) }
 }
 
-func (m *Meta) Join(other Meta) Meta {
+func (m *Meta) Copy() Meta {
 	result := Meta{
 		Epic:        m.Epic,
-		Tags:        append([]string{}, m.Tags...),
 		Suite:       m.Suite,
 		Story:       m.Story,
 		Layer:       m.Layer,
-		Issues:      append([]string{}, m.Issues...),
-		Labels:      map[string]string{},
 		Feature:     m.Feature,
 		Platform:    m.Platform,
 		Severity:    m.Severity,
 		SubSuite:    m.SubSuite,
-		TestCases:   append([]string{}, m.TestCases...),
 		ParentSuite: m.ParentSuite,
 	}
-	for k, v := range m.Labels {
-		result.Labels[k] = v
+
+	if m.Tags != nil {
+		result.Tags = append([]string{}, m.Tags...)
 	}
+	if m.Issues != nil {
+		result.Issues = append([]string{}, m.Issues...)
+	}
+	if m.TestCases != nil {
+		result.TestCases = append([]string{}, m.TestCases...)
+	}
+	if m.Labels != nil {
+		result.Labels = make(map[string]string, len(m.Labels))
+		for k, v := range m.Labels {
+			result.Labels[k] = v
+		}
+	}
+
+	return result
+}
+
+func (m *Meta) Join(other Meta) Meta {
+	result := m.Copy()
 
 	if other.Epic != "" {
 		result.Epic = other.Epic
@@ -169,8 +184,13 @@ func (m *Meta) Join(other Meta) Meta {
 	result.Issues = append(result.Issues, other.Issues...)
 	result.TestCases = append(result.TestCases, other.TestCases...)
 
-	for k, v := range other.Labels {
-		result.Labels[k] = v
+	if len(other.Labels) > 0 {
+		if result.Labels == nil {
+			result.Labels = make(map[string]string, len(other.Labels))
+		}
+		for k, v := range other.Labels {
+			result.Labels[k] = v
+		}
 	}
 
 	return result
