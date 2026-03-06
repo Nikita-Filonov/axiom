@@ -95,13 +95,40 @@ func (h *Hooks) ApplyAfterTest(cfg *Config) {
 	}
 }
 
+func (h *Hooks) Copy() Hooks {
+	var result Hooks
+
+	if h.BeforeAll != nil {
+		result.BeforeAll = append([]AllHook{}, h.BeforeAll...)
+	}
+	if h.AfterAll != nil {
+		result.AfterAll = append([]AllHook{}, h.AfterAll...)
+	}
+	if h.BeforeTest != nil {
+		result.BeforeTest = append([]TestHook{}, h.BeforeTest...)
+	}
+	if h.AfterTest != nil {
+		result.AfterTest = append([]TestHook{}, h.AfterTest...)
+	}
+	if h.BeforeStep != nil {
+		result.BeforeStep = append([]StepHook{}, h.BeforeStep...)
+	}
+	if h.AfterStep != nil {
+		result.AfterStep = append([]StepHook{}, h.AfterStep...)
+	}
+
+	return result
+}
+
 func (h *Hooks) Join(other Hooks) Hooks {
+	result := h.Copy()
+
 	return Hooks{
-		BeforeAll:  append(h.BeforeAll, other.BeforeAll...),
-		AfterAll:   append(h.AfterAll, other.AfterAll...),
-		BeforeTest: append(h.BeforeTest, other.BeforeTest...),
-		AfterTest:  append(h.AfterTest, other.AfterTest...),
-		BeforeStep: append(h.BeforeStep, other.BeforeStep...),
-		AfterStep:  append(h.AfterStep, other.AfterStep...),
+		BeforeAll:  append(result.BeforeAll, other.BeforeAll...),
+		AfterAll:   append(result.AfterAll, other.AfterAll...),
+		BeforeTest: append(result.BeforeTest, other.BeforeTest...),
+		AfterTest:  append(result.AfterTest, other.AfterTest...),
+		BeforeStep: append(result.BeforeStep, other.BeforeStep...),
+		AfterStep:  append(result.AfterStep, other.AfterStep...),
 	}
 }

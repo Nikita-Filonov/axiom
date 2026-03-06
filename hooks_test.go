@@ -210,3 +210,21 @@ func TestHooks_BeforeTest_UseFixtures_RegistersCleanup(t *testing.T) {
 	cfg.Hooks.ApplyAfterTest(cfg)
 	assert.True(t, cleanupCalled)
 }
+
+func TestHooksCopy_SlicesAreIndependent(t *testing.T) {
+	h := axiom.Hooks{
+		BeforeTest: []axiom.TestHook{func(cfg *axiom.Config) {}},
+		AfterTest:  []axiom.TestHook{func(cfg *axiom.Config) {}},
+		BeforeStep: []axiom.StepHook{func(cfg *axiom.Config, name string) {}},
+	}
+
+	cp := h.Copy()
+	cp.BeforeTest = append(cp.BeforeTest, func(cfg *axiom.Config) {})
+	cp.AfterTest = append(cp.AfterTest, func(cfg *axiom.Config) {})
+	cp.BeforeStep = append(cp.BeforeStep, func(cfg *axiom.Config, name string) {})
+
+	assert.Len(t, h.BeforeTest, 1)
+	assert.Len(t, h.AfterTest, 1)
+	assert.Len(t, h.BeforeStep, 1)
+	assert.Len(t, cp.BeforeTest, 2)
+}
