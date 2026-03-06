@@ -246,14 +246,6 @@ func TestGetFixture_Panic_NilConfig(t *testing.T) {
 	})
 }
 
-func TestFixtureResultCopy(t *testing.T) {
-	r := axiom.FixtureResult{Value: "x", Cleanup: func() {}}
-	cp := r.Copy()
-
-	assert.Equal(t, r.Value, cp.Value)
-	assert.NotNil(t, cp.Cleanup)
-}
-
 func TestFixturesCopy_DeepCopyMaps(t *testing.T) {
 	f := axiom.Fixtures{
 		Registry: map[string]axiom.Fixture{

@@ -7,8 +7,6 @@ type FixtureResult struct {
 	Cleanup func()
 }
 
-func (r FixtureResult) Copy() FixtureResult { return r }
-
 type Fixtures struct {
 	Registry map[string]Fixture
 	Cache    map[string]FixtureResult
@@ -57,7 +55,7 @@ func (f *Fixtures) Copy() Fixtures {
 	if f.Cache != nil {
 		result.Cache = make(map[string]FixtureResult, len(f.Cache))
 		for k, v := range f.Cache {
-			result.Cache[k] = v.Copy()
+			result.Cache[k] = v
 		}
 	}
 	return result
