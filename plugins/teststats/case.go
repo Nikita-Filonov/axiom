@@ -29,7 +29,7 @@ func NewCaseResult(cfg *axiom.Config) *CaseResult {
 	return &CaseResult{
 		ID:    cfg.Case.ID,
 		Name:  cfg.Case.Name,
-		Meta:  cfg.Meta,
+		Meta:  cfg.Meta.Copy(),
 		Start: time.Now(),
 	}
 }
