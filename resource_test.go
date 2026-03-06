@@ -221,3 +221,88 @@ func TestGetResource_CleanupRegisteredOnce(t *testing.T) {
 
 	assert.Equal(t, 1, cleanups)
 }
+
+func TestResourcesCopy_DeepCopyMaps(t *testing.T) {
+	r := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"x": func(rr *axiom.Runner) (any, func(), error) { return 1, nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"x": {Value: 1},
+		},
+	}
+
+	cp := r.Copy()
+
+	v, ok := cp.Cache["x"]
+	assert.True(t, ok)
+	assert.Equal(t, 1, v.Value)
+
+	cp.Registry["y"] = func(rr *axiom.Runner) (any, func(), error) { return 2, nil, nil }
+	cp.Cache["y"] = axiom.ResourceResult{Value: 2}
+
+	x := cp.Cache["x"]
+	x.Value = 100
+	cp.Cache["x"] = x
+
+	assert.NotContains(t, r.Registry, "y")
+	assert.NotContains(t, r.Cache, "y")
+	assert.Equal(t, 1, r.Cache["x"].Value)
+}
+
+func TestResourcesCopy_DeepCopyRegistryAndCache(t *testing.T) {
+	r := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"a": func(rr *axiom.Runner) (any, func(), error) { return "A", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"cached": {Value: "C"},
+		},
+	}
+
+	cp := r.Copy()
+
+	assert.Contains(t, cp.Registry, "a")
+	assert.Contains(t, cp.Cache, "cached")
+	assert.Equal(t, "C", cp.Cache["cached"].Value)
+
+	cp.Registry["b"] = func(rr *axiom.Runner) (any, func(), error) { return "B", nil, nil }
+	cp.Cache["cached2"] = axiom.ResourceResult{Value: "X"}
+
+	assert.NotContains(t, r.Registry, "b")
+	assert.NotContains(t, r.Cache, "cached2")
+}
+
+func TestResourcesJoin_MergesRegistryAndCache(t *testing.T) {
+	r1 := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"a": func(rr *axiom.Runner) (any, func(), error) { return "A1", nil, nil },
+			"b": func(rr *axiom.Runner) (any, func(), error) { return "B1", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"x": {Value: "X1"},
+			"y": {Value: "Y1"},
+		},
+	}
+
+	r2 := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"b": func(rr *axiom.Runner) (any, func(), error) { return "B2", nil, nil }, // override
+			"c": func(rr *axiom.Runner) (any, func(), error) { return "C2", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"y": {Value: "Y2"}, // override
+			"z": {Value: "Z2"},
+		},
+	}
+
+	joined := r1.Join(r2)
+
+	assert.Contains(t, joined.Registry, "a")
+	assert.Contains(t, joined.Registry, "b")
+	assert.Contains(t, joined.Registry, "c")
+
+	assert.Equal(t, "X1", joined.Cache["x"].Value)
+	assert.Equal(t, "Y2", joined.Cache["y"].Value)
+	assert.Equal(t, "Z2", joined.Cache["z"].Value)
+}

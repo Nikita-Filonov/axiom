@@ -49,15 +49,27 @@ func WithResourcesMap(resources map[string]Resource) ResourcesOption {
 	}
 }
 
-func (r *Resources) Join(other Resources) Resources {
+func (r *Resources) Copy() Resources {
 	result := Resources{
 		mu:       &sync.Mutex{},
 		Registry: map[string]Resource{},
 		Cache:    map[string]ResourceResult{},
 	}
-
+	for k, v := range r.Cache {
+		result.Cache[k] = v
+	}
 	for k, v := range r.Registry {
 		result.Registry[k] = v
+	}
+
+	return result
+}
+
+func (r *Resources) Join(other Resources) Resources {
+	result := r.Copy()
+
+	for k, v := range other.Cache {
+		result.Cache[k] = v
 	}
 	for k, v := range other.Registry {
 		result.Registry[k] = v
