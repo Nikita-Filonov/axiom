@@ -282,3 +282,81 @@ func TestRetry_RunnerUsedWhenCaseRetryNotSet(t *testing.T) {
 
 	assert.Equal(t, 3, cfg.Retry.Times)
 }
+
+func TestCaseCopy_DeepCopyMutableFields(t *testing.T) {
+	base := axiom.NewCase(
+		axiom.WithCaseID("ID-1"),
+		axiom.WithCaseName("name"),
+		axiom.WithCaseDescription("desc"),
+		axiom.WithCaseMeta(
+			axiom.WithMetaTag("smoke"),
+			axiom.WithMetaIssue("ISSUE-1"),
+			axiom.WithMetaLabel("owner", "team-a"),
+			axiom.WithMetaTestCase("TC-1"),
+		),
+		axiom.WithCaseContext(axiom.WithContextData("k", "v")),
+		axiom.WithCaseRuntime(
+			axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
+			axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
+			axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) {}),
+		),
+		axiom.WithCasePlugins(func(cfg *axiom.Config) {}),
+		axiom.WithCaseFixture("fx", func(cfg *axiom.Config) (any, func(), error) {
+			return 1, nil, nil
+		}),
+	)
+	base.Hooks.BeforeTest = append(base.Hooks.BeforeTest, func(cfg *axiom.Config) {})
+	base.Fixtures.Cache = map[string]axiom.FixtureResult{
+		"cached": {Value: "x"},
+	}
+
+	cloned := base.Copy()
+
+	cloned.Meta.Tags[0] = "changed"
+	cloned.Meta.Issues[0] = "ISSUE-2"
+	cloned.Meta.TestCases[0] = "TC-2"
+	cloned.Meta.Labels["owner"] = "team-b"
+	cloned.Context.Data["k"] = "v2"
+	cloned.Plugins = append(cloned.Plugins, func(cfg *axiom.Config) {})
+	cloned.Hooks.BeforeTest = append(cloned.Hooks.BeforeTest, func(cfg *axiom.Config) {})
+	cloned.Runtime.LogSinks = append(cloned.Runtime.LogSinks, func(l axiom.Log) {})
+	cloned.Fixtures.Registry["fx2"] = func(cfg *axiom.Config) (any, func(), error) {
+		return 2, nil, nil
+	}
+	cloned.Fixtures.Cache["cached2"] = axiom.FixtureResult{Value: "y"}
+
+	assert.Equal(t, "smoke", base.Meta.Tags[0])
+	assert.Equal(t, "ISSUE-1", base.Meta.Issues[0])
+	assert.Equal(t, "TC-1", base.Meta.TestCases[0])
+	assert.Equal(t, "team-a", base.Meta.Labels["owner"])
+	assert.Equal(t, "v", base.Context.Data["k"])
+	assert.Len(t, base.Plugins, 1)
+	assert.Len(t, base.Hooks.BeforeTest, 1)
+	assert.Len(t, base.Runtime.LogSinks, 1)
+	assert.NotContains(t, base.Fixtures.Registry, "fx2")
+	assert.NotContains(t, base.Fixtures.Cache, "cached2")
+}
+
+func TestCaseCopy_PluginsSlice_IsIndependent(t *testing.T) {
+	base := axiom.NewCase(
+		axiom.WithCasePlugins(
+			func(cfg *axiom.Config) {
+				cfg.Context.SetData("marker", "base")
+			},
+		),
+	)
+
+	cloned := base.Copy()
+	cloned.Plugins[0] = func(cfg *axiom.Config) {
+		cfg.Context.SetData("marker", "clone")
+	}
+
+	cfgBase := &axiom.Config{}
+	base.Plugins[0](cfgBase)
+
+	cfgClone := &axiom.Config{}
+	cloned.Plugins[0](cfgClone)
+
+	assert.Equal(t, "base", axiom.MustContextValue[string](&cfgBase.Context, "marker"))
+	assert.Equal(t, "clone", axiom.MustContextValue[string](&cfgClone.Context, "marker"))
+}

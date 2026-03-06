@@ -98,3 +98,28 @@ func WithCaseFixture(name string, fx Fixture) CaseOption {
 func WithCaseDescription(desc string) CaseOption {
 	return func(c *Case) { c.Description = desc }
 }
+
+func (c Case) Copy() Case {
+	result := Case{
+		ID:          c.ID,
+		Name:        c.Name,
+		Skip:        c.Skip.Copy(),
+		Meta:        c.Meta.Copy(),
+		Retry:       c.Retry.Copy(),
+		Hooks:       c.Hooks.Copy(),
+		Params:      c.Params,
+		Context:     c.Context.Copy(),
+		Runtime:     c.Runtime.Copy(),
+		Parallel:    c.Parallel.Copy(),
+		Fixtures:    c.Fixtures.Copy(),
+		Description: c.Description,
+	}
+
+	if c.Plugins == nil {
+		result.Plugins = nil
+	} else {
+		result.Plugins = append([]Plugin{}, c.Plugins...)
+	}
+
+	return result
+}
