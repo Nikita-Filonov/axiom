@@ -87,3 +87,10 @@ func TestSkipJoin_NoOverride(t *testing.T) {
 	assert.True(t, result.Enabled)
 	assert.Equal(t, "keep", result.Reason)
 }
+
+func TestSkipCopy(t *testing.T) {
+	s := axiom.Skip{Enabled: true, Reason: "because"}
+	cp := s.Copy()
+
+	assert.Equal(t, s, cp)
+}

@@ -35,11 +35,15 @@ func SkipBecause(reason string) SkipOption {
 	}
 }
 
-func (s *Skip) Join(other Skip) Skip {
-	result := Skip{
+func (s *Skip) Copy() Skip {
+	return Skip{
 		Reason:  s.Reason,
 		Enabled: s.Enabled,
 	}
+}
+
+func (s *Skip) Join(other Skip) Skip {
+	result := s.Copy()
 
 	if other.Enabled {
 		result.Enabled = true
