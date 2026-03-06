@@ -7,6 +7,7 @@
 - [Key characteristics](#key-characteristics)
 - [Resource lifecycle](#resource-lifecycle)
 - [Resource API](#resource-api)
+- [Join semantics](#join-semantics)
 - [Concurrency model](#concurrency-model)
 - [Registering resources](#registering-resources)
 - [Example](#example)
@@ -92,6 +93,24 @@ Resources are accessed via:
 axiom.GetResource[T](runner, name)
 axiom.MustResource[T](runner, name)
 ```
+
+---
+
+## Join semantics
+
+`Resources.Join(other)` merges both resource definition and resource state:
+
+- `Registry` is merged by key
+- `Cache` is merged by key
+- if the same key exists in both, values from `other` override base values
+
+This means a joined runner may inherit already initialized resource instances from source runners.
+
+### Practical implications
+
+- Joining is no longer config-only for resources
+- warm cache entries can be reused immediately after join
+- this behavior is useful for pre-warmed infrastructure
 
 ---
 
