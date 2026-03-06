@@ -7,3 +7,7 @@ type Normalize interface {
 type Join[T any] interface {
 	Join(other T) T
 }
+
+type Copy[T any] interface {
+	Copy() T
+}
