@@ -7,6 +7,9 @@ func GetParams[T any](cfg *Config) T {
 	if cfg.Case == nil {
 		panic("params: nil case")
 	}
+	if cfg.SubT == nil {
+		panic("params: nil subT")
+	}
 
 	v, ok := cfg.Case.Params.(T)
 	if !ok {

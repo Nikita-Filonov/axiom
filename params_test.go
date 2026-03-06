@@ -14,6 +14,7 @@ type sampleParams struct {
 
 func TestGetParams_ValueSuccess(t *testing.T) {
 	cfg := &axiom.Config{
+		SubT: &testing.T{},
 		Case: &axiom.Case{
 			Params: sampleParams{Foo: "hello", Bar: 123},
 		},
@@ -27,6 +28,7 @@ func TestGetParams_ValueSuccess(t *testing.T) {
 
 func TestGetParams_PointerSuccess(t *testing.T) {
 	cfg := &axiom.Config{
+		SubT: &testing.T{},
 		Case: &axiom.Case{
 			Params: &sampleParams{Foo: "hi", Bar: 999},
 		},
@@ -93,9 +95,28 @@ func TestGetParams_Panic_NilConfig(t *testing.T) {
 }
 
 func TestGetParams_Panic_NilCase(t *testing.T) {
-	cfg := &axiom.Config{}
+	cfg := &axiom.Config{SubT: &testing.T{}}
 
 	assert.PanicsWithValue(t, "params: nil case", func() {
+		_ = axiom.GetParams[sampleParams](cfg)
+	})
+}
+
+func TestGetParams_Panic_NilSubT(t *testing.T) {
+	cfg := &axiom.Config{Case: &axiom.Case{}}
+
+	assert.PanicsWithValue(t, "params: nil subT", func() {
+		_ = axiom.GetParams[sampleParams](cfg)
+	})
+}
+
+func TestGetParams_Panic_NilSubT_TakesPrecedenceOverTypeMismatch(t *testing.T) {
+	cfg := &axiom.Config{
+		Case: &axiom.Case{Params: "wrong type"},
+		SubT: nil,
+	}
+
+	assert.PanicsWithValue(t, "params: nil subT", func() {
 		_ = axiom.GetParams[sampleParams](cfg)
 	})
 }
