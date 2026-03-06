@@ -165,15 +165,46 @@ func (r *Runtime) Artefact(a Artefact) {
 	}
 }
 
-func (r *Runtime) Join(other Runtime) Runtime {
-	return Runtime{
-		TestWraps:     append(r.TestWraps, other.TestWraps...),
-		StepWraps:     append(r.StepWraps, other.StepWraps...),
-		SetupWraps:    append(r.SetupWraps, other.SetupWraps...),
-		TeardownWraps: append(r.TeardownWraps, other.TeardownWraps...),
+func (r *Runtime) Copy() Runtime {
+	var result Runtime
 
-		LogSinks:      append(r.LogSinks, other.LogSinks...),
-		AssertSinks:   append(r.AssertSinks, other.AssertSinks...),
-		ArtefactSinks: append(r.ArtefactSinks, other.ArtefactSinks...),
+	if r.TestWraps != nil {
+		result.TestWraps = append([]WrapTestAction{}, r.TestWraps...)
+	}
+	if r.StepWraps != nil {
+		result.StepWraps = append([]WrapStepAction{}, r.StepWraps...)
+	}
+	if r.SetupWraps != nil {
+		result.SetupWraps = append([]WrapSetupAction{}, r.SetupWraps...)
+	}
+	if r.TeardownWraps != nil {
+		result.TeardownWraps = append([]WrapTeardownAction{}, r.TeardownWraps...)
+	}
+
+	if r.LogSinks != nil {
+		result.LogSinks = append([]SinkLogAction{}, r.LogSinks...)
+	}
+	if r.AssertSinks != nil {
+		result.AssertSinks = append([]SinkAssertAction{}, r.AssertSinks...)
+	}
+	if r.ArtefactSinks != nil {
+		result.ArtefactSinks = append([]SinkArtefactAction{}, r.ArtefactSinks...)
+	}
+
+	return result
+}
+
+func (r *Runtime) Join(other Runtime) Runtime {
+	result := r.Copy()
+
+	return Runtime{
+		TestWraps:     append(result.TestWraps, other.TestWraps...),
+		StepWraps:     append(result.StepWraps, other.StepWraps...),
+		SetupWraps:    append(result.SetupWraps, other.SetupWraps...),
+		TeardownWraps: append(result.TeardownWraps, other.TeardownWraps...),
+
+		LogSinks:      append(result.LogSinks, other.LogSinks...),
+		AssertSinks:   append(result.AssertSinks, other.AssertSinks...),
+		ArtefactSinks: append(result.ArtefactSinks, other.ArtefactSinks...),
 	}
 }

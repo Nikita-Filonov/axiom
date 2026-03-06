@@ -346,3 +346,21 @@ func TestRuntime_Emitters_DoNotMutateRuntime(t *testing.T) {
 	assert.Empty(t, rt.AssertSinks)
 	assert.Empty(t, rt.ArtefactSinks)
 }
+
+func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
+		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
+		axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
+	)
+
+	cp := rt.Copy()
+	cp.TestWraps = append(cp.TestWraps, func(next axiom.TestAction) axiom.TestAction { return next })
+	cp.StepWraps = append(cp.StepWraps, func(name string, next axiom.StepAction) axiom.StepAction { return next })
+	cp.LogSinks = append(cp.LogSinks, func(l axiom.Log) {})
+
+	assert.Len(t, rt.TestWraps, 1)
+	assert.Len(t, rt.StepWraps, 1)
+	assert.Len(t, rt.LogSinks, 1)
+	assert.Len(t, cp.TestWraps, 2)
+}
