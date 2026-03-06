@@ -188,3 +188,29 @@ func TestContext_SetData_ThenMustGet(t *testing.T) {
 	c.SetData("x", 10)
 	assert.Equal(t, 10, axiom.MustContextValue[int](&c, "x"))
 }
+
+func TestContextCopy_DeepCopyData(t *testing.T) {
+	baseRaw := context.WithValue(context.Background(), ctxKey("a"), 1)
+	c := axiom.Context{
+		Raw:  baseRaw,
+		Data: map[string]any{"k": "v"},
+	}
+
+	cp := c.Copy()
+	cp.Data["k"] = "v2"
+
+	assert.Equal(t, "v", c.Data["k"])
+	assert.Equal(t, baseRaw, cp.Raw)
+}
+
+func TestContextJoin_BaseNilData_OtherHasData_NoPanicAndMerged(t *testing.T) {
+	base := axiom.Context{}
+	other := axiom.Context{
+		Data: map[string]any{"k": "v"},
+	}
+
+	assert.NotPanics(t, func() {
+		joined := base.Join(other)
+		assert.Equal(t, "v", joined.Data["k"])
+	})
+}

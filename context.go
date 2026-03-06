@@ -78,17 +78,26 @@ func (c *Context) SetData(key string, value any) {
 	c.Data[key] = value
 }
 
-func (c *Context) Join(other Context) Context {
+func (c *Context) Copy() Context {
 	result := Context{
-		Raw:  c.Raw,
-		DB:   c.DB,
-		MQ:   c.MQ,
-		RPC:  c.RPC,
-		Data: map[string]any{},
+		Raw: c.Raw,
+		DB:  c.DB,
+		MQ:  c.MQ,
+		RPC: c.RPC,
 	}
-	for k, v := range c.Data {
-		result.Data[k] = v
+
+	if c.Data != nil {
+		result.Data = make(map[string]any, len(c.Data))
+		for k, v := range c.Data {
+			result.Data[k] = v
+		}
 	}
+
+	return result
+}
+
+func (c *Context) Join(other Context) Context {
+	result := c.Copy()
 
 	if other.Raw != nil {
 		result.Raw = other.Raw
@@ -103,8 +112,13 @@ func (c *Context) Join(other Context) Context {
 		result.RPC = other.RPC
 	}
 
-	for k, v := range other.Data {
-		result.Data[k] = v
+	if len(other.Data) > 0 {
+		if result.Data == nil {
+			result.Data = make(map[string]any, len(other.Data))
+		}
+		for k, v := range other.Data {
+			result.Data[k] = v
+		}
 	}
 
 	return result
