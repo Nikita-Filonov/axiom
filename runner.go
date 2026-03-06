@@ -131,7 +131,8 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 	r.ApplyStart()
 	r.ApplyFinish(t)
 
-	baseCfg := r.BuildConfig(t, &c)
+	baseCase := c.Copy()
+	baseCfg := r.BuildConfig(t, &baseCase)
 	baseCfg.ApplyPlugins()
 	baseCfg.ApplyExecutionPolicy()
 
@@ -140,7 +141,8 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 			time.Sleep(baseCfg.Retry.Delay)
 		}
 
-		cfg := r.BuildConfig(t, &c)
+		attemptCase := c.Copy()
+		cfg := r.BuildConfig(t, &attemptCase)
 		cfg.ApplyPlugins()
 
 		ok := t.Run(cfg.Case.Name, func(st *testing.T) {

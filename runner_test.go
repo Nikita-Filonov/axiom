@@ -1,6 +1,7 @@
 package axiom_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -583,4 +584,52 @@ func TestRunner_BuildConfig_PanicsWithMessageOnNilCase(t *testing.T) {
 	assert.PanicsWithValue(t, "config: nil *Case", func() {
 		r.BuildConfig(&testing.T{}, nil)
 	})
+}
+
+func TestRunner_RunCase_NamePlugin_DoesNotDoublePrefixAcrossRetries(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(2)),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseName("Name"),
+		axiom.WithCaseMeta(axiom.WithMetaFeature("Feature")),
+		axiom.WithCasePlugins(func(cfg *axiom.Config) {
+			cfg.Case.Name = fmt.Sprintf("[%s] %s", cfg.Meta.Feature, cfg.Case.Name)
+		}),
+	)
+
+	var seen []string
+	r.RunCase(t, c, func(cfg *axiom.Config) { seen = append(seen, cfg.Case.Name) })
+	r.RunCase(t, c, func(cfg *axiom.Config) { seen = append(seen, cfg.Case.Name) })
+	r.RunCase(t, c, func(cfg *axiom.Config) { seen = append(seen, cfg.Case.Name) })
+
+	assert.Equal(t, []string{"[Feature] Name", "[Feature] Name", "[Feature] Name"}, seen)
+	assert.Equal(t, "Name", c.Name)
+}
+
+func TestRunner_Join_ResourcesRegistryAndCacheMerged(t *testing.T) {
+	r1 := axiom.NewRunner(
+		axiom.WithRunnerResource("a", func(r *axiom.Runner) (any, func(), error) {
+			return "A", nil, nil
+		}),
+	)
+	r2 := axiom.NewRunner(
+		axiom.WithRunnerResource("b", func(r *axiom.Runner) (any, func(), error) {
+			return "B", nil, nil
+		}),
+	)
+
+	_ = axiom.MustResource[string](r1, "a")
+	_ = axiom.MustResource[string](r2, "b")
+
+	joined := r1.Join(r2)
+
+	_, okA := joined.Resources.Cache["a"]
+	_, okB := joined.Resources.Cache["b"]
+	assert.True(t, okA)
+	assert.True(t, okB)
+
+	assert.Equal(t, "A", axiom.MustResource[string](joined, "a"))
+	assert.Equal(t, "B", axiom.MustResource[string](joined, "b"))
 }
