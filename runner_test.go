@@ -87,7 +87,7 @@ func TestWithRunnerPlugins(t *testing.T) {
 
 func TestWithRunnerParallel(t *testing.T) {
 	r := axiom.NewRunner(
-		axiom.WithRunnerParallel(),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 	)
 
 	assert.True(t, r.Parallel.Enabled)
@@ -133,7 +133,7 @@ func TestRunnerBuildConfig(t *testing.T) {
 		axiom.WithRunnerMeta(axiom.WithMetaEpic("RunnerEpic")),
 		axiom.WithRunnerSkip(axiom.WithSkipReason("runner skip")),
 		axiom.WithRunnerRetry(axiom.WithRetryTimes(10)),
-		axiom.WithRunnerParallel(),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 		axiom.WithRunnerContext(axiom.WithContextData("x", 1)),
 	)
 
@@ -174,6 +174,34 @@ func TestRunnerBuildConfig(t *testing.T) {
 	assert.Equal(t, &c, cfg.Case)
 	assert.Equal(t, r, cfg.Runner)
 	assert.NotNil(t, cfg.RootT)
+}
+
+func TestRunnerBuildConfig_CaseDisablesRunnerParallel(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseParallel(axiom.WithParallelDisabled()),
+	)
+
+	cfg := r.BuildConfig(&testing.T{}, &c)
+
+	assert.False(t, cfg.Parallel.Enabled)
+	assert.True(t, cfg.Parallel.EnabledSet)
+}
+
+func TestRunnerBuildConfig_CaseNotSet_KeepsRunnerParallel(t *testing.T) {
+	r := axiom.NewRunner(
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+	)
+
+	c := axiom.NewCase()
+
+	cfg := r.BuildConfig(&testing.T{}, &c)
+
+	assert.True(t, cfg.Parallel.Enabled)
+	assert.True(t, cfg.Parallel.EnabledSet)
 }
 
 func TestRunnerApplyPlugins(t *testing.T) {

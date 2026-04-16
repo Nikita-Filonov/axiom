@@ -103,7 +103,7 @@ var runner = axiom.NewRunner(
 		axiom.WithRetryTimes(2),
 	),
 
-	axiom.WithRunnerParallel(),
+	axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 )
 
 type LoginResponse struct {

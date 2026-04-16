@@ -71,6 +71,7 @@ package example_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testallure"
@@ -123,14 +124,14 @@ var runner = axiom.NewRunner(
 	// Global retry configuration (per test case):
 	axiom.WithRunnerRetry(
 		axiom.WithRetryTimes(3),
-		axiom.WithRetryDelay(15),
+		axiom.WithRetryDelay(15*time.Second),
 	),
 
 	// Global fixtures:
 	axiom.WithRunnerFixture("db", DBFixture),
 
 	// Enable parallel execution across test cases:
-	axiom.WithRunnerParallel(),
+	axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 )
 
 func TestUserLogin(t *testing.T) {

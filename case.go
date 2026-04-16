@@ -78,12 +78,11 @@ func WithCasePlugins(plugins ...Plugin) CaseOption {
 	return func(c *Case) { c.Plugins = append(c.Plugins, plugins...) }
 }
 
-func WithCaseParallel() CaseOption {
-	return func(c *Case) { c.Parallel.Enabled = true }
-}
-
-func WithCaseSequential() CaseOption {
-	return func(c *Case) { c.Parallel.Enabled = false }
+func WithCaseParallel(opts ...ParallelOption) CaseOption {
+	return func(c *Case) {
+		p := NewParallel(opts...)
+		c.Parallel = c.Parallel.Join(p)
+	}
 }
 
 func WithCaseFixture(name string, fx Fixture) CaseOption {

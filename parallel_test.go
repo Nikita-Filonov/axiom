@@ -11,6 +11,7 @@ func TestNewParallel_Defaults(t *testing.T) {
 	p := axiom.NewParallel()
 
 	assert.False(t, p.Enabled)
+	assert.False(t, p.EnabledSet)
 }
 
 func TestNewParallel_WithEnabled(t *testing.T) {
@@ -19,15 +20,17 @@ func TestNewParallel_WithEnabled(t *testing.T) {
 	)
 
 	assert.True(t, p.Enabled)
+	assert.True(t, p.EnabledSet)
 }
 
 func TestNewParallel_WithDisabled(t *testing.T) {
 	p := axiom.NewParallel(
 		axiom.WithParallelEnabled(),
-		axiom.WithParallelDisabled(), // overrides enabled
+		axiom.WithParallelDisabled(),
 	)
 
 	assert.False(t, p.Enabled)
+	assert.True(t, p.EnabledSet)
 }
 
 func TestWithParallelEnabled(t *testing.T) {
@@ -35,6 +38,7 @@ func TestWithParallelEnabled(t *testing.T) {
 	axiom.WithParallelEnabled()(&p)
 
 	assert.True(t, p.Enabled)
+	assert.True(t, p.EnabledSet)
 }
 
 func TestWithParallelDisabled(t *testing.T) {
@@ -42,47 +46,80 @@ func TestWithParallelDisabled(t *testing.T) {
 	axiom.WithParallelDisabled()(&p)
 
 	assert.False(t, p.Enabled)
+	assert.True(t, p.EnabledSet)
 }
 
-func TestParallelJoin_NoOverride(t *testing.T) {
-	base := axiom.Parallel{Enabled: false}
-	other := axiom.Parallel{Enabled: false}
+func TestParallelJoin_NeitherSet(t *testing.T) {
+	base := axiom.Parallel{}
+	other := axiom.Parallel{}
 
 	result := base.Join(other)
 
 	assert.False(t, result.Enabled)
+	assert.False(t, result.EnabledSet)
 }
 
-func TestParallelJoin_OverrideToTrue(t *testing.T) {
-	base := axiom.Parallel{Enabled: false}
-	other := axiom.Parallel{Enabled: true}
+func TestParallelJoin_OtherEnablesToTrue(t *testing.T) {
+	base := axiom.Parallel{}
+	other := axiom.NewParallel(axiom.WithParallelEnabled())
 
 	result := base.Join(other)
 
 	assert.True(t, result.Enabled)
+	assert.True(t, result.EnabledSet)
 }
 
-func TestParallelJoin_KeepTrue(t *testing.T) {
-	base := axiom.Parallel{Enabled: true}
-	other := axiom.Parallel{Enabled: false}
+func TestParallelJoin_OtherDisablesToFalse(t *testing.T) {
+	base := axiom.NewParallel(axiom.WithParallelEnabled())
+	other := axiom.NewParallel(axiom.WithParallelDisabled())
+
+	result := base.Join(other)
+
+	assert.False(t, result.Enabled)
+	assert.True(t, result.EnabledSet)
+}
+
+func TestParallelJoin_OtherNotSet_KeepsBase(t *testing.T) {
+	base := axiom.NewParallel(axiom.WithParallelEnabled())
+	other := axiom.Parallel{}
 
 	result := base.Join(other)
 
 	assert.True(t, result.Enabled)
+	assert.True(t, result.EnabledSet)
 }
 
-func TestParallelJoin_TrueWithTrue(t *testing.T) {
-	base := axiom.Parallel{Enabled: true}
-	other := axiom.Parallel{Enabled: true}
+func TestParallelJoin_BothEnabled(t *testing.T) {
+	base := axiom.NewParallel(axiom.WithParallelEnabled())
+	other := axiom.NewParallel(axiom.WithParallelEnabled())
 
 	result := base.Join(other)
 
 	assert.True(t, result.Enabled)
+	assert.True(t, result.EnabledSet)
+}
+
+func TestParallelJoin_BaseNotSet_OtherDisabled(t *testing.T) {
+	base := axiom.Parallel{}
+	other := axiom.NewParallel(axiom.WithParallelDisabled())
+
+	result := base.Join(other)
+
+	assert.False(t, result.Enabled)
+	assert.True(t, result.EnabledSet)
 }
 
 func TestParallelCopy(t *testing.T) {
-	p := axiom.Parallel{Enabled: true}
+	p := axiom.NewParallel(axiom.WithParallelEnabled())
 	cp := p.Copy()
 
 	assert.Equal(t, p, cp)
+}
+
+func TestParallelCopy_PreservesEnabledSet(t *testing.T) {
+	p := axiom.NewParallel(axiom.WithParallelDisabled())
+	cp := p.Copy()
+
+	assert.False(t, cp.Enabled)
+	assert.True(t, cp.EnabledSet)
 }

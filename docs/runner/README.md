@@ -106,7 +106,7 @@ var runner = axiom.NewRunner(
 	),
 
 	// Enable parallel execution by default
-	axiom.WithRunnerParallel(),
+	axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 
 	// Global fixtures shared across all tests
 	axiom.WithRunnerFixture("db", DBFixture),

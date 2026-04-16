@@ -78,8 +78,8 @@ func TestCaseExample(t *testing.T) {
 		// axiom.WithCasePlugins(myPlugin),
 
 		// Parallel or sequential execution
-		axiom.WithCaseParallel(),
-		// axiom.WithCaseSequential(),
+		axiom.WithCaseParallel(axiom.WithParallelEnabled()),
+		// axiom.WithCaseParallel(axiom.WithParallelDisabled()),
 
 		// Case-local fixtures
 		axiom.WithCaseFixture("user", UserFixture),

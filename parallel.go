@@ -1,7 +1,8 @@
 package axiom
 
 type Parallel struct {
-	Enabled bool
+	Enabled    bool
+	EnabledSet bool
 }
 
 type ParallelOption func(*Parallel)
@@ -15,27 +16,30 @@ func NewParallel(options ...ParallelOption) Parallel {
 	return p
 }
 
-func WithParallelEnabled() func(*Parallel) {
+func WithParallelEnabled() ParallelOption {
 	return func(p *Parallel) {
 		p.Enabled = true
+		p.EnabledSet = true
 	}
 }
 
-func WithParallelDisabled() func(*Parallel) {
+func WithParallelDisabled() ParallelOption {
 	return func(p *Parallel) {
 		p.Enabled = false
+		p.EnabledSet = true
 	}
 }
 
 func (p *Parallel) Copy() Parallel {
-	return Parallel{Enabled: p.Enabled}
+	return Parallel{Enabled: p.Enabled, EnabledSet: p.EnabledSet}
 }
 
 func (p *Parallel) Join(other Parallel) Parallel {
 	result := p.Copy()
 
-	if other.Enabled {
-		result.Enabled = true
+	if other.EnabledSet {
+		result.Enabled = other.Enabled
+		result.EnabledSet = true
 	}
 
 	return result

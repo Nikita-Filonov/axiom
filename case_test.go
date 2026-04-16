@@ -93,13 +93,16 @@ func TestWithCasePlugins(t *testing.T) {
 }
 
 func TestWithCaseParallel(t *testing.T) {
-	c := axiom.NewCase(axiom.WithCaseParallel())
+	c := axiom.NewCase(axiom.WithCaseParallel(axiom.WithParallelEnabled()))
 
 	assert.True(t, c.Parallel.Enabled)
 }
 
-func TestWithCaseSequential(t *testing.T) {
-	c := axiom.NewCase(axiom.WithCaseParallel(), axiom.WithCaseSequential())
+func TestWithCaseParallel_Disabled(t *testing.T) {
+	c := axiom.NewCase(
+		axiom.WithCaseParallel(axiom.WithParallelEnabled()),
+		axiom.WithCaseParallel(axiom.WithParallelDisabled()),
+	)
 
 	assert.False(t, c.Parallel.Enabled)
 }

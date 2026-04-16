@@ -17,7 +17,7 @@ var BaseRunner = axiom.NewRunner(
 		axiom.WithRetryTimes(2),
 	),
 
-	axiom.WithRunnerParallel(),
+	axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 
 	axiom.WithRunnerFixture("config", ConfigFixture),
 )

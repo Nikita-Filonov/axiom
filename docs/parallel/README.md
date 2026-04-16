@@ -36,7 +36,7 @@ func TestParallelExample(t *testing.T) {
 	// -------------------------------------------------------------------------
 
 	runner := axiom.NewRunner(
-		axiom.WithRunnerParallel(), // same as WithParallelEnabled()
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 	)
 
 	// -------------------------------------------------------------------------
@@ -45,7 +45,7 @@ func TestParallelExample(t *testing.T) {
 
 	c := axiom.NewCase(
 		axiom.WithCaseName("runs sequentially"),
-		axiom.WithCaseSequential(), // disables parallel mode for this test
+		axiom.WithCaseParallel(axiom.WithParallelDisabled()),
 	)
 
 	runner.RunCase(t, c, func(cfg *axiom.Config) {

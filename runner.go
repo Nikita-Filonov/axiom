@@ -88,9 +88,10 @@ func WithRunnerPlugins(plugins ...Plugin) RunnerOption {
 	}
 }
 
-func WithRunnerParallel() RunnerOption {
+func WithRunnerParallel(options ...ParallelOption) RunnerOption {
 	return func(r *Runner) {
-		r.Parallel.Enabled = true
+		p := NewParallel(options...)
+		r.Parallel = r.Parallel.Join(p)
 	}
 }
 
