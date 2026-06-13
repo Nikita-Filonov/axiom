@@ -130,8 +130,12 @@ func (r *Runner) Join(other *Runner) *Runner {
 
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 	r.ApplyStart()
-	r.ApplyFinish(t)
+	t.Cleanup(r.ApplyFinish)
 
+	r.runCase(t, c, action)
+}
+
+func (r *Runner) runCase(t *testing.T, c Case, action TestAction) {
 	baseCase := c.Copy()
 	baseCfg := r.BuildConfig(t, &baseCase)
 	baseCfg.ApplyPlugins()
@@ -201,8 +205,6 @@ func (r *Runner) ApplyStart() {
 	r.beforeOnce.Do(func() { r.Hooks.ApplyBeforeAll(r) })
 }
 
-func (r *Runner) ApplyFinish(t *testing.T) {
-	t.Cleanup(func() {
-		r.afterOnce.Do(func() { r.Hooks.ApplyAfterAll(r) })
-	})
+func (r *Runner) ApplyFinish() {
+	r.afterOnce.Do(func() { r.Hooks.ApplyAfterAll(r) })
 }

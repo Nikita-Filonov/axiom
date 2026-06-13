@@ -10,6 +10,7 @@ framework. Each subfolder provides focused reference material and examples.
 - [./usage](./usage) — realistic end-to-end example of building a test framework with Axiom
 - [./philosophy](./philosophy) — design principles and how Axiom fits into the Go testing ecosystem
 - [./runner](./runner) — global execution environment, hooks, shared fixtures, retries
+- [./suite](./suite) — optional execution boundary for grouped tests, shared runners, resources, and lifecycle
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks

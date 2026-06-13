@@ -215,6 +215,7 @@ following folders:
 - [./docs/usage](./docs/usage) — realistic end-to-end example of building a test framework with Axiom
 - [./docs/philosophy](./docs/philosophy) — design principles and how Axiom fits into the Go testing ecosystem
 - [./docs/runner](./docs/runner) — global execution environment, plugins, hooks, shared fixtures, retries
+- [./docs/suite](./docs/suite) — optional execution boundary for grouped tests, shared runners, resources, and lifecycle
 - [./docs/case](./docs/case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./docs/config](./docs/config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
