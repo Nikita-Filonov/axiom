@@ -494,10 +494,6 @@ func (s *discoverySuite) TestWithArgs(_ int) {
 	*s.called = append(*s.called, "with-args")
 }
 
-func (s *discoverySuite) testLowercase() {
-	*s.called = append(*s.called, "lowercase")
-}
-
 func TestSuite_DiscoveryRunsOnlyExportedZeroArgTestMethods(t *testing.T) {
 	var called []string
 

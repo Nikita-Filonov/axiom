@@ -78,7 +78,13 @@ func RunSuite(t *testing.T, suite any, options ...SuiteOption) {
 	}
 
 	suiteValue := reflect.ValueOf(suite)
-	if !suiteValue.IsValid() || suiteValue.Kind() != reflect.Ptr || suiteValue.IsNil() {
+	if !suiteValue.IsValid() {
+		panic("suite: suite must be a non-nil pointer to a struct")
+	}
+	if suiteValue.Kind() != reflect.Ptr {
+		panic("suite: suite must be a non-nil pointer to a struct")
+	}
+	if suiteValue.IsNil() {
 		panic("suite: suite must be a non-nil pointer to a struct")
 	}
 	if suiteValue.Elem().Kind() != reflect.Struct {
