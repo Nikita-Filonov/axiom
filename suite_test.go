@@ -414,29 +414,41 @@ func TestSuite_RequiresEmbeddedPointerSuite(t *testing.T) {
 	})
 }
 
-func TestSuite_RunPanicsForInvalidSuite(t *testing.T) {
+func TestSuite_RunPanicsWhenTestingTIsNil(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: nil *testing.T", func() {
 		axiom.RunSuite(nil, &emptySuite{})
 	})
+}
 
+func TestSuite_RunPanicsWhenSuiteIsNil(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer to a struct", func() {
 		axiom.RunSuite(t, nil)
 	})
+}
 
+func TestSuite_RunPanicsWhenSuiteIsNotPointer(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer to a struct", func() {
 		axiom.RunSuite(t, emptySuite{})
 	})
+}
 
+func TestSuite_RunPanicsWhenSuitePointerIsNil(t *testing.T) {
 	var nilSuite *emptySuite
+
 	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer to a struct", func() {
 		axiom.RunSuite(t, nilSuite)
 	})
+}
+
+func TestSuite_RunPanicsWhenSuitePointerDoesNotPointToStruct(t *testing.T) {
+	v := 1
 
 	assert.PanicsWithValue(t, "suite: suite must be a pointer to a struct", func() {
-		v := 1
 		axiom.RunSuite(t, &v)
 	})
+}
 
+func TestSuite_RunPanicsWhenStructDoesNotEmbedSuite(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: suite must embed axiom.Suite", func() {
 		axiom.RunSuite(t, &struct{}{})
 	})
