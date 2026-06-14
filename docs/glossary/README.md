@@ -11,6 +11,7 @@ documents ([/docs/case](./../../docs/case), [/docs/runner](./../../docs/runner),
 |--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Case**     | Declarative definition of a single test: name, metadata, fixtures, retry policy, parameters, plugins, and execution behavior.                                                    |
 | **Runner**   | Global test environment. Merges its configuration with a Case and executes it. Applies plugins, hooks, fixtures, retry logic, and parallelization settings.                      |
+| **Suite**    | Optional grouping layer for related test cases. Provides a shared execution boundary for suite-level lifecycle, including correct `BeforeAll` and `AfterAll` semantics.          |
 | **Config**   | Runtime object produced per test execution. Represents merged Runner + Case configuration and provides access to fixtures, metadata, steps, hooks, plugins, and context.         |
 | **Plugin**   | Function that configures test execution by registering behavior in `Config` and its `Runtime` (wraps, hooks, sinks, filters, instrumentation).                                   |
 | **Fixture**  | Lazily evaluated resource (e.g., DB connection). Created on first request, cached for the test duration, and cleaned up automatically.                                           |
