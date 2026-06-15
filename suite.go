@@ -2,7 +2,6 @@ package axiom
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -12,109 +11,128 @@ type Suite struct {
 	Runner *Runner
 }
 
-type SuiteOption func(*Suite)
-
-func WithSuiteRunner(runner *Runner) SuiteOption {
-	return func(s *Suite) { s.Runner = runner }
+type TestingSuite interface {
+	SetRootT(*testing.T)
+	SetSubT(*testing.T)
+	SetRunner(*Runner)
+	RunCase(Case, TestAction)
 }
 
-func findEmbeddedSuite(suiteValue reflect.Value) *Suite {
-	suiteStruct := suiteValue.Elem()
-	suiteStructType := suiteStruct.Type()
-
-	suiteType := reflect.TypeOf(Suite{})
-	suitePointerType := reflect.TypeOf((*Suite)(nil))
-
-	for i := 0; i < suiteStruct.NumField(); i++ {
-		structField := suiteStructType.Field(i)
-		if !structField.Anonymous {
-			continue
-		}
-
-		field := suiteStruct.Field(i)
-
-		switch field.Type() {
-		case suiteType:
-			if field.CanAddr() {
-				return field.Addr().Interface().(*Suite)
-			}
-
-		case suitePointerType:
-			if field.IsNil() {
-				field.Set(reflect.New(suiteType))
-			}
-
-			return field.Interface().(*Suite)
-		}
-	}
-
-	return nil
+type BoundSuite[T TestingSuite] struct {
+	rootT  *testing.T
+	suite  T
+	config SuiteConfig
+	tests  []boundSuiteTest[T]
+	ran    bool
 }
 
-func discoverSuiteTests(suiteValue reflect.Value) []string {
-	suiteType := suiteValue.Type()
-	tests := make([]string, 0)
-
-	for i := 0; i < suiteType.NumMethod(); i++ {
-		method := suiteType.Method(i)
-
-		if !strings.HasPrefix(method.Name, "Test") {
-			continue
-		}
-
-		if method.Type.NumIn() != 1 || method.Type.NumOut() != 0 {
-			continue
-		}
-
-		tests = append(tests, method.Name)
-	}
-
-	return tests
+type boundSuiteTest[T TestingSuite] struct {
+	name   string
+	action func(T)
 }
 
-func RunSuite(t *testing.T, suite any, options ...SuiteOption) {
+func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOption) *BoundSuite[T] {
 	if t == nil {
 		panic("suite: nil *testing.T")
 	}
+	validateSuiteInstance(suite)
 
+	cfg := NewSuiteConfig(options...)
+
+	suite.SetRootT(t)
+	suite.SetSubT(nil)
+	suite.SetRunner(cfg.Runner)
+
+	return &BoundSuite[T]{
+		rootT:  t,
+		suite:  suite,
+		config: cfg,
+		tests:  make([]boundSuiteTest[T], 0),
+	}
+}
+
+func validateSuiteInstance(suite any) {
 	suiteValue := reflect.ValueOf(suite)
 	if !suiteValue.IsValid() {
-		panic("suite: suite must be a non-nil pointer to a struct")
+		panic("suite: suite must be a non-nil pointer implementing axiom.TestingSuite")
 	}
 	if suiteValue.Kind() != reflect.Pointer {
-		panic("suite: suite must be a non-nil pointer to a struct")
+		panic("suite: suite must be a non-nil pointer implementing axiom.TestingSuite")
 	}
 	if suiteValue.IsNil() {
-		panic("suite: suite must be a non-nil pointer to a struct")
+		panic("suite: suite must be a non-nil pointer implementing axiom.TestingSuite")
 	}
 	if suiteValue.Elem().Kind() != reflect.Struct {
-		panic("suite: suite must be a pointer to a struct")
+		panic("suite: suite must be a pointer to a struct implementing axiom.TestingSuite")
+	}
+}
+
+func (s *BoundSuite[T]) Test(name string, action func(T)) {
+	if s == nil {
+		panic("suite: nil BoundSuite")
+	}
+	if s.ran {
+		panic("suite: cannot register test after Run")
+	}
+	if name == "" {
+		panic("suite: test name must not be empty")
+	}
+	if action == nil {
+		panic("suite: nil test action")
+	}
+	for _, test := range s.tests {
+		if test.name == name {
+			panic("suite: duplicate test name: " + name)
+		}
 	}
 
-	baseSuite := findEmbeddedSuite(suiteValue)
-	if baseSuite == nil {
-		panic("suite: suite must embed axiom.Suite")
+	s.tests = append(s.tests, boundSuiteTest[T]{name: name, action: action})
+}
+
+func (s *BoundSuite[T]) Run() {
+	if s == nil {
+		panic("suite: nil BoundSuite")
 	}
-
-	baseSuite.RootT = t
-	for _, option := range options {
-		option(baseSuite)
+	if s.ran {
+		panic("suite: suite already ran")
 	}
-	if baseSuite.Runner == nil {
-		baseSuite.Runner = NewRunner()
-	}
+	s.ran = true
 
-	baseSuite.Runner.ApplyStart()
-	t.Cleanup(baseSuite.Runner.ApplyFinish)
+	s.config.Runner.ApplyStart()
+	s.rootT.Cleanup(s.config.Runner.ApplyFinish)
 
-	for _, test := range discoverSuiteTests(suiteValue) {
-		t.Run(test, func(st *testing.T) {
-			baseSuite.SubT = st
-			defer func() { baseSuite.SubT = nil }()
+	for _, test := range s.tests {
+		s.rootT.Run(test.name, func(st *testing.T) {
+			s.suite.SetSubT(st)
+			defer s.suite.SetSubT(nil)
 
-			suiteValue.MethodByName(test).Call(nil)
+			test.action(s.suite)
 		})
 	}
+}
+
+func (s *Suite) SetRootT(t *testing.T) {
+	if s == nil {
+		panic("suite: nil Suite")
+	}
+
+	s.RootT = t
+}
+
+func (s *Suite) SetSubT(t *testing.T) {
+	if s == nil {
+		panic("suite: nil Suite")
+	}
+
+	s.SubT = t
+}
+
+func (s *Suite) SetRunner(runner *Runner) {
+	if s == nil {
+		panic("suite: nil Suite")
+	}
+
+	s.Runner = runner
 }
 
 func (s *Suite) RunCase(c Case, a TestAction) {

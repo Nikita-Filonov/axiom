@@ -25,7 +25,7 @@ Use `Suite` when several related cases should be executed as one logical group w
 This model enables:
 
 * grouping related cases without replacing native Go tests
-* sharing one `Runner` configuration across suite methods
+* sharing one `Runner` configuration across registered suite tests
 * runner-scoped resources shared by all cases in the suite
 * case-attempt fixtures for each individual case execution
 * consistent metadata, context, retry policy, plugins, and runtime wrappers
@@ -33,10 +33,93 @@ This model enables:
 
 ---
 
-## Example
+## Minimal Example
+
+```go
+package example_test
+
+import (
+	"testing"
+
+	"github.com/Nikita-Filonov/axiom"
+)
+
+var UsersRunner = axiom.NewRunner()
+
+type UsersSuite struct { axiom.Suite }
+
+func TestUsersSuite(t *testing.T) {
+	suite := axiom.NewSuite(t, new(UsersSuite), axiom.WithSuiteConfigRunner(UsersRunner))
+	suite.Test("user can log in", (*UsersSuite).UserCanLogin)
+	suite.Test("admin can block user", (*UsersSuite).AdminCanBlockUser)
+	suite.Run()
+}
+
+func (s *UsersSuite) UserCanLogin() {
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("user can log in")), func(cfg *axiom.Config) {
+		cfg.Step("login", func() {
+			// test body
+		})
+	})
+}
+
+func (s *UsersSuite) AdminCanBlockUser() {
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("admin can block user")), func(cfg *axiom.Config) {
+		cfg.Step("block user", func() {
+			// test body
+		})
+	})
+}
+```
+
+The only Go test discovered by `go test` is the top-level `TestUsersSuite`. Suite tests are registered explicitly with
+`suite.Test(...)`; Axiom does not discover receiver methods by name.
+
+Suite methods do not need a `Test` prefix. They become executable suite tests only when they are registered:
+
+```go
+suite.Test("user can log in", (*UsersSuite).UserCanLogin)
+```
+
+`NewSuite` accepts any non-nil pointer implementing `axiom.TestingSuite`. Embedding `axiom.Suite` is the standard way to
+provide that contract:
+
+```go
+type BaseSuite struct {
+	axiom.Suite
+}
+
+type UsersSuite struct {
+	BaseSuite
+}
+```
+
+`SuiteConfig` controls suite-level configuration. If no runner is provided, Axiom creates a default runner:
+
+```go
+suite := axiom.NewSuite(t, new(UsersSuite))
+```
+
+Use `WithSuiteConfigRunner` when the suite should run through a shared runner:
+
+```go
+suite := axiom.NewSuite(t, new(UsersSuite), axiom.WithSuiteConfigRunner(UsersRunner))
+```
+
+Rules:
+
+* test names passed to `suite.Test` must be non-empty
+* test names must be unique within a suite
+* test actions must be non-nil
+* register all tests before calling `suite.Run`
+* call `suite.Run` once per bound suite
+
+---
+
+## Complete Example
 
 The following example demonstrates a complete suite use case with a shared runner, runner-scoped resource, fixture,
-metadata, context, hooks, runtime wrappers, plugin, case-level overrides, and multiple suite test methods.
+metadata, context, hooks, runtime wrappers, plugin, case-level overrides, and multiple registered suite tests.
 
 ```go
 package example_test
@@ -192,7 +275,7 @@ var UsersRunner = axiom.NewRunner(
 	axiom.WithRunnerFixture("user", UserFixture),
 
 	// Hooks are part of runner configuration.
-	// BeforeAll/AfterAll wrap the whole suite because RunSuite provides
+	// BeforeAll/AfterAll wrap the whole suite because NewSuite provides
 	// an explicit execution boundary.
 	axiom.WithRunnerHooks(
 		axiom.WithBeforeAll(beforeAll),
@@ -240,14 +323,17 @@ type UsersSuite struct {
 // -----------------------------------------------------------------------------
 
 func TestUsersSuite(t *testing.T) {
-	axiom.RunSuite(t, new(UsersSuite), axiom.WithSuiteRunner(UsersRunner))
+	suite := axiom.NewSuite(t, new(UsersSuite), axiom.WithSuiteConfigRunner(UsersRunner))
+	suite.Test("user can log in", (*UsersSuite).UserCanLogin)
+	suite.Test("admin can block user", (*UsersSuite).AdminCanBlockUser)
+	suite.Run()
 }
 
 // -----------------------------------------------------------------------------
-// Suite test methods
+// Suite methods
 // -----------------------------------------------------------------------------
 
-func (s *UsersSuite) TestUserCanLogin() {
+func (s *UsersSuite) UserCanLogin() {
 	c := axiom.NewCase(
 		axiom.WithCaseName("user can log in"),
 
@@ -286,7 +372,7 @@ func (s *UsersSuite) TestUserCanLogin() {
 	})
 }
 
-func (s *UsersSuite) TestAdminCanBlockUser() {
+func (s *UsersSuite) AdminCanBlockUser() {
 	c := axiom.NewCase(
 		axiom.WithCaseName("admin can block user"),
 
@@ -316,38 +402,34 @@ func (s *UsersSuite) TestAdminCanBlockUser() {
 	})
 }
 
-// This method is ignored by RunSuite because it does not start with Test.
 func (s *UsersSuite) helper() {}
-
-// This method is ignored by RunSuite because it requires an argument.
-func (s *UsersSuite) TestWithArgs(_ int) {}
 ```
 
 In this example, `UsersRunner` remains the central execution configuration. The suite only defines a boundary around a
-group of related test methods.
+group of related registered tests.
 
-Axiom discovers exported zero-argument methods whose names start with `Test` and runs each method as a Go subtest.
-Inside each suite method, `s.RunCase(...)` executes a normal Axiom `Case` through the suite runner.
+Axiom runs the methods explicitly registered with `Test`. Inside each suite method, `s.RunCase(...)` executes a
+normal Axiom `Case` through the suite runner.
 
 The resulting test structure is:
 
 ```text
 TestUsersSuite
-  TestAdminCanBlockUser
+  admin can block user
     admin can block user
-  TestUserCanLogin
+  user can log in
     user can log in
 ```
 
 The execution model is:
 
 ```text
-RunSuite
+NewSuite
   Runner ApplyStart
-    suite test method
+    bound suite test
       s.RunCase
         Case execution
-    suite test method
+    bound suite test
       s.RunCase
         Case execution
   Runner ApplyFinish
@@ -359,7 +441,7 @@ It is an optional grouping boundary around normal Axiom cases:
 
 ```text
 Runner = shared execution configuration
-Suite  = boundary for related test methods
+Suite  = boundary for related registered tests
 Case   = individual test definition
 Config = runtime state for one case attempt
 ```

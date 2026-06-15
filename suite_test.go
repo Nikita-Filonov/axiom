@@ -10,6 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func runBoundSuite[T axiom.TestingSuite](
+	t *testing.T,
+	suite T,
+	bind func(*axiom.BoundSuite[T]),
+	options ...axiom.SuiteConfigOption,
+) {
+	boundSuite := axiom.NewSuite(t, suite, options...)
+	if bind != nil {
+		bind(boundSuite)
+	}
+	boundSuite.Run()
+}
+
 type lifecycleSuite struct {
 	axiom.Suite
 	order *[]string
@@ -56,7 +69,10 @@ func TestSuite_BeforeAllAfterAllWrapAllSuiteTests(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &lifecycleSuite{order: &order}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &lifecycleSuite{order: &order}, func(s *axiom.BoundSuite[*lifecycleSuite]) {
+			s.Test("TestAlpha", (*lifecycleSuite).TestAlpha)
+			s.Test("TestBeta", (*lifecycleSuite).TestBeta)
+		}, axiom.WithSuiteConfigRunner(runner))
 	})
 
 	assert.Equal(t, []string{"before-all", "test:alpha", "test:beta", "after-all"}, order)
@@ -94,7 +110,10 @@ func TestSuite_TestAndStepHooksRunForEachCase(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &hookCountingSuite{}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &hookCountingSuite{}, func(s *axiom.BoundSuite[*hookCountingSuite]) {
+			s.Test("TestOne", (*hookCountingSuite).TestOne)
+			s.Test("TestTwo", (*hookCountingSuite).TestTwo)
+		}, axiom.WithSuiteConfigRunner(runner))
 	})
 
 	assert.Equal(t, 2, beforeTestCount)
@@ -208,7 +227,9 @@ func TestSuite_UsesFullRunnerConfiguration(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &runnerUseCaseSuite{seen: &seen}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &runnerUseCaseSuite{seen: &seen}, func(s *axiom.BoundSuite[*runnerUseCaseSuite]) {
+			s.Test("TestRunnerConfigurationIsApplied", (*runnerUseCaseSuite).TestRunnerConfigurationIsApplied)
+		}, axiom.WithSuiteConfigRunner(runner))
 		assert.Equal(t, 0, resourceCleaned)
 	})
 
@@ -268,7 +289,10 @@ func TestSuite_ResourcesAreSharedAndCleanedUpAfterSuite(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &resourceSuite{seen: &seen}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &resourceSuite{seen: &seen}, func(s *axiom.BoundSuite[*resourceSuite]) {
+			s.Test("TestFirst", (*resourceSuite).TestFirst)
+			s.Test("TestSecond", (*resourceSuite).TestSecond)
+		}, axiom.WithSuiteConfigRunner(runner))
 		assert.Equal(t, 0, cleaned)
 	})
 
@@ -295,7 +319,43 @@ func TestSuite_AllowsPointerEmbeddedSuite(t *testing.T) {
 	called := false
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &pointerEmbeddedSuite{called: &called})
+		runBoundSuite(t, &pointerEmbeddedSuite{Suite: new(axiom.Suite), called: &called}, func(s *axiom.BoundSuite[*pointerEmbeddedSuite]) {
+			s.Test("TestPointerEmbeddedSuite", (*pointerEmbeddedSuite).TestPointerEmbeddedSuite)
+		})
+	})
+
+	assert.True(t, called)
+}
+
+type nestedSuiteLayer struct {
+	axiom.Suite
+}
+
+type nestedBaseSuite struct {
+	nestedSuiteLayer
+}
+
+type nestedEmbeddedSuite struct {
+	nestedBaseSuite
+	called *bool
+}
+
+func (s *nestedEmbeddedSuite) TestNestedEmbeddedSuite() {
+	require.NotNil(s.SubT, s.Suite)
+
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("nested embedded")), func(cfg *axiom.Config) {
+		*s.called = true
+		assert.Same(cfg.SubT, s.SubT, cfg.RootT)
+	})
+}
+
+func TestSuite_AllowsNestedEmbeddedSuite(t *testing.T) {
+	called := false
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuite(t, &nestedEmbeddedSuite{called: &called}, func(s *axiom.BoundSuite[*nestedEmbeddedSuite]) {
+			s.Test("TestNestedEmbeddedSuite", (*nestedEmbeddedSuite).TestNestedEmbeddedSuite)
+		})
 	})
 
 	assert.True(t, called)
@@ -317,7 +377,9 @@ func TestSuite_UsesDefaultRunnerWhenOptionIsMissing(t *testing.T) {
 	var seenRunner *axiom.Runner
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner})
+		runBoundSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.BoundSuite[*defaultRunnerSuite]) {
+			s.Test("TestDefaultRunner", (*defaultRunnerSuite).TestDefaultRunner)
+		})
 	})
 
 	assert.NotNil(t, seenRunner)
@@ -327,10 +389,23 @@ func TestSuite_UsesDefaultRunnerWhenOptionSetsNilRunner(t *testing.T) {
 	var seenRunner *axiom.Runner
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, axiom.WithSuiteRunner(nil))
+		runBoundSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.BoundSuite[*defaultRunnerSuite]) {
+			s.Test("TestDefaultRunner", (*defaultRunnerSuite).TestDefaultRunner)
+		}, axiom.WithSuiteConfigRunner(nil))
 	})
 
 	assert.NotNil(t, seenRunner)
+}
+
+func TestSuite_NewSuiteBindsRootTAndRunner(t *testing.T) {
+	runner := axiom.NewRunner()
+	suite := &emptySuite{}
+
+	axiom.NewSuite(t, suite, axiom.WithSuiteConfigRunner(runner))
+
+	assert.Same(t, t, suite.RootT)
+	assert.Nil(t, suite.SubT)
+	assert.Same(t, runner, suite.Runner)
 }
 
 type rootAndSubTSuite struct {
@@ -358,11 +433,13 @@ func TestSuite_BindsRootAndSubTestingT(t *testing.T) {
 	var caseSub string
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &rootAndSubTSuite{
+		runBoundSuite(t, &rootAndSubTSuite{
 			rootName: &rootName,
 			subName:  &subName,
 			caseRoot: &caseRoot,
 			caseSub:  &caseSub,
+		}, func(s *axiom.BoundSuite[*rootAndSubTSuite]) {
+			s.Test("TestTBinding", (*rootAndSubTSuite).TestTBinding)
 		})
 	})
 
@@ -387,71 +464,183 @@ func TestSuite_RunsBeforeAllAfterAllEvenWithoutTestMethods(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &emptySuite{}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &emptySuite{}, nil, axiom.WithSuiteConfigRunner(runner))
 		assert.Equal(t, []string{"before"}, order)
 	})
 
 	assert.Equal(t, []string{"before", "after"}, order)
 }
 
-type namedSuiteField struct {
-	Base axiom.Suite
-}
+func TestSuite_TestPanicsWhenBoundSuiteIsNil(t *testing.T) {
+	var boundSuite *axiom.BoundSuite[*emptySuite]
 
-func TestSuite_RequiresEmbeddedSuite(t *testing.T) {
-	assert.PanicsWithValue(t, "suite: suite must embed axiom.Suite", func() {
-		axiom.RunSuite(t, &namedSuiteField{})
+	assert.PanicsWithValue(t, "suite: nil BoundSuite", func() {
+		boundSuite.Test("empty", func(s *emptySuite) {})
 	})
 }
 
-type namedPointerSuiteField struct {
-	Base *axiom.Suite
-}
+func TestSuite_TestPanicsWhenNameIsEmpty(t *testing.T) {
+	boundSuite := axiom.NewSuite(t, &emptySuite{})
 
-func TestSuite_RequiresEmbeddedPointerSuite(t *testing.T) {
-	assert.PanicsWithValue(t, "suite: suite must embed axiom.Suite", func() {
-		axiom.RunSuite(t, &namedPointerSuiteField{})
+	assert.PanicsWithValue(t, "suite: test name must not be empty", func() {
+		boundSuite.Test("", func(s *emptySuite) {})
 	})
 }
 
-func TestSuite_RunPanicsWhenTestingTIsNil(t *testing.T) {
+func TestSuite_TestPanicsWhenActionIsNil(t *testing.T) {
+	boundSuite := axiom.NewSuite(t, &emptySuite{})
+
+	assert.PanicsWithValue(t, "suite: nil test action", func() {
+		boundSuite.Test("empty", nil)
+	})
+}
+
+func TestSuite_TestPanicsWhenNameIsDuplicated(t *testing.T) {
+	boundSuite := axiom.NewSuite(t, &emptySuite{})
+	boundSuite.Test("empty", func(s *emptySuite) {})
+
+	assert.PanicsWithValue(t, "suite: duplicate test name: empty", func() {
+		boundSuite.Test("empty", func(s *emptySuite) {})
+	})
+}
+
+func TestSuite_TestPanicsAfterRun(t *testing.T) {
+	boundSuite := axiom.NewSuite(t, &emptySuite{})
+	boundSuite.Run()
+
+	assert.PanicsWithValue(t, "suite: cannot register test after Run", func() {
+		boundSuite.Test("empty", func(s *emptySuite) {})
+	})
+}
+
+func TestSuite_RunPanicsWhenBoundSuiteIsNil(t *testing.T) {
+	var boundSuite *axiom.BoundSuite[*emptySuite]
+
+	assert.PanicsWithValue(t, "suite: nil BoundSuite", func() {
+		boundSuite.Run()
+	})
+}
+
+func TestSuite_RunPanicsWhenSuiteAlreadyRan(t *testing.T) {
+	boundSuite := axiom.NewSuite(t, &emptySuite{})
+	boundSuite.Run()
+
+	assert.PanicsWithValue(t, "suite: suite already ran", func() {
+		boundSuite.Run()
+	})
+}
+
+func TestSuite_NewSuitePanicsWhenTestingTIsNil(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: nil *testing.T", func() {
-		axiom.RunSuite(nil, &emptySuite{})
+		axiom.NewSuite(nil, &emptySuite{})
 	})
 }
 
-func TestSuite_RunPanicsWhenSuiteIsNil(t *testing.T) {
-	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer to a struct", func() {
-		axiom.RunSuite(t, nil)
-	})
-}
-
-func TestSuite_RunPanicsWhenSuiteIsNotPointer(t *testing.T) {
-	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer to a struct", func() {
-		axiom.RunSuite(t, emptySuite{})
-	})
-}
-
-func TestSuite_RunPanicsWhenSuitePointerIsNil(t *testing.T) {
+func TestSuite_NewSuitePanicsWhenSuitePointerIsNil(t *testing.T) {
 	var nilSuite *emptySuite
 
-	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer to a struct", func() {
-		axiom.RunSuite(t, nilSuite)
+	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer implementing axiom.TestingSuite", func() {
+		axiom.NewSuite(t, nilSuite)
 	})
 }
 
-func TestSuite_RunPanicsWhenSuitePointerDoesNotPointToStruct(t *testing.T) {
-	v := 1
-
-	assert.PanicsWithValue(t, "suite: suite must be a pointer to a struct", func() {
-		axiom.RunSuite(t, &v)
+func TestSuite_NewSuitePanicsWhenSuiteInterfaceIsNil(t *testing.T) {
+	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer implementing axiom.TestingSuite", func() {
+		axiom.NewSuite[axiom.TestingSuite](t, nil)
 	})
 }
 
-func TestSuite_RunPanicsWhenStructDoesNotEmbedSuite(t *testing.T) {
-	assert.PanicsWithValue(t, "suite: suite must embed axiom.Suite", func() {
-		axiom.RunSuite(t, &struct{}{})
+type valueTestingSuite struct{}
+
+func (s valueTestingSuite) SetRootT(_ *testing.T) {}
+
+func (s valueTestingSuite) SetSubT(_ *testing.T) {}
+
+func (s valueTestingSuite) SetRunner(_ *axiom.Runner) {}
+
+func (s valueTestingSuite) RunCase(_ axiom.Case, _ axiom.TestAction) {}
+
+func TestSuite_NewSuitePanicsWhenSuiteIsNotPointer(t *testing.T) {
+	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer implementing axiom.TestingSuite", func() {
+		axiom.NewSuite(t, valueTestingSuite{})
 	})
+}
+
+type scalarTestingSuite int
+
+func (s *scalarTestingSuite) SetRootT(_ *testing.T) {}
+
+func (s *scalarTestingSuite) SetSubT(_ *testing.T) {}
+
+func (s *scalarTestingSuite) SetRunner(_ *axiom.Runner) {}
+
+func (s *scalarTestingSuite) RunCase(_ axiom.Case, _ axiom.TestAction) {}
+
+func TestSuite_NewSuitePanicsWhenSuitePointerDoesNotPointToStruct(t *testing.T) {
+	var suite scalarTestingSuite
+
+	assert.PanicsWithValue(t, "suite: suite must be a pointer to a struct implementing axiom.TestingSuite", func() {
+		axiom.NewSuite(t, &suite)
+	})
+}
+
+func TestSuite_SettersPanicWhenSuiteIsNil(t *testing.T) {
+	var suite *axiom.Suite
+
+	assert.PanicsWithValue(t, "suite: nil Suite", func() {
+		suite.SetRootT(t)
+	})
+	assert.PanicsWithValue(t, "suite: nil Suite", func() {
+		suite.SetSubT(t)
+	})
+	assert.PanicsWithValue(t, "suite: nil Suite", func() {
+		suite.SetRunner(axiom.NewRunner())
+	})
+}
+
+func TestSuite_SetRootT(t *testing.T) {
+	suite := &axiom.Suite{}
+
+	suite.SetRootT(t)
+
+	assert.Same(t, t, suite.RootT)
+}
+
+func TestSuite_SetSubT(t *testing.T) {
+	suite := &axiom.Suite{}
+
+	suite.SetSubT(t)
+	assert.Same(t, t, suite.SubT)
+
+	suite.SetSubT(nil)
+	assert.Nil(t, suite.SubT)
+}
+
+func TestSuite_SetRunner(t *testing.T) {
+	runner := axiom.NewRunner()
+	suite := &axiom.Suite{}
+
+	suite.SetRunner(runner)
+	assert.Same(t, runner, suite.Runner)
+
+	suite.SetRunner(nil)
+	assert.Nil(t, suite.Runner)
+}
+
+func TestSuite_RunCaseUsesConfiguredRunnerAndSubT(t *testing.T) {
+	runner := axiom.NewRunner()
+	suite := &axiom.Suite{}
+	suite.SetSubT(t)
+	suite.SetRunner(runner)
+
+	called := false
+	suite.RunCase(axiom.NewCase(axiom.WithCaseName("direct suite run case")), func(cfg *axiom.Config) {
+		called = true
+		assert.Same(cfg.SubT, t, cfg.RootT)
+		assert.Same(cfg.SubT, runner, cfg.Runner)
+	})
+
+	assert.True(t, called)
 }
 
 func TestSuite_RunCasePanicsForInvalidRuntimeState(t *testing.T) {
@@ -480,40 +669,26 @@ func (s *runCaseWithoutSubTSuite) TestRunCaseWithoutSubT() {
 
 func TestSuite_RunCasePanicsWhenCalledOutsideSuiteTestMethod(t *testing.T) {
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &runCaseWithoutSubTSuite{})
+		runBoundSuite(t, &runCaseWithoutSubTSuite{}, func(s *axiom.BoundSuite[*runCaseWithoutSubTSuite]) {
+			s.Test("TestRunCaseWithoutSubT", (*runCaseWithoutSubTSuite).TestRunCaseWithoutSubT)
+		})
 	})
 }
 
-type discoverySuite struct {
-	axiom.Suite
-	called *[]string
-}
-
-func (s *discoverySuite) TestValid() {
-	*s.called = append(*s.called, "valid")
-}
-
-func (s *discoverySuite) Helper() {
-	*s.called = append(*s.called, "helper")
-}
-
-func (s *discoverySuite) TestWithReturn() bool {
-	*s.called = append(*s.called, "with-return")
-	return true
-}
-
-func (s *discoverySuite) TestWithArgs(_ int) {
-	*s.called = append(*s.called, "with-args")
-}
-
-func TestSuite_DiscoveryRunsOnlyExportedZeroArgTestMethods(t *testing.T) {
-	var called []string
+func TestSuite_TestReceivesOriginalSuiteInstance(t *testing.T) {
+	suite := &emptySuite{}
+	var seen *emptySuite
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &discoverySuite{called: &called})
+		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*emptySuite]) {
+			s.Test("identity", func(suite *emptySuite) {
+				seen = suite
+			})
+		})
 	})
 
-	assert.Equal(t, []string{"valid"}, called)
+	assert.Same(t, suite, seen)
+	assert.Nil(t, suite.SubT)
 }
 
 type multipleCasesSuite struct {
@@ -551,7 +726,9 @@ func TestSuite_AllowsMultipleCasesInsideSingleSuiteMethod(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &multipleCasesSuite{order: &order}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &multipleCasesSuite{order: &order}, func(s *axiom.BoundSuite[*multipleCasesSuite]) {
+			s.Test("TestSeveralCases", (*multipleCasesSuite).TestSeveralCases)
+		}, axiom.WithSuiteConfigRunner(runner))
 	})
 
 	assert.Equal(t, []string{
@@ -596,7 +773,10 @@ func TestSuite_FixturesAreCreatedPerCase(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &fixtureIsolationSuite{values: &values}, axiom.WithSuiteRunner(runner))
+		runBoundSuite(t, &fixtureIsolationSuite{values: &values}, func(s *axiom.BoundSuite[*fixtureIsolationSuite]) {
+			s.Test("TestFirst", (*fixtureIsolationSuite).TestFirst)
+			s.Test("TestSecond", (*fixtureIsolationSuite).TestSecond)
+		}, axiom.WithSuiteConfigRunner(runner))
 	})
 
 	assert.Equal(t, 2, created)
@@ -606,7 +786,7 @@ func TestSuite_FixturesAreCreatedPerCase(t *testing.T) {
 
 func TestSuite_RunCasePanicsWhenSubTIsMissing(t *testing.T) {
 	s := &axiom.Suite{}
-	axiom.WithSuiteRunner(axiom.NewRunner())(s)
+	s.SetRunner(axiom.NewRunner())
 
 	assert.PanicsWithValue(t, "suite: nil *testing.T", func() {
 		s.RunCase(axiom.NewCase(), func(cfg *axiom.Config) {})
@@ -628,12 +808,17 @@ func (s *subTResetSuite) TestSecond() {
 
 func TestSuite_RebindsSubTForEachSuiteMethod(t *testing.T) {
 	var names []string
+	suite := &subTResetSuite{names: &names}
 
 	t.Run("suite", func(t *testing.T) {
-		axiom.RunSuite(t, &subTResetSuite{names: &names})
+		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*subTResetSuite]) {
+			s.Test("TestFirst", (*subTResetSuite).TestFirst)
+			s.Test("TestSecond", (*subTResetSuite).TestSecond)
+		})
 	})
 
 	require.Len(t, names, 2)
 	assert.True(t, strings.HasSuffix(names[0], "/suite/TestFirst"), names[0])
 	assert.True(t, strings.HasSuffix(names[1], "/suite/TestSecond"), names[1])
+	assert.Nil(t, suite.SubT)
 }
