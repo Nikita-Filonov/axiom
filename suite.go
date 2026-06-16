@@ -111,6 +111,14 @@ func (s *BoundSuite[T]) Run() {
 	}
 }
 
+func (s *Suite) T() *testing.T {
+	if s.SubT != nil {
+		return s.SubT
+	}
+
+	return s.RootT
+}
+
 func (s *Suite) SetRootT(t *testing.T) {
 	if s == nil {
 		panic("suite: nil Suite")

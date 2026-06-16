@@ -7,6 +7,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestConfig_T(t *testing.T) {
+	subT := &testing.T{}
+
+	cfg := &axiom.Config{
+		RootT: t,
+		SubT:  subT,
+	}
+
+	assert.Same(t, subT, cfg.T())
+
+	cfg.SubT = nil
+	assert.Same(t, t, cfg.T())
+
+	cfg.RootT = nil
+	assert.Nil(t, cfg.T())
+}
+
 func TestConfig_Step_HooksOrder(t *testing.T) {
 	var calls []string
 

@@ -412,32 +412,40 @@ type rootAndSubTSuite struct {
 	axiom.Suite
 	rootName *string
 	subName  *string
+	suiteT   *string
 	caseRoot *string
 	caseSub  *string
+	caseT    *string
 }
 
 func (s *rootAndSubTSuite) TestTBinding() {
 	*s.rootName = s.RootT.Name()
 	*s.subName = s.SubT.Name()
+	*s.suiteT = s.T().Name()
 
 	s.RunCase(axiom.NewCase(axiom.WithCaseName("case t binding")), func(cfg *axiom.Config) {
 		*s.caseRoot = cfg.RootT.Name()
 		*s.caseSub = cfg.SubT.Name()
+		*s.caseT = cfg.T().Name()
 	})
 }
 
 func TestSuite_BindsRootAndSubTestingT(t *testing.T) {
 	var rootName string
 	var subName string
+	var suiteT string
 	var caseRoot string
 	var caseSub string
+	var caseT string
 
 	t.Run("suite", func(t *testing.T) {
 		runBoundSuite(t, &rootAndSubTSuite{
 			rootName: &rootName,
 			subName:  &subName,
+			suiteT:   &suiteT,
 			caseRoot: &caseRoot,
 			caseSub:  &caseSub,
+			caseT:    &caseT,
 		}, func(s *axiom.BoundSuite[*rootAndSubTSuite]) {
 			s.Test("TestTBinding", (*rootAndSubTSuite).TestTBinding)
 		})
@@ -445,8 +453,10 @@ func TestSuite_BindsRootAndSubTestingT(t *testing.T) {
 
 	assert.True(t, strings.HasSuffix(rootName, "/suite"), rootName)
 	assert.True(t, strings.HasSuffix(subName, "/suite/TestTBinding"), subName)
+	assert.Equal(t, subName, suiteT)
 	assert.Equal(t, subName, caseRoot)
 	assert.True(t, strings.HasSuffix(caseSub, "/suite/TestTBinding/case_t_binding"), caseSub)
+	assert.Equal(t, caseSub, caseT)
 }
 
 type emptySuite struct {
@@ -596,6 +606,23 @@ func TestSuite_SettersPanicWhenSuiteIsNil(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: nil Suite", func() {
 		suite.SetRunner(axiom.NewRunner())
 	})
+}
+
+func TestSuite_T(t *testing.T) {
+	subT := &testing.T{}
+
+	suite := &axiom.Suite{
+		RootT: t,
+		SubT:  subT,
+	}
+
+	assert.Same(t, subT, suite.T())
+
+	suite.SubT = nil
+	assert.Same(t, t, suite.T())
+
+	suite.RootT = nil
+	assert.Nil(t, suite.T())
 }
 
 func TestSuite_SetRootT(t *testing.T) {

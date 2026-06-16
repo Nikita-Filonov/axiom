@@ -21,6 +21,14 @@ type Config struct {
 	Fixtures Fixtures
 }
 
+func (c *Config) T() *testing.T {
+	if c.SubT != nil {
+		return c.SubT
+	}
+
+	return c.RootT
+}
+
 func (c *Config) Log(l Log) { c.Runtime.Log(l) }
 
 func (c *Config) Step(name string, fn func()) {
