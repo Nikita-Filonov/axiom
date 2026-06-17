@@ -106,6 +106,27 @@ Use `WithSuiteConfigRunner` when the suite should run through a shared runner:
 suite := axiom.NewSuite(t, new(UsersSuite), axiom.WithSuiteConfigRunner(UsersRunner))
 ```
 
+Use `WithSuiteTestRunner` when one registered suite test should run through a different runner:
+
+```go
+suite.Test(
+	"user can log in",
+	(*UsersSuite).UserCanLogin,
+	axiom.WithSuiteTestRunner(LoginRunner),
+)
+```
+
+The test runner replaces the suite runner for that registered suite test. If it should include the suite runner behavior,
+compose it explicitly:
+
+```go
+var LoginRunner = UsersRunner.Join(
+	axiom.NewRunner(
+		axiom.WithRunnerMeta(axiom.WithMetaStory("login")),
+	),
+)
+```
+
 Rules:
 
 * test names passed to `suite.Test` must be non-empty

@@ -29,6 +29,7 @@ type BoundSuite[T TestingSuite] struct {
 type boundSuiteTest[T TestingSuite] struct {
 	name   string
 	action func(T)
+	config SuiteTestConfig
 }
 
 func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOption) *BoundSuite[T] {
@@ -67,7 +68,7 @@ func validateSuiteInstance(suite any) {
 	}
 }
 
-func (s *BoundSuite[T]) Test(name string, action func(T)) {
+func (s *BoundSuite[T]) Test(name string, action func(T), options ...SuiteTestConfigOption) {
 	if s == nil {
 		panic("suite: nil BoundSuite")
 	}
@@ -86,7 +87,11 @@ func (s *BoundSuite[T]) Test(name string, action func(T)) {
 		}
 	}
 
-	s.tests = append(s.tests, boundSuiteTest[T]{name: name, action: action})
+	s.tests = append(s.tests, boundSuiteTest[T]{
+		name:   name,
+		action: action,
+		config: NewSuiteTestConfig(options...),
+	})
 }
 
 func (s *BoundSuite[T]) Run() {
@@ -103,8 +108,19 @@ func (s *BoundSuite[T]) Run() {
 
 	for _, test := range s.tests {
 		s.rootT.Run(test.name, func(st *testing.T) {
+			runner := test.config.Runner
+			if runner == nil {
+				runner = s.config.Runner
+			}
+
+			runner.ApplyStart()
+			s.rootT.Cleanup(runner.ApplyFinish)
+
 			s.suite.SetSubT(st)
+			s.suite.SetRunner(runner)
+
 			defer s.suite.SetSubT(nil)
+			defer s.suite.SetRunner(s.config.Runner)
 
 			test.action(s.suite)
 		})

@@ -397,6 +397,184 @@ func TestSuite_UsesDefaultRunnerWhenOptionSetsNilRunner(t *testing.T) {
 	assert.NotNil(t, seenRunner)
 }
 
+func TestSuite_TestOptionUsesSuiteRunnerWhenRunnerIsNil(t *testing.T) {
+	var seenRunner *axiom.Runner
+	runner := axiom.NewRunner()
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.BoundSuite[*defaultRunnerSuite]) {
+			s.Test("TestDefaultRunner", (*defaultRunnerSuite).TestDefaultRunner, axiom.WithSuiteTestRunner(nil))
+		}, axiom.WithSuiteConfigRunner(runner))
+	})
+
+	assert.Same(t, runner, seenRunner)
+}
+
+type suiteTestRunnerSuite struct {
+	axiom.Suite
+	seen          *[]string
+	defaultRunner *axiom.Runner
+	customRunner  *axiom.Runner
+}
+
+func (s *suiteTestRunnerSuite) TestDefaultRunner() {
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("default runner case")), func(cfg *axiom.Config) {
+		client := axiom.MustResource[string](cfg.Runner, "client")
+
+		*s.seen = append(*s.seen, "case:default:"+cfg.Meta.Feature+":"+client)
+		assert.Same(cfg.SubT, s.defaultRunner, cfg.Runner)
+	})
+}
+
+func (s *suiteTestRunnerSuite) TestCustomRunner() {
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("custom runner case")), func(cfg *axiom.Config) {
+		client := axiom.MustResource[string](cfg.Runner, "client")
+
+		*s.seen = append(*s.seen, "case:custom:"+cfg.Meta.Feature+":"+client)
+		assert.Same(cfg.SubT, s.customRunner, cfg.Runner)
+	})
+}
+
+func TestSuite_TestOptionRunnerOverridesSuiteRunner(t *testing.T) {
+	var seen []string
+	var defaultCreated int
+	var defaultCleaned int
+	var customCreated int
+	var customCleaned int
+
+	defaultRunner := axiom.NewRunner(
+		axiom.WithRunnerMeta(axiom.WithMetaFeature("default")),
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) { seen = append(seen, "default:before-all") }),
+			axiom.WithAfterAll(func(r *axiom.Runner) { seen = append(seen, "default:after-all") }),
+			axiom.WithBeforeTest(func(cfg *axiom.Config) { seen = append(seen, "default:before-test:"+cfg.Meta.Feature) }),
+			axiom.WithAfterTest(func(cfg *axiom.Config) { seen = append(seen, "default:after-test:"+cfg.Meta.Feature) }),
+		),
+		axiom.WithRunnerResource("client", func(r *axiom.Runner) (any, func(), error) {
+			defaultCreated++
+			return "default-client", func() { defaultCleaned++ }, nil
+		}),
+	)
+	customRunner := axiom.NewRunner(
+		axiom.WithRunnerMeta(axiom.WithMetaFeature("custom")),
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) { seen = append(seen, "custom:before-all") }),
+			axiom.WithAfterAll(func(r *axiom.Runner) { seen = append(seen, "custom:after-all") }),
+			axiom.WithBeforeTest(func(cfg *axiom.Config) { seen = append(seen, "custom:before-test:"+cfg.Meta.Feature) }),
+			axiom.WithAfterTest(func(cfg *axiom.Config) { seen = append(seen, "custom:after-test:"+cfg.Meta.Feature) }),
+		),
+		axiom.WithRunnerResource("client", func(r *axiom.Runner) (any, func(), error) {
+			customCreated++
+			return "custom-client", func() { customCleaned++ }, nil
+		}),
+	)
+	suite := &suiteTestRunnerSuite{
+		seen:          &seen,
+		defaultRunner: defaultRunner,
+		customRunner:  customRunner,
+	}
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*suiteTestRunnerSuite]) {
+			s.Test("TestDefaultRunner", (*suiteTestRunnerSuite).TestDefaultRunner)
+			s.Test("TestCustomRunner", (*suiteTestRunnerSuite).TestCustomRunner, axiom.WithSuiteTestRunner(customRunner))
+		}, axiom.WithSuiteConfigRunner(defaultRunner))
+
+		assert.Same(t, defaultRunner, suite.Runner)
+		assert.Nil(t, suite.SubT)
+		assert.Equal(t, 0, defaultCleaned)
+		assert.Equal(t, 0, customCleaned)
+	})
+
+	assert.Equal(t, 1, defaultCreated)
+	assert.Equal(t, 1, defaultCleaned)
+	assert.Equal(t, 1, customCreated)
+	assert.Equal(t, 1, customCleaned)
+	assert.Equal(t, []string{
+		"default:before-all",
+		"default:before-test:default",
+		"case:default:default:default-client",
+		"default:after-test:default",
+		"custom:before-all",
+		"custom:before-test:custom",
+		"case:custom:custom:custom-client",
+		"custom:after-test:custom",
+		"custom:after-all",
+		"default:after-all",
+	}, seen)
+}
+
+type suiteTestRunnerRestoreSuite struct {
+	axiom.Suite
+	runnerDuringMethod **axiom.Runner
+}
+
+func (s *suiteTestRunnerRestoreSuite) TestRecoveringPanic() {
+	defer func() {
+		_ = recover()
+		*s.runnerDuringMethod = s.Runner
+	}()
+
+	panic("boom")
+}
+
+func TestSuite_RestoresSuiteRunnerAfterSuiteTestMethod(t *testing.T) {
+	var runnerDuringMethod *axiom.Runner
+	defaultRunner := axiom.NewRunner()
+	customRunner := axiom.NewRunner()
+	suite := &suiteTestRunnerRestoreSuite{
+		runnerDuringMethod: &runnerDuringMethod,
+	}
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*suiteTestRunnerRestoreSuite]) {
+			s.Test("TestRecoveringPanic", (*suiteTestRunnerRestoreSuite).TestRecoveringPanic, axiom.WithSuiteTestRunner(customRunner))
+		}, axiom.WithSuiteConfigRunner(defaultRunner))
+	})
+
+	assert.Same(t, customRunner, runnerDuringMethod)
+	assert.Same(t, defaultRunner, suite.Runner)
+	assert.Nil(t, suite.SubT)
+}
+
+type repeatedSuiteTestRunnerSuite struct {
+	axiom.Suite
+	events *[]string
+}
+
+func (s *repeatedSuiteTestRunnerSuite) TestFirst() {
+	*s.events = append(*s.events, "first")
+}
+
+func (s *repeatedSuiteTestRunnerSuite) TestSecond() {
+	*s.events = append(*s.events, "second")
+}
+
+func TestSuite_ReusesSameSuiteTestRunnerLifecycle(t *testing.T) {
+	var events []string
+	runner := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) {
+				events = append(events, "before-all")
+			}),
+			axiom.WithAfterAll(func(r *axiom.Runner) {
+				events = append(events, "after-all")
+			}),
+		),
+	)
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuite(t, &repeatedSuiteTestRunnerSuite{events: &events}, func(s *axiom.BoundSuite[*repeatedSuiteTestRunnerSuite]) {
+			s.Test("TestFirst", (*repeatedSuiteTestRunnerSuite).TestFirst, axiom.WithSuiteTestRunner(runner))
+			s.Test("TestSecond", (*repeatedSuiteTestRunnerSuite).TestSecond, axiom.WithSuiteTestRunner(runner))
+		})
+
+		assert.Equal(t, []string{"before-all", "first", "second"}, events)
+	})
+
+	assert.Equal(t, []string{"before-all", "first", "second", "after-all"}, events)
+}
+
 func TestSuite_NewSuiteBindsRootTAndRunner(t *testing.T) {
 	runner := axiom.NewRunner()
 	suite := &emptySuite{}
