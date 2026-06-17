@@ -3,7 +3,9 @@ package axiom_test
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
@@ -17,6 +19,19 @@ func runBoundSuite[T axiom.TestingSuite](
 	options ...axiom.SuiteConfigOption,
 ) {
 	boundSuite := axiom.NewSuite(t, suite, options...)
+	if bind != nil {
+		bind(boundSuite)
+	}
+	boundSuite.Run()
+}
+
+func runBoundSuiteFactory[T axiom.TestingSuite](
+	t *testing.T,
+	factory func() T,
+	bind func(*axiom.BoundSuite[T]),
+	options ...axiom.SuiteConfigOption,
+) {
+	boundSuite := axiom.NewSuiteFactory(t, factory, options...)
 	if bind != nil {
 		bind(boundSuite)
 	}
@@ -408,6 +423,187 @@ func TestSuite_TestOptionUsesSuiteRunnerWhenRunnerIsNil(t *testing.T) {
 	})
 
 	assert.Same(t, runner, seenRunner)
+}
+
+func TestSuite_NewSuitePanicsWhenSuiteConfigParallelIsUsed(t *testing.T) {
+	assert.PanicsWithValue(t, "suite: parallel suite tests require NewSuiteFactory", func() {
+		axiom.NewSuite(t, &emptySuite{}, axiom.WithSuiteConfigParallel())
+	})
+}
+
+func TestSuite_TestPanicsWhenSuiteTestParallelIsUsedWithoutFactory(t *testing.T) {
+	boundSuite := axiom.NewSuite(t, &emptySuite{})
+
+	assert.PanicsWithValue(t, "suite: parallel suite tests require NewSuiteFactory", func() {
+		boundSuite.Test("parallel", func(s *emptySuite) {}, axiom.WithSuiteTestParallel())
+	})
+}
+
+func TestSuite_NewSuiteFactoryPanicsWhenTestingTIsNil(t *testing.T) {
+	assert.PanicsWithValue(t, "suite: nil *testing.T", func() {
+		axiom.NewSuiteFactory[*emptySuite](nil, func() *emptySuite { return &emptySuite{} })
+	})
+}
+
+func TestSuite_NewSuiteFactoryPanicsWhenFactoryIsNil(t *testing.T) {
+	assert.PanicsWithValue(t, "suite: nil suite factory", func() {
+		axiom.NewSuiteFactory[*emptySuite](t, nil)
+	})
+}
+
+func TestSuite_BuildSuitePanicsWhenBoundSuiteIsNil(t *testing.T) {
+	var boundSuite *axiom.BoundSuite[*emptySuite]
+
+	assert.PanicsWithValue(t, "suite: nil BoundSuite", func() {
+		_ = boundSuite.BuildSuite()
+	})
+}
+
+func TestSuite_BuildSuiteReturnsSharedSuiteInstance(t *testing.T) {
+	runner := axiom.NewRunner()
+	suite := &emptySuite{}
+	boundSuite := axiom.NewSuite(t, suite, axiom.WithSuiteConfigRunner(runner))
+
+	built := boundSuite.BuildSuite()
+
+	assert.Same(t, suite, built)
+	assert.Same(t, t, built.RootT)
+	assert.Nil(t, built.SubT)
+	assert.Same(t, runner, built.Runner)
+}
+
+func TestSuiteFactory_BuildSuiteCreatesConfiguredSuiteInstance(t *testing.T) {
+	runner := axiom.NewRunner()
+	var created int
+	boundSuite := axiom.NewSuiteFactory(t, func() *emptySuite {
+		created++
+		return &emptySuite{}
+	}, axiom.WithSuiteConfigRunner(runner))
+
+	first := boundSuite.BuildSuite()
+	second := boundSuite.BuildSuite()
+
+	assert.Equal(t, 2, created)
+	assert.NotSame(t, first, second)
+	assert.Same(t, t, first.RootT)
+	assert.Nil(t, first.SubT)
+	assert.Same(t, runner, first.Runner)
+	assert.Same(t, t, second.RootT)
+	assert.Nil(t, second.SubT)
+	assert.Same(t, runner, second.Runner)
+}
+
+func TestSuiteFactory_BuildSuitePanicsWhenFactoryReturnsNil(t *testing.T) {
+	boundSuite := axiom.NewSuiteFactory(t, func() *emptySuite {
+		return nil
+	})
+
+	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer implementing axiom.TestingSuite", func() {
+		_ = boundSuite.BuildSuite()
+	})
+}
+
+func TestSuiteFactory_BuildSuitePanicsWhenFactoryReturnsNonStructPointer(t *testing.T) {
+	boundSuite := axiom.NewSuiteFactory(t, func() *scalarTestingSuite {
+		suite := scalarTestingSuite(1)
+		return &suite
+	})
+
+	assert.PanicsWithValue(t, "suite: suite must be a pointer to a struct implementing axiom.TestingSuite", func() {
+		_ = boundSuite.BuildSuite()
+	})
+}
+
+type factoryInstanceSuite struct {
+	axiom.Suite
+	id   int64
+	seen *[]string
+}
+
+func (s *factoryInstanceSuite) TestFirst() {
+	*s.seen = append(*s.seen, fmt.Sprintf("first:%d", s.id))
+}
+
+func (s *factoryInstanceSuite) TestSecond() {
+	*s.seen = append(*s.seen, fmt.Sprintf("second:%d", s.id))
+}
+
+func TestSuiteFactory_UsesFreshSuiteInstanceForEachRegisteredTest(t *testing.T) {
+	var nextID atomic.Int64
+	var seen []string
+	runner := axiom.NewRunner()
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuiteFactory(t, func() *factoryInstanceSuite {
+			return &factoryInstanceSuite{
+				id:   nextID.Add(1),
+				seen: &seen,
+			}
+		}, func(s *axiom.BoundSuite[*factoryInstanceSuite]) {
+			s.Test("TestFirst", (*factoryInstanceSuite).TestFirst)
+			s.Test("TestSecond", (*factoryInstanceSuite).TestSecond)
+		}, axiom.WithSuiteConfigRunner(runner))
+	})
+
+	assert.Equal(t, []string{"first:1", "second:2"}, seen)
+}
+
+type parallelFactorySuite struct {
+	axiom.Suite
+	id      int64
+	ready   chan<- int64
+	release <-chan struct{}
+	records chan<- int64
+}
+
+func (s *parallelFactorySuite) TestParallel() {
+	s.ready <- s.id
+	<-s.release
+
+	s.RunCase(axiom.NewCase(axiom.WithCaseName(fmt.Sprintf("case-%d", s.id))), func(cfg *axiom.Config) {
+		assert.NotNil(s.T(), s.SubT)
+		assert.Same(s.T(), s.SubT, cfg.RootT)
+		assert.Same(s.T(), s.Runner, cfg.Runner)
+
+		s.records <- s.id
+	})
+}
+
+func TestSuiteFactory_RunsParallelSuiteTestsWithSeparateInstances(t *testing.T) {
+	var nextID atomic.Int64
+	ready := make(chan int64, 2)
+	release := make(chan struct{})
+	records := make(chan int64, 2)
+	overlapped := make(chan bool, 1)
+	runner := axiom.NewRunner()
+
+	go func() {
+		<-ready
+		select {
+		case <-ready:
+			overlapped <- true
+		case <-time.After(500 * time.Millisecond):
+			overlapped <- false
+		}
+		close(release)
+	}()
+
+	t.Run("suite", func(t *testing.T) {
+		runBoundSuiteFactory(t, func() *parallelFactorySuite {
+			return &parallelFactorySuite{
+				id:      nextID.Add(1),
+				ready:   ready,
+				release: release,
+				records: records,
+			}
+		}, func(s *axiom.BoundSuite[*parallelFactorySuite]) {
+			s.Test("first", (*parallelFactorySuite).TestParallel)
+			s.Test("second", (*parallelFactorySuite).TestParallel)
+		}, axiom.WithSuiteConfigRunner(runner), axiom.WithSuiteConfigParallel())
+	})
+
+	assert.True(t, <-overlapped)
+	assert.ElementsMatch(t, []int64{1, 2}, []int64{<-records, <-records})
 }
 
 type suiteTestRunnerSuite struct {

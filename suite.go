@@ -19,11 +19,12 @@ type TestingSuite interface {
 }
 
 type BoundSuite[T TestingSuite] struct {
-	rootT  *testing.T
-	suite  T
-	config SuiteConfig
-	tests  []boundSuiteTest[T]
-	ran    bool
+	rootT   *testing.T
+	suite   T
+	factory func() T
+	config  SuiteConfig
+	tests   []boundSuiteTest[T]
+	ran     bool
 }
 
 type boundSuiteTest[T TestingSuite] struct {
@@ -39,6 +40,9 @@ func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOptio
 	validateSuiteInstance(suite)
 
 	cfg := NewSuiteConfig(options...)
+	if cfg.Parallel {
+		panic("suite: parallel suite tests require NewSuiteFactory")
+	}
 
 	suite.SetRootT(t)
 	suite.SetSubT(nil)
@@ -49,6 +53,22 @@ func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOptio
 		suite:  suite,
 		config: cfg,
 		tests:  make([]boundSuiteTest[T], 0),
+	}
+}
+
+func NewSuiteFactory[T TestingSuite](t *testing.T, factory func() T, options ...SuiteConfigOption) *BoundSuite[T] {
+	if t == nil {
+		panic("suite: nil *testing.T")
+	}
+	if factory == nil {
+		panic("suite: nil suite factory")
+	}
+
+	return &BoundSuite[T]{
+		rootT:   t,
+		factory: factory,
+		config:  NewSuiteConfig(options...),
+		tests:   make([]boundSuiteTest[T], 0),
 	}
 }
 
@@ -87,10 +107,15 @@ func (s *BoundSuite[T]) Test(name string, action func(T), options ...SuiteTestCo
 		}
 	}
 
+	cfg := NewSuiteTestConfig(options...)
+	if cfg.Parallel && s.factory == nil {
+		panic("suite: parallel suite tests require NewSuiteFactory")
+	}
+
 	s.tests = append(s.tests, boundSuiteTest[T]{
 		name:   name,
 		action: action,
-		config: NewSuiteTestConfig(options...),
+		config: cfg,
 	})
 }
 
@@ -112,19 +137,43 @@ func (s *BoundSuite[T]) Run() {
 			if runner == nil {
 				runner = s.config.Runner
 			}
+			parallel := s.config.Parallel || test.config.Parallel
 
 			runner.ApplyStart()
 			s.rootT.Cleanup(runner.ApplyFinish)
 
-			s.suite.SetSubT(st)
-			s.suite.SetRunner(runner)
+			if parallel {
+				st.Parallel()
+			}
 
-			defer s.suite.SetSubT(nil)
-			defer s.suite.SetRunner(s.config.Runner)
+			suite := s.BuildSuite()
+			suite.SetSubT(st)
+			suite.SetRunner(runner)
 
-			test.action(s.suite)
+			defer suite.SetSubT(nil)
+			defer suite.SetRunner(s.config.Runner)
+
+			test.action(suite)
 		})
 	}
+}
+
+func (s *BoundSuite[T]) BuildSuite() T {
+	if s == nil {
+		panic("suite: nil BoundSuite")
+	}
+	if s.factory == nil {
+		return s.suite
+	}
+
+	suite := s.factory()
+	validateSuiteInstance(suite)
+
+	suite.SetRootT(s.rootT)
+	suite.SetSubT(nil)
+	suite.SetRunner(s.config.Runner)
+
+	return suite
 }
 
 func (s *Suite) T() *testing.T {

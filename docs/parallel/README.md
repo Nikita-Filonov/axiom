@@ -1,7 +1,7 @@
 # 📘 Parallel
 
-`Parallel` controls whether a test runs in Go’s parallel mode. `Parallel` settings may be defined at both `Runner` and
-`Case` level. Case-level settings override Runner-level settings.
+`Parallel` controls whether a test runs in Go’s parallel mode. `Parallel` settings may be defined at `Runner`, `Case`,
+and registered `Suite` test level. Case-level settings override Runner-level settings for case execution.
 
 Parallelism affects only test _scheduling_ and is fully compatible with metadata, fixtures, hooks, plugins, and retry
 logic.
@@ -14,6 +14,7 @@ This model enables:
 - explicit opt-in parallel execution
 - predictable merging (`Case` > `Runner`)
 - consistent behavior across retries and subtests
+- parallel suite tests without sharing mutable suite runtime state
 
 ---
 
@@ -60,3 +61,45 @@ func TestParallelExample(t *testing.T) {
 }
 
 ```
+
+---
+
+## Suite-Level Parallelism
+
+Suite-level parallelism is intentionally separate from Runner/Case parallelism.
+
+Use `NewSuiteFactory` with `WithSuiteConfigParallel` when every registered suite test should run in parallel:
+
+```go
+func TestUsersSuite(t *testing.T) {
+	suite := axiom.NewSuiteFactory(
+		t,
+		func() *UsersSuite { return new(UsersSuite) },
+		axiom.WithSuiteConfigParallel(),
+	)
+
+	suite.Test("user can log in", (*UsersSuite).UserCanLogin)
+	suite.Test("admin can block user", (*UsersSuite).AdminCanBlockUser)
+	suite.Run()
+}
+```
+
+Use `WithSuiteTestParallel` when only one registered suite test should run in parallel:
+
+```go
+suite.Test(
+	"user can log in",
+	(*UsersSuite).UserCanLogin,
+	axiom.WithSuiteTestParallel(),
+)
+```
+
+Parallel suite tests require `NewSuiteFactory`. The regular `NewSuite` constructor uses one suite instance and stays
+sequential so `SubT`, `Runner`, and any suite fields are not shared across parallel suite methods by accident.
+
+Hooks keep the same lifecycle:
+
+- `BeforeAll` and `AfterAll` run once per runner
+- `BeforeTest` and `AfterTest` run for each case attempt
+- test-level hooks may run concurrently when suite tests or cases are parallel
+- runner resources shared by parallel tests must be safe for concurrent use

@@ -127,6 +127,94 @@ var LoginRunner = UsersRunner.Join(
 )
 ```
 
+## Parallel Suite Tests
+
+Parallel suite tests are explicit by design.
+
+`NewSuite(t, new(UsersSuite))` uses one suite instance and intentionally stays sequential. A shared suite instance has
+mutable runtime fields such as `SubT` and `Runner`, so Axiom does not try to make it parallel with hidden cloning,
+locking, or reflection tricks.
+
+Use `NewSuiteFactory` when registered suite tests should run in parallel. The factory creates a fresh suite instance for
+every registered test, so `SubT` and `Runner` belong to that test only:
+
+```go
+suite := axiom.NewSuiteFactory(
+	t,
+	func() *UsersSuite {
+		return new(UsersSuite)
+	},
+	axiom.WithSuiteConfigRunner(UsersRunner),
+	axiom.WithSuiteConfigParallel(),
+)
+
+suite.Test("user can log in", (*UsersSuite).UserCanLogin)
+suite.Test("admin can block user", (*UsersSuite).AdminCanBlockUser)
+suite.Run()
+```
+
+Use `WithSuiteConfigParallel` to mark all registered suite tests as parallel:
+
+```go
+suite := axiom.NewSuiteFactory(
+	t,
+	func() *UsersSuite { return new(UsersSuite) },
+	axiom.WithSuiteConfigParallel(),
+)
+```
+
+Use `WithSuiteTestParallel` to mark only one registered suite test as parallel:
+
+```go
+suite.Test(
+	"user can log in",
+	(*UsersSuite).UserCanLogin,
+	axiom.WithSuiteTestParallel(),
+)
+```
+
+Parallel suite tests require `NewSuiteFactory`. If you pass `WithSuiteConfigParallel` or `WithSuiteTestParallel` to a
+shared-instance suite, Axiom panics early instead of running with unsafe shared state.
+
+The model is:
+
+```text
+NewSuite
+  one suite instance
+  registered suite tests are sequential
+
+NewSuiteFactory
+  fresh suite instance per registered suite test
+  registered suite tests may run in parallel
+```
+
+`Config`, `Local`, fixtures, toolsets, retry attempts, and case hooks still belong to a concrete case attempt. Runner
+resources are shared through the runner and should be safe for the way you use them.
+
+### Hooks And Parallel Suite Tests
+
+Parallel suite tests do not introduce a second hook model. Hooks still belong to `Runner` and `Case`.
+
+`BeforeAll` and `AfterAll` are runner-level hooks. They run once per `Runner`, guarded by the runner lifecycle, even when
+multiple suite tests run in parallel. `AfterAll` is executed from Go's `testing.T.Cleanup`, after the top-level suite test
+finishes and all parallel subtests have completed.
+
+`BeforeTest` and `AfterTest` are case-attempt hooks. If several suite tests or cases run in parallel, these hooks may run
+concurrently. Keep shared state in those hooks immutable, runner-scoped and concurrency-safe, or protected explicitly.
+
+When a registered suite test uses `WithSuiteTestRunner`, that runner has its own lifecycle:
+
+```go
+suite.Test(
+	"user can log in",
+	(*UsersSuite).UserCanLogin,
+	axiom.WithSuiteTestRunner(LoginRunner),
+)
+```
+
+If `LoginRunner` is a separate runner, its `BeforeAll` and `AfterAll` are separate from `UsersRunner`. If the test should
+inherit the suite runner behavior, compose the runner explicitly with `UsersRunner.Join(...)`.
+
 Rules:
 
 * test names passed to `suite.Test` must be non-empty
