@@ -1,7 +1,8 @@
 package axiom
 
 type SuiteConfig struct {
-	Runner *Runner
+	Runner   *Runner
+	Parallel bool
 }
 
 type SuiteConfigOption func(*SuiteConfig)
@@ -21,4 +22,8 @@ func NewSuiteConfig(options ...SuiteConfigOption) SuiteConfig {
 
 func WithSuiteConfigRunner(runner *Runner) SuiteConfigOption {
 	return func(cfg *SuiteConfig) { cfg.Runner = runner }
+}
+
+func WithSuiteConfigParallel() SuiteConfigOption {
+	return func(cfg *SuiteConfig) { cfg.Parallel = true }
 }
