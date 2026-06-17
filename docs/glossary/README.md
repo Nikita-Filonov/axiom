@@ -24,7 +24,7 @@ documents ([/docs/case](./../../docs/case), [/docs/runner](./../../docs/runner),
 | **Wraps**    | Middleware registered in `Runtime` that wraps test or step execution (`TestWrap` / `StepWrap`). Used by plugins for reporting, timing, retries, and instrumentation.                |
 | **Context**  | Structured contextual values scoped to Runner or Case. Useful for passing environment data, request IDs, or framework-level information.                                            |
 | **Local**    | Typed per-attempt store attached to `Config`. Used for runtime helpers and temporary state prepared by hooks and consumed by the test body.                                         |
-| **Toolset**  | Typed helper bundle built into `Local` and consumed through `ConfigWithTools`. Useful for assertions, clients, trace helpers, and other case-attempt runtime tools.                 |
+| **Toolset**  | Typed helper bundle built into `Local` and consumed through `Use` or `Action`. Useful for assertions, clients, trace helpers, and other case-attempt runtime tools.                 |
 | **Runtime**  | Execution runtime attached to `Config`. Acts as a behavior bus for test execution: wraps tests and steps, dispatches logs and artefacts, and connects plugins to execution flow.    |
 | **Artefact** | Structured execution artifact (text, JSON, or bytes) emitted during a test. Consumed by runtime sinks for reporting, debugging, or persistence (e.g., Allure attachments).          |
 | **Log**      | Structured log event emitted during test execution with a severity level. Dispatched via runtime log sinks to external logging or reporting systems.                                |

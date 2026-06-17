@@ -38,6 +38,17 @@ func (t Toolset[T]) Use(action func(*ConfigWithTools[T])) TestAction {
 	}
 }
 
+func (t Toolset[T]) Action(action func(*Config, T)) TestAction {
+	t.validate()
+	if action == nil {
+		panic("toolset: nil action")
+	}
+
+	return func(cfg *Config) {
+		action(cfg, t.Must(cfg))
+	}
+}
+
 func (t Toolset[T]) Get(cfg *Config) (T, bool) {
 	t.validate()
 	return GetLocal(cfg, t.key)

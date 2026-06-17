@@ -65,13 +65,15 @@ func NewToolset[T any](name string, build func(*Config) T) Toolset[T]
 
 func (t Toolset[T]) Bind(cfg *Config)
 func (t Toolset[T]) Use(action func(*ConfigWithTools[T])) TestAction
+func (t Toolset[T]) Action(action func(*Config, T)) TestAction
 func (t Toolset[T]) Get(cfg *Config) (T, bool)
 func (t Toolset[T]) Must(cfg *Config) T
 ```
 
-`Bind` stores the built value in `cfg.Local`.
-
-`Use` reads that value and passes a typed `ConfigWithTools[T]` to the action.
+- `Bind` stores the built value in `cfg.Local`.
+- `Use` reads that value and passes a typed `ConfigWithTools[T]` to the action.
+- `Action` is an alternative adapter. It reads the same value and passes the original `*Config` and typed tools as 
+  separate arguments.
 
 ---
 
@@ -234,7 +236,7 @@ runtime helpers that the test body should consume ergonomically.
 
 ## Missing Bind
 
-If `Use` runs before `Bind`, the test fails with a missing local value.
+If `Use` or `Action` runs before `Bind`, the test fails with a missing local value.
 
 The intended setup is:
 
@@ -247,3 +249,23 @@ runner := axiom.NewRunner(
 ```
 
 This keeps tool preparation explicit and visible at runner/case configuration level.
+
+---
+
+## `Use` vs `Action`
+
+`Use` is useful when a single wrapper value reads better:
+
+```go
+Tools.Use(func(cfg *axiom.ConfigWithTools[*ServiceTools]) {
+	cfg.Tools.Assertions.NoError(err)
+})
+```
+
+`Action` is useful when the generic wrapper type is too noisy in the test body:
+
+```go
+Tools.Action(func(cfg *axiom.Config, tools *ServiceTools) {
+	tools.Assertions.NoError(err)
+})
+```

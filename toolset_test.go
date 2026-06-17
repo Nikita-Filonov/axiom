@@ -68,6 +68,24 @@ func TestToolset_PassesOriginalConfig(t *testing.T) {
 	action(cfg)
 }
 
+func TestToolset_ActionPassesOriginalConfigAndTools(t *testing.T) {
+	cfg := &axiom.Config{
+		Case: &axiom.Case{Name: "case"},
+	}
+	toolset := axiom.NewToolset("tools", func(cfg *axiom.Config) localBundle {
+		return localBundle{Name: cfg.Case.Name}
+	})
+
+	toolset.Bind(cfg)
+
+	action := toolset.Action(func(gotCfg *axiom.Config, tools localBundle) {
+		assert.Same(t, cfg, gotCfg)
+		assert.Equal(t, localBundle{Name: "case"}, tools)
+	})
+
+	action(cfg)
+}
+
 func TestToolset_GetAndMust(t *testing.T) {
 	cfg := &axiom.Config{}
 	toolset := axiom.NewToolset("tools", func(cfg *axiom.Config) localBundle {
@@ -110,8 +128,12 @@ func TestToolset_PanicsWhenToolsAreMissing(t *testing.T) {
 	toolset := axiom.NewToolset("tools", func(cfg *axiom.Config) localBundle {
 		return localBundle{Name: "tools"}
 	})
-	action := toolset.Use(func(cfg *axiom.ConfigWithTools[localBundle]) {})
+	use := toolset.Use(func(cfg *axiom.ConfigWithTools[localBundle]) {})
+	action := toolset.Action(func(cfg *axiom.Config, tools localBundle) {})
 
+	assert.PanicsWithValue(t, "local: missing value for key \"tools\"", func() {
+		use(&axiom.Config{})
+	})
 	assert.PanicsWithValue(t, "local: missing value for key \"tools\"", func() {
 		action(&axiom.Config{})
 	})
@@ -147,6 +169,10 @@ func TestToolset_PanicsWhenConfigIsNil(t *testing.T) {
 	assert.PanicsWithValue(t, "local: nil *Config", func() {
 		_ = toolset.Must(nil)
 	})
+	assert.PanicsWithValue(t, "local: nil *Config", func() {
+		action := toolset.Action(func(cfg *axiom.Config, tools localBundle) {})
+		action(nil)
+	})
 }
 
 func TestToolset_PanicsWhenActionIsNil(t *testing.T) {
@@ -156,6 +182,9 @@ func TestToolset_PanicsWhenActionIsNil(t *testing.T) {
 
 	assert.PanicsWithValue(t, "toolset: nil action", func() {
 		_ = toolset.Use(nil)
+	})
+	assert.PanicsWithValue(t, "toolset: nil action", func() {
+		_ = toolset.Action(nil)
 	})
 }
 
@@ -167,6 +196,9 @@ func TestToolset_PanicsWhenEmpty(t *testing.T) {
 	})
 	assert.PanicsWithValue(t, "toolset: empty toolset", func() {
 		_ = toolset.Use(func(cfg *axiom.ConfigWithTools[localBundle]) {})
+	})
+	assert.PanicsWithValue(t, "toolset: empty toolset", func() {
+		_ = toolset.Action(func(cfg *axiom.Config, tools localBundle) {})
 	})
 	assert.PanicsWithValue(t, "toolset: empty toolset", func() {
 		_, _ = toolset.Get(&axiom.Config{})
