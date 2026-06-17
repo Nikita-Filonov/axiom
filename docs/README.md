@@ -13,6 +13,8 @@ framework. Each subfolder provides focused reference material and examples.
 - [./suite](./suite) — optional execution boundary for grouped tests, shared runners, resources, and lifecycle
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
+- [./local](./local) — per-attempt typed local state stored on Config
+- [./toolset](./toolset) — typed helper bundles built into Local and consumed as cfg.Tools
 - [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
 - [./resource](./resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown

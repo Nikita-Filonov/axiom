@@ -114,6 +114,16 @@ func TestConfigExample(t *testing.T) {
 
 ---
 
+## Local State
+
+`Config` also owns `Local`: a small per-attempt typed store for runtime helpers and temporary state prepared during test
+execution.
+
+Use [`Local`](../local) for low-level typed values. Use [`Toolset`](../toolset) when a group of helpers should be built
+in `BeforeTest` and consumed as `cfg.Tools` inside the test body.
+
+---
+
 ## How `Config` Is Built (Merging Model)
 
 `Config` is constructed inside `Runner.RunCase`:
@@ -126,6 +136,8 @@ Runner.Hooks    + Case.Hooks    → Config.Hooks
 Runner.Fixtures + Case.Fixtures → Config.Fixtures
 Runner.Parallel + Case.Parallel → Config.Parallel
 ```
+
+`Config.Local` starts empty for every attempt.
 
 Then plugins are applied:
 

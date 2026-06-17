@@ -14,6 +14,7 @@ type Config struct {
 	Meta     Meta
 	Skip     Skip
 	Retry    Retry
+	Local    Local
 	Hooks    Hooks
 	Context  Context
 	Runtime  Runtime

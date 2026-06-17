@@ -204,6 +204,20 @@ func TestRunnerBuildConfig_CaseNotSet_KeepsRunnerParallel(t *testing.T) {
 	assert.True(t, cfg.Parallel.EnabledSet)
 }
 
+func TestRunnerBuildConfig_LocalIsFresh(t *testing.T) {
+	r := axiom.NewRunner()
+	c := axiom.NewCase()
+	key := axiom.NewLocalKey[string]("value")
+
+	cfg1 := r.BuildConfig(&testing.T{}, &c)
+	axiom.SetLocal(cfg1, key, "first")
+
+	cfg2 := r.BuildConfig(&testing.T{}, &c)
+	_, ok := axiom.GetLocal(cfg2, key)
+
+	assert.False(t, ok)
+}
+
 func TestRunnerApplyPlugins(t *testing.T) {
 	var calls []string
 
