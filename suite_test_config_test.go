@@ -23,6 +23,20 @@ func TestNewSuiteTestConfig_UsesConfiguredRunner(t *testing.T) {
 	assert.Same(t, runner, cfg.Runner)
 }
 
+func TestNewSuiteTestConfig_UsesSequentialModeByDefault(t *testing.T) {
+	cfg := axiom.NewSuiteTestConfig()
+
+	assert.False(t, cfg.Parallel)
+}
+
+func TestNewSuiteTestConfig_UsesConfiguredParallelMode(t *testing.T) {
+	cfg := axiom.NewSuiteTestConfig(
+		axiom.WithSuiteTestParallel(),
+	)
+
+	assert.True(t, cfg.Parallel)
+}
+
 func TestNewSuiteTestConfig_AllowsNilRunner(t *testing.T) {
 	cfg := axiom.NewSuiteTestConfig(
 		axiom.WithSuiteTestRunner(nil),
