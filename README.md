@@ -55,7 +55,7 @@ go get github.com/Nikita-Filonov/axiom
 For version pinning:
 
 ```bash
-go get github.com/Nikita-Filonov/axiom@v0.3.0
+go get github.com/Nikita-Filonov/axiom@v1.3.0
 ```
 
 ---
