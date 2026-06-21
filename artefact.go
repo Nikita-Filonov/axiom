@@ -12,6 +12,10 @@ const (
 	ArtefactTypeBytes ArtefactType = "bytes"
 )
 
+func (t ArtefactType) String() string {
+	return string(t)
+}
+
 type Artefact struct {
 	Name string
 	Type ArtefactType

@@ -23,6 +23,10 @@ func TestNewArtefact_WithOptions(t *testing.T) {
 	assert.Equal(t, data, a.Data)
 }
 
+func TestArtefactTypeString(t *testing.T) {
+	assert.Equal(t, "text", axiom.ArtefactTypeText.String())
+}
+
 func TestNewTextArtefact(t *testing.T) {
 	a := axiom.NewTextArtefact("log", "hello world")
 
