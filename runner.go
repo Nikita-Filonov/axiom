@@ -202,9 +202,33 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 }
 
 func (r *Runner) ApplyStart() {
-	r.beforeOnce.Do(func() { r.Hooks.ApplyBeforeAll(r) })
+	r.beforeOnce.Do(func() {
+		r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllStart))
+		defer func() {
+			if v := recover(); v != nil {
+				r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllPanic, WithEventMessage(v)))
+				panic(v)
+			}
+
+			r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllFinish))
+		}()
+
+		r.Hooks.ApplyBeforeAll(r)
+	})
 }
 
 func (r *Runner) ApplyFinish() {
-	r.afterOnce.Do(func() { r.Hooks.ApplyAfterAll(r) })
+	r.afterOnce.Do(func() {
+		r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllStart))
+		defer func() {
+			if v := recover(); v != nil {
+				r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllPanic, WithEventMessage(v)))
+				panic(v)
+			}
+
+			r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllFinish))
+		}()
+
+		r.Hooks.ApplyAfterAll(r)
+	})
 }

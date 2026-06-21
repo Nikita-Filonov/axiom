@@ -396,6 +396,86 @@ func TestRunner_BeforeAll_ExecutesBeforeTestLogic(t *testing.T) {
 	assert.Equal(t, "action", order[1])
 }
 
+func TestRunner_ApplyStart_EmitsStartAndFinishFacts(t *testing.T) {
+	var events []axiom.Event
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+	)
+
+	r.ApplyStart()
+
+	requireEventTypes(t, events,
+		axiom.EventTypeRunnerBeforeAllStart,
+		axiom.EventTypeRunnerBeforeAllFinish,
+	)
+}
+
+func TestRunner_ApplyStartPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(r *axiom.Runner) { panic("boom") }),
+		),
+	)
+
+	assert.PanicsWithValue(t, "boom", r.ApplyStart)
+
+	requireEventTypes(t, events,
+		axiom.EventTypeRunnerBeforeAllStart,
+		axiom.EventTypeRunnerBeforeAllPanic,
+	)
+	assert.Equal(t, "boom", events[1].Message)
+}
+
+func TestRunner_ApplyFinish_EmitsStartAndFinishFacts(t *testing.T) {
+	var events []axiom.Event
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+	)
+
+	r.ApplyFinish()
+
+	requireEventTypes(t, events,
+		axiom.EventTypeRunnerAfterAllStart,
+		axiom.EventTypeRunnerAfterAllFinish,
+	)
+}
+
+func TestRunner_ApplyFinishPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	r := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		axiom.WithRunnerHooks(
+			axiom.WithAfterAll(func(r *axiom.Runner) { panic("boom") }),
+		),
+	)
+
+	assert.PanicsWithValue(t, "boom", r.ApplyFinish)
+
+	requireEventTypes(t, events,
+		axiom.EventTypeRunnerAfterAllStart,
+		axiom.EventTypeRunnerAfterAllPanic,
+	)
+	assert.Equal(t, "boom", events[1].Message)
+}
+
 func TestRunner_WithRunnerRuntime(t *testing.T) {
 	r := axiom.NewRunner(
 		axiom.WithRunnerRuntime(func(rt *axiom.Runtime) {
