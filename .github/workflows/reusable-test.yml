@@ -32,6 +32,8 @@ jobs:
           (cd ./plugins/testlogger && go test ./... -cover)
           (cd ./plugins/testassert && go test ./... -cover)
           (cd ./plugins/testallure && go test ./... -cover)
+          (cd ./plugins/testexplain && go test ./... -cover)
+          (cd ./plugins/testtracing && go test ./... -cover)
 
       - name: Convert coverage to XML
         run: go tool cover -func=coverage.out
