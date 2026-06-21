@@ -14,6 +14,10 @@ const (
 	AssertNotNil AssertType = "not-nil"
 )
 
+func (t AssertType) String() string {
+	return string(t)
+}
+
 type Assert struct {
 	Type AssertType
 

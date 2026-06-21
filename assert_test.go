@@ -26,6 +26,10 @@ func TestNewAssert_WithOptions(t *testing.T) {
 	assert.Equal(t, err, a.Error)
 }
 
+func TestAssertTypeString(t *testing.T) {
+	assert.Equal(t, "equal", axiom.AssertEqual.String())
+}
+
 func TestNewAssert_Empty(t *testing.T) {
 	a := axiom.NewAssert()
 
