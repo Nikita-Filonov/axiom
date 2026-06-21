@@ -11,6 +11,7 @@ type WrapSetupAction func(name string, next SetupAction) SetupAction
 type WrapTeardownAction func(name string, next TeardownAction) TeardownAction
 
 type SinkLogAction func(l Log)
+type SinkEventAction func(e Event)
 type SinkAssertAction func(a Assert)
 type SinkArtefactAction func(a Artefact)
 
@@ -21,6 +22,7 @@ type Runtime struct {
 	TeardownWraps []WrapTeardownAction
 
 	LogSinks      []SinkLogAction
+	EventSinks    []SinkEventAction
 	AssertSinks   []SinkAssertAction
 	ArtefactSinks []SinkArtefactAction
 }
@@ -54,6 +56,10 @@ func WithRuntimeTeardownWrap(w WrapTeardownAction) RuntimeOption {
 
 func WithRuntimeLogSink(s SinkLogAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitLogSink(s) }
+}
+
+func WithRuntimeEventSink(s SinkEventAction) RuntimeOption {
+	return func(r *Runtime) { r.EmitEventSink(s) }
 }
 
 func WithRuntimeAssertSink(s SinkAssertAction) RuntimeOption {
@@ -97,6 +103,13 @@ func (r *Runtime) EmitLogSink(s SinkLogAction) {
 		return
 	}
 	r.LogSinks = append(r.LogSinks, s)
+}
+
+func (r *Runtime) EmitEventSink(s SinkEventAction) {
+	if s == nil {
+		return
+	}
+	r.EventSinks = append(r.EventSinks, s)
 }
 
 func (r *Runtime) EmitAssertSink(s SinkAssertAction) {
@@ -153,6 +166,12 @@ func (r *Runtime) Log(l Log) {
 	}
 }
 
+func (r *Runtime) Event(e Event) {
+	for _, sink := range r.EventSinks {
+		sink(e)
+	}
+}
+
 func (r *Runtime) Assert(a Assert) {
 	for _, sink := range r.AssertSinks {
 		sink(a)
@@ -184,6 +203,9 @@ func (r *Runtime) Copy() Runtime {
 	if r.LogSinks != nil {
 		result.LogSinks = append([]SinkLogAction{}, r.LogSinks...)
 	}
+	if r.EventSinks != nil {
+		result.EventSinks = append([]SinkEventAction{}, r.EventSinks...)
+	}
 	if r.AssertSinks != nil {
 		result.AssertSinks = append([]SinkAssertAction{}, r.AssertSinks...)
 	}
@@ -204,6 +226,7 @@ func (r *Runtime) Join(other Runtime) Runtime {
 		TeardownWraps: append(result.TeardownWraps, other.TeardownWraps...),
 
 		LogSinks:      append(result.LogSinks, other.LogSinks...),
+		EventSinks:    append(result.EventSinks, other.EventSinks...),
 		AssertSinks:   append(result.AssertSinks, other.AssertSinks...),
 		ArtefactSinks: append(result.ArtefactSinks, other.ArtefactSinks...),
 	}

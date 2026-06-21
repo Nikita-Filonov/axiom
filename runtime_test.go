@@ -16,6 +16,7 @@ func TestNewRuntime_Defaults(t *testing.T) {
 	assert.Empty(t, rt.TeardownWraps)
 
 	assert.Empty(t, rt.LogSinks)
+	assert.Empty(t, rt.EventSinks)
 	assert.Empty(t, rt.AssertSinks)
 	assert.Empty(t, rt.ArtefactSinks)
 }
@@ -78,6 +79,16 @@ func TestWithRuntimeLogSink(t *testing.T) {
 	assert.Len(t, rt.LogSinks, 1)
 }
 
+func TestWithRuntimeEventSink(t *testing.T) {
+	sink := func(e axiom.Event) {}
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeEventSink(sink),
+	)
+
+	assert.Len(t, rt.EventSinks, 1)
+}
+
 func TestWithRuntimeAssertSink(t *testing.T) {
 	sink := func(a axiom.Assert) {}
 
@@ -107,6 +118,7 @@ func TestRuntime_EmitIgnoresNil(t *testing.T) {
 	rt.EmitTeardownWrap(nil)
 
 	rt.EmitLogSink(nil)
+	rt.EmitEventSink(nil)
 	rt.EmitAssertSink(nil)
 	rt.EmitArtefactSink(nil)
 
@@ -116,6 +128,7 @@ func TestRuntime_EmitIgnoresNil(t *testing.T) {
 	assert.Empty(t, rt.TeardownWraps)
 
 	assert.Empty(t, rt.LogSinks)
+	assert.Empty(t, rt.EventSinks)
 	assert.Empty(t, rt.AssertSinks)
 	assert.Empty(t, rt.ArtefactSinks)
 }
@@ -129,6 +142,19 @@ func TestRuntime_LogCallsAllSinks(t *testing.T) {
 	)
 
 	rt.Log(axiom.Log{Text: "hello"})
+
+	assert.Equal(t, 2, calls)
+}
+
+func TestRuntime_EventCallsAllSinks(t *testing.T) {
+	var calls int
+
+	rt := axiom.NewRuntime(
+		axiom.WithRuntimeEventSink(func(e axiom.Event) { calls++ }),
+		axiom.WithRuntimeEventSink(func(e axiom.Event) { calls++ }),
+	)
+
+	rt.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
 
 	assert.Equal(t, 2, calls)
 }
@@ -310,12 +336,14 @@ func TestRuntime_TeardownWrapOrder(t *testing.T) {
 func TestRuntimeJoin(t *testing.T) {
 	rt1 := axiom.NewRuntime(
 		axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
+		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
 		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
 		axiom.WithRuntimeSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction { return next }),
 	)
 
 	rt2 := axiom.NewRuntime(
+		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
 		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
 		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) {}),
 		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
@@ -331,6 +359,7 @@ func TestRuntimeJoin(t *testing.T) {
 	assert.Len(t, joined.TeardownWraps, 1)
 
 	assert.Len(t, joined.LogSinks, 1)
+	assert.Len(t, joined.EventSinks, 2)
 	assert.Len(t, joined.AssertSinks, 2)
 	assert.Len(t, joined.ArtefactSinks, 1)
 }
@@ -339,10 +368,12 @@ func TestRuntime_Emitters_DoNotMutateRuntime(t *testing.T) {
 	rt := axiom.NewRuntime()
 
 	rt.Log(axiom.Log{Text: "log"})
+	rt.Event(axiom.NewEvent(axiom.EventTypeLog))
 	rt.Assert(axiom.Assert{Type: axiom.AssertTrue})
 	rt.Artefact(axiom.Artefact{Name: "file"})
 
 	assert.Empty(t, rt.LogSinks)
+	assert.Empty(t, rt.EventSinks)
 	assert.Empty(t, rt.AssertSinks)
 	assert.Empty(t, rt.ArtefactSinks)
 }
@@ -352,15 +383,18 @@ func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
 		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
 		axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
+		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
 	)
 
 	cp := rt.Copy()
 	cp.TestWraps = append(cp.TestWraps, func(next axiom.TestAction) axiom.TestAction { return next })
 	cp.StepWraps = append(cp.StepWraps, func(name string, next axiom.StepAction) axiom.StepAction { return next })
 	cp.LogSinks = append(cp.LogSinks, func(l axiom.Log) {})
+	cp.EventSinks = append(cp.EventSinks, func(e axiom.Event) {})
 
 	assert.Len(t, rt.TestWraps, 1)
 	assert.Len(t, rt.StepWraps, 1)
 	assert.Len(t, rt.LogSinks, 1)
+	assert.Len(t, rt.EventSinks, 1)
 	assert.Len(t, cp.TestWraps, 2)
 }
