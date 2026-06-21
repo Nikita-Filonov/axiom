@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_T(t *testing.T) {
@@ -184,9 +185,11 @@ func TestConfig_ApplyExecutionPolicy_Parallel_DoesNotPanic(t *testing.T) {
 
 func TestConfig_Log_DelegatesToRuntimeSink(t *testing.T) {
 	var received axiom.Log
+	var events []axiom.Event
 
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeLogSink(func(l axiom.Log) { received = l }),
+		axiom.WithRuntimeEventSink(func(e axiom.Event) { events = append(events, e) }),
 	)
 	cfg := &axiom.Config{Runtime: rt}
 	log := axiom.Log{Text: "hello"}
@@ -194,13 +197,18 @@ func TestConfig_Log_DelegatesToRuntimeSink(t *testing.T) {
 	cfg.Log(log)
 
 	assert.Equal(t, log, received)
+	require.Len(t, events, 1)
+	assert.Equal(t, axiom.EventTypeLog, events[0].Type)
+	assert.Equal(t, "hello", events[0].Message)
 }
 
 func TestConfig_Assert_DelegatesToRuntimeSink(t *testing.T) {
 	var received axiom.Assert
+	var events []axiom.Event
 
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeAssertSink(func(a axiom.Assert) { received = a }),
+		axiom.WithRuntimeEventSink(func(e axiom.Event) { events = append(events, e) }),
 	)
 	cfg := &axiom.Config{Runtime: rt}
 	input := axiom.Assert{
@@ -211,20 +219,29 @@ func TestConfig_Assert_DelegatesToRuntimeSink(t *testing.T) {
 	cfg.Assert(input)
 
 	assert.Equal(t, input, received)
+	require.Len(t, events, 1)
+	assert.Equal(t, axiom.EventTypeAssert, events[0].Type)
+	assert.Equal(t, "test", events[0].Message)
 }
 
 func TestConfig_Artefact_DelegatesToRuntimeSink(t *testing.T) {
 	var received axiom.Artefact
+	var events []axiom.Event
 
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) { received = a }),
+		axiom.WithRuntimeEventSink(func(e axiom.Event) { events = append(events, e) }),
 	)
 	cfg := &axiom.Config{Runtime: rt}
-	art := axiom.Artefact{Name: "file"}
+	art := axiom.NewTextArtefact("file", "payload")
 
 	cfg.Artefact(art)
 
 	assert.Equal(t, art, received)
+	require.Len(t, events, 1)
+	assert.Equal(t, axiom.EventTypeArtefact, events[0].Type)
+	assert.Equal(t, axiom.ArtefactTypeText.String(), events[0].Name)
+	assert.Equal(t, "file", events[0].Message)
 }
 
 func TestConfig_Setup_WrapsCalled(t *testing.T) {
@@ -320,4 +337,182 @@ func TestConfig_Setup_DoesNotCallStepHooks(t *testing.T) {
 	cfg.Setup("setup", func() {})
 
 	assert.False(t, called)
+}
+
+func TestConfig_Event_DelegatesAsIs(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+	}
+
+	cfg.Event(axiom.Event{Type: axiom.EventTypeLog, Message: "raw"})
+
+	require.Len(t, events, 1)
+	assert.Equal(t, axiom.Event{Type: axiom.EventTypeLog, Message: "raw"}, events[0])
+}
+
+func TestConfig_Test_EmitsStartAndFinishFacts(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: t,
+	}
+
+	cfg.Test(func(_ *axiom.Config) {})
+
+	require.Len(t, events, 2)
+	assert.Equal(t, axiom.EventTypeCaseStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeCaseFinish, events[1].Type)
+}
+
+func TestConfig_TestPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Case: &axiom.Case{Name: "case"},
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	cfg.Test(func(_ *axiom.Config) { panic("boom") })
+
+	require.Len(t, events, 3)
+	assert.Equal(t, axiom.EventTypeCaseStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeCasePanic, events[1].Type)
+	assert.Equal(t, "boom", events[1].Message)
+	assert.Equal(t, axiom.EventTypeCaseFinish, events[2].Type)
+}
+
+func TestConfig_StepFinish_DoesNotInferStatusFromTestingT(t *testing.T) {
+	fakeT := &testing.T{}
+	fakeT.Fail()
+
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: fakeT,
+	}
+
+	cfg.Step("clean step", func() {})
+
+	require.Len(t, events, 2)
+	assert.Equal(t, axiom.EventTypeStepStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeStepFinish, events[1].Type)
+}
+
+func TestConfig_StepPanic_EmitsPanicFact(t *testing.T) {
+	fakeT := &testing.T{}
+
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: fakeT,
+	}
+
+	cfg.Step("panic step", func() { panic("boom") })
+
+	require.Len(t, events, 3)
+	assert.Equal(t, axiom.EventTypeStepStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeStepPanic, events[1].Type)
+	assert.Equal(t, "boom", events[1].Message)
+	assert.Equal(t, axiom.EventTypeStepFinish, events[2].Type)
+}
+
+func TestConfig_Setup_EmitsStartAndFinishFacts(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: t,
+	}
+
+	cfg.Setup("setup", func() {})
+
+	require.Len(t, events, 2)
+	assert.Equal(t, axiom.EventTypeSetupStart, events[0].Type)
+	assert.Equal(t, "setup", events[0].Name)
+	assert.Equal(t, axiom.EventTypeSetupFinish, events[1].Type)
+	assert.Equal(t, "setup", events[1].Name)
+}
+
+func TestConfig_SetupPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	cfg.Setup("setup", func() { panic("boom") })
+
+	require.Len(t, events, 3)
+	assert.Equal(t, axiom.EventTypeSetupStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeSetupPanic, events[1].Type)
+	assert.Equal(t, "boom", events[1].Message)
+	assert.Equal(t, axiom.EventTypeSetupFinish, events[2].Type)
+}
+
+func TestConfig_Teardown_EmitsStartAndFinishFacts(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: t,
+	}
+
+	cfg.Teardown("teardown", func() {})
+
+	require.Len(t, events, 2)
+	assert.Equal(t, axiom.EventTypeTeardownStart, events[0].Type)
+	assert.Equal(t, "teardown", events[0].Name)
+	assert.Equal(t, axiom.EventTypeTeardownFinish, events[1].Type)
+	assert.Equal(t, "teardown", events[1].Name)
+}
+
+func TestConfig_TeardownPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	cfg.Teardown("teardown", func() { panic("boom") })
+
+	require.Len(t, events, 3)
+	assert.Equal(t, axiom.EventTypeTeardownStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeTeardownPanic, events[1].Type)
+	assert.Equal(t, "boom", events[1].Message)
+	assert.Equal(t, axiom.EventTypeTeardownFinish, events[2].Type)
 }
