@@ -14,6 +14,10 @@ func TestNewLog_Empty(t *testing.T) {
 	assert.Equal(t, axiom.LogLevel(""), l.Level)
 }
 
+func TestLogLevelString(t *testing.T) {
+	assert.Equal(t, "info", axiom.LogLevelInfo.String())
+}
+
 func TestNewLog_WithOptions(t *testing.T) {
 	l := axiom.NewLog(
 		axiom.WithLogText("hello"),

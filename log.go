@@ -10,6 +10,10 @@ const (
 	LogLevelFatal   LogLevel = "fatal"
 )
 
+func (l LogLevel) String() string {
+	return string(l)
+}
+
 type Log struct {
 	Text  string
 	Level LogLevel
