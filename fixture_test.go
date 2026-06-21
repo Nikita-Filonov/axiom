@@ -1,6 +1,7 @@
 package axiom_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Nikita-Filonov/axiom"
@@ -124,6 +125,7 @@ func TestFixturesJoin_DoesNotMutateOriginalFixtures(t *testing.T) {
 func TestGetFixture_HappyPath(t *testing.T) {
 	callCount := 0
 	cleanupCalled := false
+	var events []axiom.Event
 
 	fixtures := axiom.Fixtures{
 		Registry: map[string]axiom.Fixture{
@@ -138,7 +140,12 @@ func TestGetFixture_HappyPath(t *testing.T) {
 	cfg := &axiom.Config{
 		Fixtures: fixtures,
 		Hooks:    axiom.Hooks{},
-		SubT:     t,
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: t,
 	}
 
 	v := axiom.GetFixture[int](cfg, "num")
@@ -150,9 +157,19 @@ func TestGetFixture_HappyPath(t *testing.T) {
 	assert.Equal(t, 1, callCount, "fixture must NOT run twice")
 
 	assert.Len(t, cfg.Hooks.AfterTest, 1)
+	requireEventTypes(t, events,
+		axiom.EventTypeFixtureSetupStart,
+		axiom.EventTypeFixtureSetupFinish,
+	)
 
 	cfg.Hooks.AfterTest[0](cfg)
 	assert.True(t, cleanupCalled, "cleanup must be executed")
+	requireEventTypes(t, events,
+		axiom.EventTypeFixtureSetupStart,
+		axiom.EventTypeFixtureSetupFinish,
+		axiom.EventTypeFixtureCleanupStart,
+		axiom.EventTypeFixtureCleanupFinish,
+	)
 }
 
 func TestUseFixtures_ExecutesAllAndCaches(t *testing.T) {
@@ -212,6 +229,7 @@ func TestUseFixtures_DoesNotExecuteTwice(t *testing.T) {
 	hook(cfg)
 
 	assert.Equal(t, 1, callCount, "fixture must be executed only once due to cache")
+	assert.Empty(t, cfg.Hooks.AfterTest, "nil cleanup must not register a cleanup hook")
 }
 
 func TestUseFixtures_AddsCleanupToAfterTest(t *testing.T) {
@@ -244,6 +262,151 @@ func TestGetFixture_Panic_NilConfig(t *testing.T) {
 	assert.PanicsWithValue(t, "fixture: nil config", func() {
 		_ = axiom.GetFixture[string](nil, "x")
 	})
+}
+
+func TestGetFixture_Missing_EmitsFailedFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{},
+			Cache:    map[string]axiom.FixtureResult{},
+		},
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "missing") })
+
+	requireEventTypes(t, events, axiom.EventTypeFixtureSetupFailed)
+	assert.Equal(t, "missing", events[0].Name)
+	assert.Equal(t, "not found", events[0].Message)
+}
+
+func TestGetFixture_NilFixture_EmitsFailedFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{"x": nil},
+			Cache:    map[string]axiom.FixtureResult{},
+		},
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "x") })
+
+	requireEventTypes(t, events, axiom.EventTypeFixtureSetupFailed)
+	assert.Equal(t, "nil fixture", events[0].Message)
+}
+
+func TestGetFixture_FactoryError_EmitsFailedFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{
+				"x": func(cfg *axiom.Config) (any, func(), error) {
+					return nil, nil, fmt.Errorf("boom")
+				},
+			},
+			Cache: map[string]axiom.FixtureResult{},
+		},
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "x") })
+
+	requireEventTypes(t, events,
+		axiom.EventTypeFixtureSetupStart,
+		axiom.EventTypeFixtureSetupFailed,
+	)
+	assert.Equal(t, "boom", events[1].Message)
+}
+
+func TestGetFixture_WrongType_EmitsFailedFact(t *testing.T) {
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{
+				"x": func(cfg *axiom.Config) (any, func(), error) {
+					return "string", nil, nil
+				},
+			},
+			Cache: map[string]axiom.FixtureResult{},
+		},
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: &testing.T{},
+	}
+
+	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "x") })
+
+	requireEventTypes(t, events,
+		axiom.EventTypeFixtureSetupStart,
+		axiom.EventTypeFixtureSetupFailed,
+	)
+	assert.Equal(t, "unexpected type", events[1].Message)
+}
+
+func TestGetFixture_CleanupPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	fixtures := axiom.Fixtures{
+		Registry: map[string]axiom.Fixture{
+			"x": func(cfg *axiom.Config) (any, func(), error) {
+				return "X", func() { panic("boom") }, nil
+			},
+		},
+		Cache: map[string]axiom.FixtureResult{},
+	}
+
+	cfg := &axiom.Config{
+		Fixtures: fixtures,
+		Hooks:    axiom.Hooks{},
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: t,
+	}
+
+	assert.Equal(t, "X", axiom.GetFixture[string](cfg, "x"))
+
+	assert.PanicsWithValue(t, "boom", func() {
+		cfg.Hooks.AfterTest[0](cfg)
+	})
+
+	requireEventTypes(t, events,
+		axiom.EventTypeFixtureSetupStart,
+		axiom.EventTypeFixtureSetupFinish,
+		axiom.EventTypeFixtureCleanupStart,
+		axiom.EventTypeFixtureCleanupPanic,
+	)
+	assert.Equal(t, "boom", events[3].Message)
+}
+
+func runFixtureFatal(fn func()) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		fn()
+	}()
+	<-done
 }
 
 func TestFixturesCopy_DeepCopyMaps(t *testing.T) {

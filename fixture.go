@@ -97,31 +97,37 @@ func GetFixture[T any](cfg *Config, name string) T {
 
 	fx, ok := cfg.Fixtures.Registry[name]
 	if !ok {
+		cfg.Event(NewEvent(EventTypeFixtureSetupFailed, WithEventName(name), WithEventMessage("not found")))
 		cfg.SubT.Fatalf("fixture %q not found", name)
 		return zero
 	}
 	if fx == nil {
+		cfg.Event(NewEvent(EventTypeFixtureSetupFailed, WithEventName(name), WithEventMessage("nil fixture")))
 		cfg.SubT.Fatalf("fixture %q is nil", name)
 		return zero
 	}
 
+	cfg.Event(NewEvent(EventTypeFixtureSetupStart, WithEventName(name)))
 	val, cleanup, err := fx(cfg)
 	if err != nil {
+		cfg.Event(NewEvent(EventTypeFixtureSetupFailed, WithEventName(name), WithEventMessage(err.Error())))
 		cfg.SubT.Fatalf("fixture %q failed: %v", name, err)
 		return zero
 	}
 
-	cfg.Fixtures.Cache[name] = FixtureResult{Value: val, Cleanup: cleanup}
-
 	if cleanup != nil {
-		cfg.Hooks.AfterTest = append(cfg.Hooks.AfterTest, func(_ *Config) { cleanup() })
+		cfg.Hooks.AfterTest = append(cfg.Hooks.AfterTest, fixtureCleanupHook(name, cleanup))
 	}
 
 	out, ok := val.(T)
 	if !ok {
+		cfg.Event(NewEvent(EventTypeFixtureSetupFailed, WithEventName(name), WithEventMessage("unexpected type")))
 		cfg.SubT.Fatalf("fixture %q has unexpected type", name)
 		return zero
 	}
+	cfg.Fixtures.Cache[name] = FixtureResult{Value: val, Cleanup: cleanup}
+	cfg.Event(NewEvent(EventTypeFixtureSetupFinish, WithEventName(name)))
+
 	return out
 }
 
@@ -130,5 +136,21 @@ func UseFixtures(names ...string) func(cfg *Config) {
 		for _, name := range names {
 			GetFixture[any](cfg, name)
 		}
+	}
+}
+
+func fixtureCleanupHook(name string, cleanup func()) TestHook {
+	return func(c *Config) {
+		c.Event(NewEvent(EventTypeFixtureCleanupStart, WithEventName(name)))
+		defer func() {
+			if v := recover(); v != nil {
+				c.Event(NewEvent(EventTypeFixtureCleanupPanic, WithEventName(name), WithEventMessage(v)))
+				panic(v)
+			}
+
+			c.Event(NewEvent(EventTypeFixtureCleanupFinish, WithEventName(name)))
+		}()
+
+		cleanup()
 	}
 }
