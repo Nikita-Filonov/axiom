@@ -77,8 +77,14 @@ func TestResourcesJoin(t *testing.T) {
 func TestGetResource_HappyPath(t *testing.T) {
 	calls := 0
 	cleanupCalled := false
+	var events []axiom.Event
 
 	runner := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
 		axiom.WithRunnerResource("num", func(r *axiom.Runner) (any, func(), error) {
 			calls++
 			return 42, func() { cleanupCalled = true }, nil
@@ -94,9 +100,19 @@ func TestGetResource_HappyPath(t *testing.T) {
 	assert.Equal(t, 1, calls, "resource must be created only once")
 
 	assert.Len(t, runner.Hooks.AfterAll, 1)
+	requireEventTypes(t, events,
+		axiom.EventTypeResourceSetupStart,
+		axiom.EventTypeResourceSetupFinish,
+	)
 
 	runner.Hooks.AfterAll[0](runner)
 	assert.True(t, cleanupCalled)
+	requireEventTypes(t, events,
+		axiom.EventTypeResourceSetupStart,
+		axiom.EventTypeResourceSetupFinish,
+		axiom.EventTypeResourceCleanupStart,
+		axiom.EventTypeResourceCleanupFinish,
+	)
 }
 
 func TestGetResource_Dependency_NoDeadlock(t *testing.T) {
@@ -170,11 +186,20 @@ func TestUseResources(t *testing.T) {
 }
 
 func TestGetResource_NotFound(t *testing.T) {
-	runner := axiom.NewRunner()
+	var events []axiom.Event
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+	)
 
 	_, err := axiom.GetResource[int](runner, "missing")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
+	requireEventTypes(t, events, axiom.EventTypeResourceSetupFailed)
+	assert.Equal(t, "not found", events[0].Message)
 }
 
 func TestGetResource_WrongType(t *testing.T) {
@@ -189,8 +214,42 @@ func TestGetResource_WrongType(t *testing.T) {
 	assert.Contains(t, err.Error(), "unexpected type")
 }
 
-func TestGetResource_FactoryError(t *testing.T) {
+func TestGetResource_WrongType_EmitsFailedWithoutPassed(t *testing.T) {
+	var events []axiom.Event
+	var cleanupCalled bool
+
 	runner := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			return "string", func() { cleanupCalled = true }, nil
+		}),
+	)
+
+	_, err := axiom.GetResource[int](runner, "x")
+
+	assert.Error(t, err)
+	assert.Len(t, events, 2)
+	assert.Equal(t, axiom.EventTypeResourceSetupStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeResourceSetupFailed, events[1].Type)
+	assert.Equal(t, "unexpected type", events[1].Message)
+
+	assert.Len(t, runner.Hooks.AfterAll, 1)
+	runner.Hooks.ApplyAfterAll(runner)
+	assert.True(t, cleanupCalled)
+}
+
+func TestGetResource_FactoryError(t *testing.T) {
+	var events []axiom.Event
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
 		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
 			return nil, nil, fmt.Errorf("boom")
 		}),
@@ -199,6 +258,39 @@ func TestGetResource_FactoryError(t *testing.T) {
 	_, err := axiom.GetResource[int](runner, "x")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed")
+	requireEventTypes(t, events,
+		axiom.EventTypeResourceSetupStart,
+		axiom.EventTypeResourceSetupFailed,
+	)
+	assert.Equal(t, "boom", events[1].Message)
+}
+
+func TestGetResource_CleanupPanic_EmitsPanicFact(t *testing.T) {
+	var events []axiom.Event
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			return "X", func() { panic("boom") }, nil
+		}),
+	)
+
+	assert.Equal(t, "X", axiom.MustResource[string](runner, "x"))
+
+	assert.PanicsWithValue(t, "boom", func() {
+		runner.Hooks.AfterAll[0](runner)
+	})
+
+	requireEventTypes(t, events,
+		axiom.EventTypeResourceSetupStart,
+		axiom.EventTypeResourceSetupFinish,
+		axiom.EventTypeResourceCleanupStart,
+		axiom.EventTypeResourceCleanupPanic,
+	)
+	assert.Equal(t, "boom", events[3].Message)
 }
 
 func TestGetResource_CleanupRegisteredOnce(t *testing.T) {

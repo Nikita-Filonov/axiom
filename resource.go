@@ -122,11 +122,14 @@ func GetResource[T any](runner *Runner, name string) (T, error) {
 	resource, ok := runner.Resources.Registry[name]
 	runner.Resources.mu.Unlock()
 	if !ok {
+		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage("not found")))
 		return zero, fmt.Errorf("resource %q not found", name)
 	}
 
+	runner.Runtime.Event(NewEvent(EventTypeResourceSetupStart, WithEventName(name)))
 	val, cleanup, err := resource(runner)
 	if err != nil {
+		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage(err.Error())))
 		return zero, fmt.Errorf("resource %q failed: %w", name, err)
 	}
 
@@ -140,17 +143,23 @@ func GetResource[T any](runner *Runner, name string) (T, error) {
 		return out, nil
 	}
 
+	out, ok := val.(T)
+	if !ok {
+		runner.Resources.mu.Unlock()
+		if cleanup != nil {
+			runner.Hooks.AfterAll = append(runner.Hooks.AfterAll, resourceCleanupHook(name, cleanup))
+		}
+		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage("unexpected type")))
+		return zero, fmt.Errorf("resource %q has unexpected type", name)
+	}
+
 	runner.Resources.Cache[name] = ResourceResult{Value: val, Cleanup: cleanup}
 	runner.Resources.mu.Unlock()
 
 	if cleanup != nil {
-		runner.Hooks.AfterAll = append(runner.Hooks.AfterAll, func(_ *Runner) { cleanup() })
+		runner.Hooks.AfterAll = append(runner.Hooks.AfterAll, resourceCleanupHook(name, cleanup))
 	}
-
-	out, ok := val.(T)
-	if !ok {
-		return zero, fmt.Errorf("resource %q has unexpected type", name)
-	}
+	runner.Runtime.Event(NewEvent(EventTypeResourceSetupFinish, WithEventName(name)))
 
 	return out, nil
 }
@@ -168,5 +177,21 @@ func UseResources(names ...string) func(r *Runner) {
 		for _, name := range names {
 			MustResource[any](r, name)
 		}
+	}
+}
+
+func resourceCleanupHook(name string, cleanup func()) AllHook {
+	return func(r *Runner) {
+		r.Runtime.Event(NewEvent(EventTypeResourceCleanupStart, WithEventName(name)))
+		defer func() {
+			if v := recover(); v != nil {
+				r.Runtime.Event(NewEvent(EventTypeResourceCleanupPanic, WithEventName(name), WithEventMessage(v)))
+				panic(v)
+			}
+
+			r.Runtime.Event(NewEvent(EventTypeResourceCleanupFinish, WithEventName(name)))
+		}()
+
+		cleanup()
 	}
 }
