@@ -62,7 +62,7 @@ Each plugin is **versioned** independently of the Axiom core.
 A plugin has the type:
 
 ```go
-type Plugin func (cfg *axiom.Config)
+type Plugin func(cfg *axiom.Config)
 ```
 
 A minimal plugin:
@@ -77,16 +77,22 @@ import (
 )
 
 func Plugin() axiom.Plugin {
+	// A plugin is applied to each built Config. It should register behavior on
+	// Config/Runtime and return; it should not run the test by itself.
 	return func(cfg *axiom.Config) {
+		// Test wraps are middleware. This registration only changes how the test
+		// will execute later, when cfg.Test(...) reaches Runtime.Test(...).
 		cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
+			// The outer function receives the next action in the chain.
+			// The returned action becomes the decorated test body.
 			return func(c *axiom.Config) {
 				fmt.Println("before test")
 				next(c)
+				fmt.Println("after test")
 			}
 		})
 	}
 }
-
 ```
 
 Plugins commonly interact with:
@@ -116,9 +122,12 @@ These plugins are intended both for direct use and as reference implementations 
   and forwards them to Go’s `log/slog` logging infrastructure.
 - **📊 Stats Plugin:** [teststats](../../plugins/teststats). Collects execution statistics for test cases, including
   attempts, duration, final status, and metadata snapshots.
+- **🔎 Tracing Plugin:** [testtracing](../../plugins/testtracing). Records raw config-scoped runtime events into an
+  in-memory trace for later inspection or export.
+- **🧭 Explain Plugin:** [testexplain](../../plugins/testexplain). Captures a structured explanation of the merged
+  runner/case configuration before test execution.
 - **🏷 Tags Plugin:** [testtags](../../plugins/testtags). Filters test execution based on metadata tags using include /
   exclude rules. Can be configured via code or environment variables.
 - **✅ Assert Plugin:** [testassert](../../plugins/testassert). Bridges Axiom’s structured runtime assertions with
   `stretchr/testify/assert`. Allows test code to emit declarative assertion events without coupling to a specific
   assertion backend.
-
