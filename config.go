@@ -65,6 +65,7 @@ func (c *Config) Test(action TestAction) {
 			}
 		}
 
+		c.Fixtures.Teardown(c)
 		c.Hooks.ApplyAfterTest(c)
 		c.Event(NewEvent(EventTypeCaseFinish))
 	}()

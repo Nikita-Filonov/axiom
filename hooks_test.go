@@ -205,9 +205,10 @@ func TestHooks_BeforeTest_UseFixtures_RegistersCleanup(t *testing.T) {
 
 	assert.Equal(t, 1, fixtureCalled)
 	assert.Contains(t, cfg.Fixtures.Cache, "fx")
-	assert.Len(t, cfg.Hooks.AfterTest, 1)
+	assert.Empty(t, cfg.Hooks.AfterTest)
+	assert.Len(t, cfg.Fixtures.Cleanups, 1)
 
-	cfg.Hooks.ApplyAfterTest(cfg)
+	cfg.Fixtures.Teardown(cfg)
 	assert.True(t, cleanupCalled)
 }
 

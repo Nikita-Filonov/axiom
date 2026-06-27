@@ -7,8 +7,8 @@ tracing, reporting, metrics, debug output, dependency injection behaviors, and a
 `Hooks` may be defined at both `Runner` and `Case` level. Case-level hooks are appended after `Runner` hooks, forming a
 unified ordered execution pipeline.
 
-`Hooks` do **not** change control flow — they observe execution. They always fire, even if a step or test panics (Axiom
-guarantees this via internal `defer` recovery).
+`Hooks` are intended for observing and extending execution. Axiom enters the corresponding after-phase even when a step
+or test body panics, but panics inside hooks still propagate like ordinary test code.
 
 ---
 
@@ -18,10 +18,10 @@ guarantees this via internal `defer` recovery).
 
 These hooks fire **once per** `Runner`, regardless of the number of executed cases.
 
-| Hook           | When it fires                                   |
-|----------------|-------------------------------------------------|
-| `BeforeAll(r)` | once, before the first test case in this runner |
-| `AfterAll(r)`  | once, after the last test case (via t.Cleanup)  |
+| Hook           | When it fires                                        |
+|----------------|------------------------------------------------------|
+| `BeforeAll(r)` | once, before the first test case in this runner      |
+| `AfterAll(r)`  | once, after runner resource cleanup (via t.Cleanup)  |
 
 Use these for:
 
@@ -30,15 +30,15 @@ Use these for:
 - test suite–level metrics
 - expensive shared resources
 
-**Note:** `AfterAll` runs inside `t.Cleanup`, so it is triggered after the test function completes. This matches Go’s
-testing lifecycle and ensures deterministic teardown.
+**Note:** `AfterAll` runs inside `t.Cleanup`, so it is triggered after the test function completes. Runner resource
+cleanup runs before user `AfterAll` hooks, so those hooks should not rely on resources still being live.
 
 ### Test-level hooks
 
-| Hook              | When it fires                                       |
-|-------------------|-----------------------------------------------------|
-| `BeforeTest(cfg)` | right before executing the test body                |
-| `AfterTest(cfg)`  | after finishing the test body (even if it panicked) |
+| Hook              | When it fires                                     |
+|-------------------|---------------------------------------------------|
+| `BeforeTest(cfg)` | right before executing the test body              |
+| `AfterTest(cfg)`  | after finishing the test body and fixture cleanup |
 
 ### Step-level hooks
 
@@ -46,6 +46,19 @@ testing lifecycle and ensures deterministic teardown.
 |-------------------------|---------------------------------------------------|
 | `BeforeStep(cfg, name)` | before executing a step                           |
 | `AfterStep(cfg, name)`  | after executing a step (always, even if panicked) |
+
+---
+
+## Cleanup order
+
+Cleanup is not implemented as user hooks. Fixture and resource cleanups have dedicated lifecycle stacks:
+
+- fixture cleanups run in LIFO order before user `AfterTest` hooks
+- resource cleanups run in LIFO order before user `AfterAll` hooks
+- user after-hooks run after cleanup when cleanup completes, even if the test body panicked
+
+This keeps framework-owned teardown separate from observability hooks and guarantees cleanup even when a user after-hook
+panics.
 
 ---
 
@@ -131,11 +144,13 @@ Case 1:
     → inside test body
     → before step finish
     → after step finish
+  → fixture cleanup
   → after test
 
 Case 2:
   → before test
   ...
 
+→ resource cleanup
 → AFTER ALL (suite teardown)
 ```

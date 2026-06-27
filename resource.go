@@ -12,11 +12,22 @@ type ResourceResult struct {
 	Cleanup func()
 }
 
+type ResourceCleanup func(*Runner)
+
 type Resources struct {
-	mu *sync.Mutex
+	mu    *sync.Mutex
+	onces map[string]*resourceOnce
 
 	Registry map[string]Resource
 	Cache    map[string]ResourceResult
+	Cleanups []ResourceCleanup
+}
+
+type resourceOnce struct {
+	once    sync.Once
+	value   any
+	cleanup func()
+	err     error
 }
 
 type ResourcesOption func(*Resources)
@@ -64,6 +75,9 @@ func (r *Resources) Copy() Resources {
 			result.Cache[k] = v
 		}
 	}
+	if r.Cleanups != nil {
+		result.Cleanups = append([]ResourceCleanup{}, r.Cleanups...)
+	}
 
 	return result
 }
@@ -89,6 +103,10 @@ func (r *Resources) Join(other Resources) Resources {
 		}
 	}
 
+	if len(other.Cleanups) > 0 {
+		result.Cleanups = append(result.Cleanups, other.Cleanups...)
+	}
+
 	return result
 }
 
@@ -102,6 +120,16 @@ func (r *Resources) Normalize() {
 	if r.Cache == nil {
 		r.Cache = map[string]ResourceResult{}
 	}
+	if r.onces == nil {
+		r.onces = map[string]*resourceOnce{}
+	}
+}
+
+func (r *Resources) Teardown(runner *Runner) {
+	for i := len(r.Cleanups) - 1; i >= 0; i-- {
+		r.Cleanups[i](runner)
+	}
+	r.Cleanups = nil
 }
 
 func GetResource[T any](runner *Runner, name string) (T, error) {
@@ -120,47 +148,49 @@ func GetResource[T any](runner *Runner, name string) (T, error) {
 	}
 
 	resource, ok := runner.Resources.Registry[name]
-	runner.Resources.mu.Unlock()
 	if !ok {
+		runner.Resources.mu.Unlock()
 		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage("not found")))
 		return zero, fmt.Errorf("resource %q not found", name)
 	}
 
-	runner.Runtime.Event(NewEvent(EventTypeResourceSetupStart, WithEventName(name)))
-	val, cleanup, err := resource(runner)
-	if err != nil {
-		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage(err.Error())))
-		return zero, fmt.Errorf("resource %q failed: %w", name, err)
+	ro, exists := runner.Resources.onces[name]
+	if !exists {
+		ro = &resourceOnce{}
+		runner.Resources.onces[name] = ro
 	}
-
-	runner.Resources.mu.Lock()
-	if existing, ok := runner.Resources.Cache[name]; ok {
-		runner.Resources.mu.Unlock()
-		out, ok := existing.Value.(T)
-		if !ok {
-			return zero, fmt.Errorf("resource %q has unexpected type", name)
-		}
-		return out, nil
-	}
-
-	out, ok := val.(T)
-	if !ok {
-		runner.Resources.mu.Unlock()
-		if cleanup != nil {
-			runner.Hooks.AfterAll = append(runner.Hooks.AfterAll, resourceCleanupHook(name, cleanup))
-		}
-		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage("unexpected type")))
-		return zero, fmt.Errorf("resource %q has unexpected type", name)
-	}
-
-	runner.Resources.Cache[name] = ResourceResult{Value: val, Cleanup: cleanup}
 	runner.Resources.mu.Unlock()
 
-	if cleanup != nil {
-		runner.Hooks.AfterAll = append(runner.Hooks.AfterAll, resourceCleanupHook(name, cleanup))
-	}
-	runner.Runtime.Event(NewEvent(EventTypeResourceSetupFinish, WithEventName(name)))
+	ro.once.Do(func() {
+		runner.Runtime.Event(NewEvent(EventTypeResourceSetupStart, WithEventName(name)))
+		val, cleanup, err := resource(runner)
+		if err != nil {
+			ro.err = err
+			runner.Runtime.Event(NewEvent(EventTypeResourceSetupFailed, WithEventName(name), WithEventMessage(err.Error())))
+			return
+		}
 
+		ro.value = val
+		ro.cleanup = cleanup
+
+		runner.Resources.mu.Lock()
+		runner.Resources.Cache[name] = ResourceResult{Value: val, Cleanup: cleanup}
+		if cleanup != nil {
+			runner.Resources.Cleanups = append(runner.Resources.Cleanups, resourceCleanupHook(name, cleanup))
+		}
+		runner.Resources.mu.Unlock()
+
+		runner.Runtime.Event(NewEvent(EventTypeResourceSetupFinish, WithEventName(name)))
+	})
+
+	if ro.err != nil {
+		return zero, fmt.Errorf("resource %q failed: %w", name, ro.err)
+	}
+
+	out, ok := ro.value.(T)
+	if !ok {
+		return zero, fmt.Errorf("resource %q has unexpected type", name)
+	}
 	return out, nil
 }
 
@@ -180,7 +210,7 @@ func UseResources(names ...string) func(r *Runner) {
 	}
 }
 
-func resourceCleanupHook(name string, cleanup func()) AllHook {
+func resourceCleanupHook(name string, cleanup func()) ResourceCleanup {
 	return func(r *Runner) {
 		r.Runtime.Event(NewEvent(EventTypeResourceCleanupStart, WithEventName(name)))
 		defer func() {

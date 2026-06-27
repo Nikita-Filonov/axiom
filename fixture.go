@@ -7,9 +7,12 @@ type FixtureResult struct {
 	Cleanup func()
 }
 
+type FixtureCleanup func(*Config)
+
 type Fixtures struct {
 	Registry map[string]Fixture
 	Cache    map[string]FixtureResult
+	Cleanups []FixtureCleanup
 }
 
 type FixturesOption func(*Fixtures)
@@ -58,6 +61,9 @@ func (f *Fixtures) Copy() Fixtures {
 			result.Cache[k] = v
 		}
 	}
+	if f.Cleanups != nil {
+		result.Cleanups = append([]FixtureCleanup{}, f.Cleanups...)
+	}
 	return result
 }
 
@@ -71,6 +77,7 @@ func (f *Fixtures) Join(other Fixtures) Fixtures {
 		result.Registry[k] = v
 	}
 	result.Cache = map[string]FixtureResult{}
+	result.Cleanups = nil
 
 	return result
 }
@@ -84,6 +91,13 @@ func (f *Fixtures) Normalize() {
 	}
 }
 
+func (f *Fixtures) Teardown(cfg *Config) {
+	for i := len(f.Cleanups) - 1; i >= 0; i-- {
+		f.Cleanups[i](cfg)
+	}
+	f.Cleanups = nil
+}
+
 func GetFixture[T any](cfg *Config, name string) T {
 	var zero T
 
@@ -92,7 +106,13 @@ func GetFixture[T any](cfg *Config, name string) T {
 	}
 
 	if res, ok := cfg.Fixtures.Cache[name]; ok {
-		return res.Value.(T)
+		out, ok := res.Value.(T)
+		if !ok {
+			cfg.Event(NewEvent(EventTypeFixtureSetupFailed, WithEventName(name), WithEventMessage("unexpected type")))
+			cfg.SubT.Fatalf("fixture %q has unexpected type", name)
+			return zero
+		}
+		return out
 	}
 
 	fx, ok := cfg.Fixtures.Registry[name]
@@ -116,7 +136,7 @@ func GetFixture[T any](cfg *Config, name string) T {
 	}
 
 	if cleanup != nil {
-		cfg.Hooks.AfterTest = append(cfg.Hooks.AfterTest, fixtureCleanupHook(name, cleanup))
+		cfg.Fixtures.Cleanups = append(cfg.Fixtures.Cleanups, fixtureCleanupHook(name, cleanup))
 	}
 
 	out, ok := val.(T)
@@ -139,7 +159,7 @@ func UseFixtures(names ...string) func(cfg *Config) {
 	}
 }
 
-func fixtureCleanupHook(name string, cleanup func()) TestHook {
+func fixtureCleanupHook(name string, cleanup func()) FixtureCleanup {
 	return func(c *Config) {
 		c.Event(NewEvent(EventTypeFixtureCleanupStart, WithEventName(name)))
 		defer func() {

@@ -22,7 +22,7 @@
 
 A `Resource` is a long-lived, lazily evaluated dependency bound to the **Runner lifecycle**, not to an individual test
 case. A resource is created on first access, cached for the lifetime of the runner, and cleaned up **exactly once**
-after all test cases have finished.
+during runner teardown.
 
 Resources are designed for **infrastructure-level dependencies** such as clients, connections, servers, or shared
 external systems.
@@ -31,7 +31,7 @@ Unlike fixtures, resources:
 
 - are **shared across all test cases**
 - **persist across retries**
-- are cleaned up **only in `AfterAll`**
+- are cleaned up **only during runner teardown**
 - are not reset between test attempts
 
 ---
@@ -41,19 +41,14 @@ Unlike fixtures, resources:
 A `Resource` has the following guarantees:
 
 - **Lazy evaluation** — a resource is not created unless explicitly requested
-- **Single active instance** — at most one resource instance is stored in the runner cache
+- **Single constructor execution** — on a cache miss, the resource constructor runs at most once per resource name
+- **Single active instance** — all callers observe the same cached resource instance
 - **Runner-level caching** — the cached resource is reused across:
     - multiple test cases
     - retries of the same test case
-- **Deterministic teardown** — cleanup is executed exactly once, via `AfterAll`
-- **Safe concurrency** — concurrent access is supported without deadlocks
-
-At the same time, a resource **does not guarantee**:
-
-- that the underlying constructor is executed only once under concurrent access
-- automatic cleanup of temporary instances created during race conditions
-
-This is an intentional design choice.
+- **Deterministic teardown** — cleanup is executed exactly once during runner teardown
+- **Safe concurrency** — concurrent access is coordinated so the constructor, cache write, and cleanup registration
+  happen once
 
 ---
 
@@ -72,7 +67,9 @@ Used across retries
    ↓
 Runner finishes
    ↓
-Cleanup is executed once (AfterAll)
+Resource cleanup is executed once
+   ↓
+User AfterAll hooks run
 ```
 
 ---
@@ -84,7 +81,7 @@ type Resource func (r *Runner) (value any, cleanup func (), err error)
 ```
 
 - `value` — the resource instance
-- `cleanup` — optional teardown logic, executed once in `AfterAll`
+- `cleanup` — optional teardown logic, executed once during runner teardown, before user `AfterAll` hooks
 - `err` — resource initialization error
 
 Resources are accessed via:
@@ -120,16 +117,24 @@ This means a joined runner may inherit already initialized resource instances fr
 
 Under concurrent access:
 
-- multiple goroutines may attempt to create the resource simultaneously
-- **only one instance is stored and used**
-- cleanup is registered **only for the stored instance**
+- the resource constructor is executed **at most once** for a cache miss
+- all successful callers observe the **same cached instance**
+- if initialization fails, all callers observe the **same cached error**
+- cleanup is registered **only once**
 - cleanup is executed **only once**
 
-For this reason:
+The cleanup contract is:
 
-> **Resource cleanup functions must be idempotent and safe to run exactly once.**
+> **Resource cleanup functions are registered once and run once during runner teardown.**
 
-They must **not** rely on being called for every constructor execution.
+Resource values themselves must still be safe for the way tests use them. If parallel tests share a resource and mutate
+it,
+the resource must provide its own synchronization.
+
+Initialization errors are cached for the runner lifetime. A failed resource constructor is not retried automatically by
+subsequent `GetResource` calls.
+
+Resource cleanup runs before user `AfterAll` hooks, so `AfterAll` hooks should not rely on resources still being live.
 
 ---
 
@@ -152,7 +157,7 @@ There are no case-local resources by design.
 The following example demonstrates that a resource is bound to the **runner lifecycle** and can be accessed from
 **any place where the runner is available**, not only from inside a test case.
 
-The resource is created lazily on first access, reused across test cases, and cleaned up once after all tests finish.
+The resource is created lazily on first access, reused across test cases, and cleaned up once during runner teardown.
 
 ```go
 package example_test
@@ -235,14 +240,14 @@ closing client
 
 ## Resources vs Fixtures
 
-| Aspect            | Fixture             | Resource                         |
-|-------------------|---------------------|----------------------------------|
-| Scope             | Test attempt        | Runner                           |
-| Cache lifetime    | Per test            | Across all tests                 |
-| Retry behavior    | Fresh on each retry | Reused across retries            |
-| Cleanup timing    | AfterTest           | AfterAll                         |
-| Intended usage    | Test data, setup    | Infrastructure, clients, servers |
-| Concurrency focus | Single test         | Cross-test, concurrent access    |
+| Aspect            | Fixture                | Resource                         |
+|-------------------|------------------------|----------------------------------|
+| Scope             | Test attempt           | Runner                           |
+| Cache lifetime    | Per test               | Across all tests                 |
+| Retry behavior    | Fresh on each retry    | Reused across retries            |
+| Cleanup timing    | Before AfterTest hooks | Before AfterAll hooks            |
+| Intended usage    | Test data, setup       | Infrastructure, clients, servers |
+| Concurrency focus | Single test            | Cross-test, concurrent access    |
 
 ---
 

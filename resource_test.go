@@ -2,7 +2,9 @@ package axiom_test
 
 import (
 	"fmt"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
@@ -99,14 +101,16 @@ func TestGetResource_HappyPath(t *testing.T) {
 	assert.Equal(t, 42, v2)
 	assert.Equal(t, 1, calls, "resource must be created only once")
 
-	assert.Len(t, runner.Hooks.AfterAll, 1)
+	assert.Empty(t, runner.Hooks.AfterAll, "cleanups must not pollute user AfterAll hooks")
+	assert.Len(t, runner.Resources.Cleanups, 1)
 	requireEventTypes(t, events,
 		axiom.EventTypeResourceSetupStart,
 		axiom.EventTypeResourceSetupFinish,
 	)
 
-	runner.Hooks.AfterAll[0](runner)
+	runner.Resources.Teardown(runner)
 	assert.True(t, cleanupCalled)
+	assert.Empty(t, runner.Resources.Cleanups, "cleanups must be drained")
 	requireEventTypes(t, events,
 		axiom.EventTypeResourceSetupStart,
 		axiom.EventTypeResourceSetupFinish,
@@ -157,9 +161,61 @@ func TestGetResource_ConcurrentAccess(t *testing.T) {
 
 	assert.Len(t, runner.Resources.Cache, 1)
 
-	runner.Hooks.ApplyAfterAll(runner)
+	runner.Resources.Teardown(runner)
 	assert.Equal(t, 1, cleanups)
-	assert.GreaterOrEqual(t, calls, 1)
+	assert.Equal(t, 1, calls, "constructor must run exactly once under concurrent access")
+}
+
+func TestGetResource_ConstructorRunsExactlyOnceAcrossConcurrentRacers(t *testing.T) {
+	var calls int32
+	start := make(chan struct{})
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			atomic.AddInt32(&calls, 1)
+			time.Sleep(20 * time.Millisecond)
+			return "X", nil, nil
+		}),
+	)
+
+	const workers = 50
+	done := make(chan struct{}, workers)
+
+	for i := 0; i < workers; i++ {
+		go func() {
+			<-start
+			_ = axiom.MustResource[string](runner, "x")
+			done <- struct{}{}
+		}()
+	}
+
+	close(start)
+	for i := 0; i < workers; i++ {
+		<-done
+	}
+
+	assert.Equal(t, int32(1), atomic.LoadInt32(&calls))
+	assert.Len(t, runner.Resources.Cache, 1)
+}
+
+func TestGetResource_ConstructorErrorIsCachedAndReturnedToAllCallers(t *testing.T) {
+	var calls int32
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			atomic.AddInt32(&calls, 1)
+			return nil, nil, fmt.Errorf("boom")
+		}),
+	)
+
+	_, err1 := axiom.GetResource[string](runner, "x")
+	_, err2 := axiom.GetResource[string](runner, "x")
+
+	assert.Error(t, err1)
+	assert.Error(t, err2)
+	assert.Contains(t, err1.Error(), "boom")
+	assert.Contains(t, err2.Error(), "boom")
+	assert.Equal(t, int32(1), atomic.LoadInt32(&calls), "failed constructor must not be retried")
 }
 
 func TestUseResources(t *testing.T) {
@@ -214,7 +270,11 @@ func TestGetResource_WrongType(t *testing.T) {
 	assert.Contains(t, err.Error(), "unexpected type")
 }
 
-func TestGetResource_WrongType_EmitsFailedWithoutPassed(t *testing.T) {
+func TestGetResource_WrongType_RegistersCleanupAndCachesValue(t *testing.T) {
+	// On type mismatch the resource itself was constructed successfully — the
+	// failure is purely on the caller's expected T. The lifecycle events reflect
+	// a successful setup, the value is cached for callers with the matching
+	// type, and the cleanup is registered exactly once on AfterAll.
 	var events []axiom.Event
 	var cleanupCalled bool
 
@@ -230,15 +290,20 @@ func TestGetResource_WrongType_EmitsFailedWithoutPassed(t *testing.T) {
 	)
 
 	_, err := axiom.GetResource[int](runner, "x")
-
 	assert.Error(t, err)
-	assert.Len(t, events, 2)
-	assert.Equal(t, axiom.EventTypeResourceSetupStart, events[0].Type)
-	assert.Equal(t, axiom.EventTypeResourceSetupFailed, events[1].Type)
-	assert.Equal(t, "unexpected type", events[1].Message)
+	assert.Contains(t, err.Error(), "unexpected type")
 
-	assert.Len(t, runner.Hooks.AfterAll, 1)
-	runner.Hooks.ApplyAfterAll(runner)
+	requireEventTypes(t, events,
+		axiom.EventTypeResourceSetupStart,
+		axiom.EventTypeResourceSetupFinish,
+	)
+
+	value, err := axiom.GetResource[string](runner, "x")
+	assert.NoError(t, err)
+	assert.Equal(t, "string", value)
+
+	assert.Len(t, runner.Resources.Cleanups, 1)
+	runner.Resources.Teardown(runner)
 	assert.True(t, cleanupCalled)
 }
 
@@ -281,7 +346,7 @@ func TestGetResource_CleanupPanic_EmitsPanicFact(t *testing.T) {
 	assert.Equal(t, "X", axiom.MustResource[string](runner, "x"))
 
 	assert.PanicsWithValue(t, "boom", func() {
-		runner.Hooks.AfterAll[0](runner)
+		runner.Resources.Teardown(runner)
 	})
 
 	requireEventTypes(t, events,
@@ -305,13 +370,80 @@ func TestGetResource_CleanupRegisteredOnce(t *testing.T) {
 	_ = axiom.MustResource[string](runner, "x")
 	_ = axiom.MustResource[string](runner, "x")
 
-	assert.Len(t, runner.Hooks.AfterAll, 1)
+	assert.Len(t, runner.Resources.Cleanups, 1)
 
-	for _, hook := range runner.Hooks.AfterAll {
-		hook(runner)
-	}
+	runner.Resources.Teardown(runner)
 
 	assert.Equal(t, 1, cleanups)
+}
+
+func TestResourcesTeardown_LIFOOrder(t *testing.T) {
+	var order []string
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("db", func(r *axiom.Runner) (any, func(), error) {
+			return "db", func() { order = append(order, "db") }, nil
+		}),
+		axiom.WithRunnerResource("client", func(r *axiom.Runner) (any, func(), error) {
+			_ = axiom.MustResource[string](r, "db")
+			return "client", func() { order = append(order, "client") }, nil
+		}),
+		axiom.WithRunnerResource("session", func(r *axiom.Runner) (any, func(), error) {
+			_ = axiom.MustResource[string](r, "client")
+			return "session", func() { order = append(order, "session") }, nil
+		}),
+	)
+
+	_ = axiom.MustResource[string](runner, "session")
+
+	runner.Resources.Teardown(runner)
+	assert.Equal(t, []string{"session", "client", "db"}, order,
+		"resource cleanups must run in reverse setup order")
+}
+
+func TestResourcesTeardown_RunsAfterUserAfterAllHooks(t *testing.T) {
+	var order []string
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("db", func(r *axiom.Runner) (any, func(), error) {
+			return "db", func() { order = append(order, "resource-cleanup") }, nil
+		}),
+		axiom.WithRunnerHooks(
+			axiom.WithAfterAll(func(r *axiom.Runner) {
+				_ = axiom.MustResource[string](r, "db")
+				order = append(order, "user-after-all")
+			}),
+		),
+	)
+
+	_ = axiom.MustResource[string](runner, "db")
+
+	runner.ApplyFinish()
+
+	assert.Equal(t, []string{"user-after-all", "resource-cleanup"}, order,
+		"user AfterAll hooks must observe live resources before cleanups run")
+}
+
+func TestResourcesTeardown_IntegratedThroughApplyFinish(t *testing.T) {
+	var order []string
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("a", func(r *axiom.Runner) (any, func(), error) {
+			return "a", func() { order = append(order, "a") }, nil
+		}),
+		axiom.WithRunnerResource("b", func(r *axiom.Runner) (any, func(), error) {
+			_ = axiom.MustResource[string](r, "a")
+			return "b", func() { order = append(order, "b") }, nil
+		}),
+	)
+
+	_ = axiom.MustResource[string](runner, "b")
+
+	runner.ApplyFinish()
+	assert.Equal(t, []string{"b", "a"}, order)
+
+	runner.ApplyFinish()
+	assert.Equal(t, []string{"b", "a"}, order, "ApplyFinish must be idempotent via sync.Once")
 }
 
 func TestResourcesCopy_DeepCopyMaps(t *testing.T) {
@@ -442,6 +574,96 @@ func TestGetResource_UsesPrewarmedCacheWithoutFactoryCall(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "from-cache", v)
 	assert.Equal(t, 0, calls, "factory must not run when cache already has value")
+}
+
+func TestGetResource_FactoryError_DoesNotRegisterCleanup(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			return nil, func() { t.Fatal("cleanup must not be registered on factory error") }, fmt.Errorf("boom")
+		}),
+	)
+
+	_, err := axiom.GetResource[int](runner, "x")
+	assert.Error(t, err)
+
+	assert.Empty(t, runner.Resources.Cleanups,
+		"cleanup must not be registered when constructor returned an error")
+	assert.NotContains(t, runner.Resources.Cache, "x",
+		"value must not be cached when constructor returned an error")
+
+	runner.Resources.Teardown(runner)
+}
+
+func TestGetResource_NilCleanup_DoesNotRegisterAnything(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			return "X", nil, nil
+		}),
+	)
+
+	v := axiom.MustResource[string](runner, "x")
+	assert.Equal(t, "X", v)
+
+	assert.Empty(t, runner.Resources.Cleanups,
+		"nil cleanup must not be appended to the cleanup stack")
+	assert.Contains(t, runner.Resources.Cache, "x",
+		"value must still be cached even with nil cleanup")
+}
+
+func TestGetResource_CachedWrongType_ReturnsError(t *testing.T) {
+	calls := 0
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			calls++
+			return "X", nil, nil
+		}),
+	)
+
+	first, err := axiom.GetResource[string](runner, "x")
+	assert.NoError(t, err)
+	assert.Equal(t, "X", first)
+
+	_, err = axiom.GetResource[int](runner, "x")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected type")
+
+	assert.Equal(t, 1, calls, "cached lookup with wrong type must not re-run the factory")
+}
+
+func TestGetResource_ConcurrentWaiters_AllSeeSameValue(t *testing.T) {
+	var calls int32
+	start := make(chan struct{})
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("x", func(r *axiom.Runner) (any, func(), error) {
+			atomic.AddInt32(&calls, 1)
+			time.Sleep(20 * time.Millisecond)
+			return &struct{ v int }{v: 42}, nil, nil
+		}),
+	)
+
+	type ptrT = *struct{ v int }
+	const workers = 30
+	results := make(chan ptrT, workers)
+
+	for i := 0; i < workers; i++ {
+		go func() {
+			<-start
+			results <- axiom.MustResource[ptrT](runner, "x")
+		}()
+	}
+	close(start)
+
+	first := <-results
+	assert.NotNil(t, first)
+	for i := 1; i < workers; i++ {
+		got := <-results
+		assert.Same(t, first, got,
+			"every concurrent waiter must observe the same pointer produced by sync.Once")
+	}
+
+	assert.Equal(t, int32(1), atomic.LoadInt32(&calls),
+		"constructor must run exactly once under heavy concurrency")
 }
 
 func TestGetResource_JoinedCacheOverrideVisibleViaAPI(t *testing.T) {

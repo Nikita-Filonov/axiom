@@ -15,7 +15,7 @@ documents ([/docs/case](./../../docs/case), [/docs/runner](./../../docs/runner),
 | **Config**   | Runtime object produced per test attempt. Represents merged Runner + Case configuration and provides access to fixtures, metadata, steps, hooks, plugins, context, and local state. |
 | **Plugin**   | Function that configures test execution by registering behavior in `Config` and its `Runtime` (wraps, hooks, sinks, filters, instrumentation).                                      |
 | **Fixture**  | Lazily evaluated resource (e.g., DB connection). Created on first request, cached for the test duration, and cleaned up automatically.                                              |
-| **Resource** | Lazily evaluated runner-scoped dependency. Created on first request, shared across all test cases and retries, and cleaned up exactly once after all tests finish.                  |
+| **Resource** | Lazily evaluated runner-scoped dependency. Created on first request, shared across all test cases and retries, and cleaned up automatically.                                        |
 | **Meta**     | Test metadata: tags, epic, feature, severity, labels, stories, layers. Used for filtering, reporting, organization, and CI integration.                                             |
 | **Retry**    | Configuration controlling how many times a test may re-run and the delay between attempts.                                                                                          |
 | **Skip**     | Declarative mechanism to mark tests as skipped (static or dynamic).                                                                                                                 |
