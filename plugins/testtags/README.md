@@ -34,7 +34,7 @@ At runtime, the plugin:
 If a rule fails, the plugin sets:
 
 ```go
-cfg.Skip = axiom.Skip{Enabled: true, Reason:  "..."}
+cfg.Skip = axiom.NewSkip(axiom.SkipBecause("..."))
 
 ```
 

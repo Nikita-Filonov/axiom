@@ -11,12 +11,12 @@ func Plugin(options ...ConfigOption) axiom.Plugin {
 		testTags := MapList(e.Meta.Tags)
 
 		if len(cfg.Exclude) > 0 && Intersects(testTags, cfg.Exclude) {
-			e.Skip = axiom.Skip{Enabled: true, Reason: "excluded by tag filter"}
+			e.Skip = axiom.NewSkip(axiom.SkipBecause("excluded by tag filter"))
 			return
 		}
 
 		if len(cfg.Include) > 0 && !Intersects(testTags, cfg.Include) {
-			e.Skip = axiom.Skip{Enabled: true, Reason: "not included by tag filter"}
+			e.Skip = axiom.NewSkip(axiom.SkipBecause("not included by tag filter"))
 			return
 		}
 	}
