@@ -229,7 +229,7 @@ func (r *Runner) ApplyFinish() {
 			r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllFinish))
 		}()
 
-		r.Resources.Teardown(r)
+		defer r.Resources.Teardown(r)
 		r.Hooks.ApplyAfterAll(r)
 	})
 }

@@ -424,6 +424,30 @@ func TestResourcesTeardown_RunsAfterUserAfterAllHooks(t *testing.T) {
 		"user AfterAll hooks must observe live resources before cleanups run")
 }
 
+func TestResourcesTeardown_RunsWhenAfterAllPanics(t *testing.T) {
+	var order []string
+
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResource("db", func(r *axiom.Runner) (any, func(), error) {
+			return "db", func() { order = append(order, "resource-cleanup") }, nil
+		}),
+		axiom.WithRunnerHooks(
+			axiom.WithAfterAll(func(r *axiom.Runner) {
+				order = append(order, "after")
+				panic("after boom")
+			}),
+		),
+	)
+
+	_ = axiom.MustResource[string](runner, "db")
+
+	assert.PanicsWithValue(t, "after boom", runner.ApplyFinish)
+	assert.Equal(t, []string{"after", "resource-cleanup"}, order,
+		"resource cleanup must still run after a panicking AfterAll hook")
+	assert.Empty(t, runner.Resources.Cleanups,
+		"resource cleanups must be drained even when AfterAll panics")
+}
+
 func TestResourcesTeardown_IntegratedThroughApplyFinish(t *testing.T) {
 	var order []string
 

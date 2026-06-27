@@ -619,6 +619,42 @@ func TestConfig_Test_DrainsFixtureCleanups_AfterAfterTestHooks(t *testing.T) {
 	assert.Empty(t, cfg.Fixtures.Cleanups, "cleanups must be drained after Config.Test")
 }
 
+func TestConfig_Test_DrainsFixtureCleanups_WhenAfterTestPanics(t *testing.T) {
+	var order []string
+
+	cfg := &axiom.Config{
+		Case: &axiom.Case{Name: "panic-after-test"},
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{
+				"db": func(cfg *axiom.Config) (any, func(), error) {
+					return "db", func() { order = append(order, "fixture-cleanup") }, nil
+				},
+			},
+			Cache: map[string]axiom.FixtureResult{},
+		},
+		Hooks: axiom.Hooks{
+			AfterTest: []axiom.TestHook{
+				func(cfg *axiom.Config) {
+					order = append(order, "after")
+					panic("after boom")
+				},
+			},
+		},
+		SubT: t,
+	}
+
+	assert.PanicsWithValue(t, "after boom", func() {
+		cfg.Test(func(c *axiom.Config) {
+			_ = axiom.GetFixture[string](c, "db")
+			order = append(order, "body")
+		})
+	})
+
+	assert.Equal(t, []string{"body", "after", "fixture-cleanup"}, order,
+		"fixture cleanup must still run after a panicking AfterTest hook")
+	assert.Empty(t, cfg.Fixtures.Cleanups, "cleanups must be drained even when AfterTest panics")
+}
+
 func TestFixturesCopy_DeepCopyMaps(t *testing.T) {
 	f := axiom.Fixtures{
 		Registry: map[string]axiom.Fixture{

@@ -23,7 +23,7 @@ Fixtures have a per-attempt lifecycle:
 - a fixture is created on the first `GetFixture[T](cfg, name)` call
 - the created value is cached for the current `Config`
 - repeated access returns the cached value and does not register cleanup twice
-- each retry attempt receives a fresh `Config`, cache, and cleanup stack
+- each retry attempt receives a fresh `Config`, fixture cache, and cleanup lifecycle
 - fixture cleanups run automatically after the test body finishes
 
 When fixtures depend on other fixtures, cleanup runs in reverse setup order:
@@ -37,9 +37,9 @@ user cleanup
 db cleanup
 ```
 
-Fixture cleanups are stored separately from user `AfterTest` hooks. `Config.Test` drains fixture cleanups before running
-user `AfterTest` hooks, so fixture cleanup is still guaranteed if an `AfterTest` hook panics. Do not rely on fixtures
-still being live inside `AfterTest` hooks.
+Fixture cleanups are stored separately from user `AfterTest` hooks. User `AfterTest` hooks run first, then Axiom drains
+fixture cleanups. That means `AfterTest` hooks can still observe live fixtures, while cleanup is still guaranteed if an
+`AfterTest` hook panics.
 
 If a fixture setup returns an error, its cleanup is not registered and the value is not cached. If setup succeeds and
 returns a cleanup, Axiom registers that cleanup even when the caller requested the wrong type, preventing leaked setup

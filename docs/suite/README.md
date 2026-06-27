@@ -196,11 +196,11 @@ resources are shared through the runner and should be safe for the way you use t
 Parallel suite tests do not introduce a second hook model. Hooks still belong to `Runner` and `Case`.
 
 `BeforeAll` and `AfterAll` are runner-level hooks. They run once per `Runner`, guarded by the runner lifecycle, even when
-multiple suite tests run in parallel. Runner resource cleanup runs first, then `AfterAll` is executed from Go's
-`testing.T.Cleanup`, after the top-level suite test finishes and all parallel subtests have completed.
+multiple suite tests run in parallel. `AfterAll` is executed from Go's `testing.T.Cleanup`, after the top-level suite test
+finishes and all parallel subtests have completed; runner-owned cleanup happens afterwards.
 
-`BeforeTest` and `AfterTest` are case-attempt hooks. Fixture cleanup runs before `AfterTest`. If several suite tests or
-cases run in parallel, these hooks may run concurrently. Keep shared state in those hooks immutable, runner-scoped and
+`BeforeTest` and `AfterTest` are case-attempt hooks. Case-attempt cleanup runs after `AfterTest`. If several suite tests
+or cases run in parallel, these hooks may run concurrently. Keep shared state in those hooks immutable, runner-scoped and
 concurrency-safe, or protected explicitly.
 
 When a registered suite test uses `WithSuiteTestRunner`, that runner has its own lifecycle:

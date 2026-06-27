@@ -18,10 +18,10 @@ or test body panics, but panics inside hooks still propagate like ordinary test 
 
 These hooks fire **once per** `Runner`, regardless of the number of executed cases.
 
-| Hook           | When it fires                                        |
-|----------------|------------------------------------------------------|
-| `BeforeAll(r)` | once, before the first test case in this runner      |
-| `AfterAll(r)`  | once, after runner resource cleanup (via t.Cleanup)  |
+| Hook           | When it fires                                   |
+|----------------|-------------------------------------------------|
+| `BeforeAll(r)` | once, before the first test case in this runner |
+| `AfterAll(r)`  | once, after the test function completes         |
 
 Use these for:
 
@@ -30,15 +30,14 @@ Use these for:
 - test suite–level metrics
 - expensive shared resources
 
-**Note:** `AfterAll` runs inside `t.Cleanup`, so it is triggered after the test function completes. Runner resource
-cleanup runs before user `AfterAll` hooks, so those hooks should not rely on resources still being live.
+**Note:** `AfterAll` runs inside `t.Cleanup`, so it is triggered after the test function completes.
 
 ### Test-level hooks
 
-| Hook              | When it fires                                     |
-|-------------------|---------------------------------------------------|
-| `BeforeTest(cfg)` | right before executing the test body              |
-| `AfterTest(cfg)`  | after finishing the test body and fixture cleanup |
+| Hook              | When it fires                        |
+|-------------------|--------------------------------------|
+| `BeforeTest(cfg)` | right before executing the test body |
+| `AfterTest(cfg)`  | after finishing the test body        |
 
 ### Step-level hooks
 
@@ -49,16 +48,12 @@ cleanup runs before user `AfterAll` hooks, so those hooks should not rely on res
 
 ---
 
-## Cleanup order
+## Cleanup Boundary
 
-Cleanup is not implemented as user hooks. Fixture and resource cleanups have dedicated lifecycle stacks:
+Framework-owned cleanup is not implemented as user hooks.
 
-- fixture cleanups run in LIFO order before user `AfterTest` hooks
-- resource cleanups run in LIFO order before user `AfterAll` hooks
-- user after-hooks run after cleanup when cleanup completes, even if the test body panicked
-
-This keeps framework-owned teardown separate from observability hooks and guarantees cleanup even when a user after-hook
-panics.
+This keeps hooks focused on user-defined behavior. Exact cleanup timing is documented by the feature that owns the
+cleanup lifecycle.
 
 ---
 
@@ -144,13 +139,11 @@ Case 1:
     → inside test body
     → before step finish
     → after step finish
-  → fixture cleanup
   → after test
 
 Case 2:
   → before test
   ...
 
-→ resource cleanup
 → AFTER ALL (suite teardown)
 ```

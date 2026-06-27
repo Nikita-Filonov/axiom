@@ -67,9 +67,9 @@ Used across retries
    ↓
 Runner finishes
    ↓
-Resource cleanup is executed once
-   ↓
 User AfterAll hooks run
+   ↓
+Resource cleanup is executed once
 ```
 
 ---
@@ -81,7 +81,7 @@ type Resource func (r *Runner) (value any, cleanup func (), err error)
 ```
 
 - `value` — the resource instance
-- `cleanup` — optional teardown logic, executed once during runner teardown, before user `AfterAll` hooks
+- `cleanup` — optional teardown logic, executed once during runner teardown, after user `AfterAll` hooks
 - `err` — resource initialization error
 
 Resources are accessed via:
@@ -128,13 +128,13 @@ The cleanup contract is:
 > **Resource cleanup functions are registered once and run once during runner teardown.**
 
 Resource values themselves must still be safe for the way tests use them. If parallel tests share a resource and mutate
-it,
-the resource must provide its own synchronization.
+it, the resource must provide its own synchronization.
 
 Initialization errors are cached for the runner lifetime. A failed resource constructor is not retried automatically by
 subsequent `GetResource` calls.
 
-Resource cleanup runs before user `AfterAll` hooks, so `AfterAll` hooks should not rely on resources still being live.
+Resource cleanup runs after user `AfterAll` hooks, so `AfterAll` hooks can still observe live resources. Cleanup is
+still guaranteed if an `AfterAll` hook panics.
 
 ---
 
@@ -240,14 +240,14 @@ closing client
 
 ## Resources vs Fixtures
 
-| Aspect            | Fixture                | Resource                         |
-|-------------------|------------------------|----------------------------------|
-| Scope             | Test attempt           | Runner                           |
-| Cache lifetime    | Per test               | Across all tests                 |
-| Retry behavior    | Fresh on each retry    | Reused across retries            |
-| Cleanup timing    | Before AfterTest hooks | Before AfterAll hooks            |
-| Intended usage    | Test data, setup       | Infrastructure, clients, servers |
-| Concurrency focus | Single test            | Cross-test, concurrent access    |
+| Aspect            | Fixture                 | Resource                         |
+|-------------------|-------------------------|----------------------------------|
+| Scope             | Test attempt            | Runner                           |
+| Cache lifetime    | Per test                | Across all tests                 |
+| Retry behavior    | Fresh on each retry     | Reused across retries            |
+| Cleanup timing    | After `AfterTest` hooks | After `AfterAll` hooks           |
+| Intended usage    | Test data, setup        | Infrastructure, clients, servers |
+| Concurrency focus | Single test             | Cross-test, concurrent access    |
 
 ---
 
