@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func runBoundSuite[T axiom.TestingSuite](
+func runSuite[T axiom.TestingSuite](
 	t *testing.T,
 	suite T,
-	bind func(*axiom.BoundSuite[T]),
+	bind func(*axiom.SuiteRunner[T]),
 	options ...axiom.SuiteConfigOption,
 ) {
 	boundSuite := axiom.NewSuite(t, suite, options...)
@@ -25,10 +25,10 @@ func runBoundSuite[T axiom.TestingSuite](
 	boundSuite.Run()
 }
 
-func runBoundSuiteFactory[T axiom.TestingSuite](
+func runSuiteFactory[T axiom.TestingSuite](
 	t *testing.T,
 	factory func() T,
-	bind func(*axiom.BoundSuite[T]),
+	bind func(*axiom.SuiteRunner[T]),
 	options ...axiom.SuiteConfigOption,
 ) {
 	boundSuite := axiom.NewSuiteFactory(t, factory, options...)
@@ -84,7 +84,7 @@ func TestSuite_BeforeAllAfterAllWrapAllSuiteTests(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &lifecycleSuite{order: &order}, func(s *axiom.BoundSuite[*lifecycleSuite]) {
+		runSuite(t, &lifecycleSuite{order: &order}, func(s *axiom.SuiteRunner[*lifecycleSuite]) {
 			s.Test("TestAlpha", (*lifecycleSuite).TestAlpha)
 			s.Test("TestBeta", (*lifecycleSuite).TestBeta)
 		}, axiom.WithSuiteConfigRunner(runner))
@@ -125,7 +125,7 @@ func TestSuite_TestAndStepHooksRunForEachCase(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &hookCountingSuite{}, func(s *axiom.BoundSuite[*hookCountingSuite]) {
+		runSuite(t, &hookCountingSuite{}, func(s *axiom.SuiteRunner[*hookCountingSuite]) {
 			s.Test("TestOne", (*hookCountingSuite).TestOne)
 			s.Test("TestTwo", (*hookCountingSuite).TestTwo)
 		}, axiom.WithSuiteConfigRunner(runner))
@@ -242,7 +242,7 @@ func TestSuite_UsesFullRunnerConfiguration(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &runnerUseCaseSuite{seen: &seen}, func(s *axiom.BoundSuite[*runnerUseCaseSuite]) {
+		runSuite(t, &runnerUseCaseSuite{seen: &seen}, func(s *axiom.SuiteRunner[*runnerUseCaseSuite]) {
 			s.Test("TestRunnerConfigurationIsApplied", (*runnerUseCaseSuite).TestRunnerConfigurationIsApplied)
 		}, axiom.WithSuiteConfigRunner(runner))
 		assert.Equal(t, 0, resourceCleaned)
@@ -304,7 +304,7 @@ func TestSuite_ResourcesAreSharedAndCleanedUpAfterSuite(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &resourceSuite{seen: &seen}, func(s *axiom.BoundSuite[*resourceSuite]) {
+		runSuite(t, &resourceSuite{seen: &seen}, func(s *axiom.SuiteRunner[*resourceSuite]) {
 			s.Test("TestFirst", (*resourceSuite).TestFirst)
 			s.Test("TestSecond", (*resourceSuite).TestSecond)
 		}, axiom.WithSuiteConfigRunner(runner))
@@ -334,7 +334,7 @@ func TestSuite_AllowsPointerEmbeddedSuite(t *testing.T) {
 	called := false
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &pointerEmbeddedSuite{Suite: new(axiom.Suite), called: &called}, func(s *axiom.BoundSuite[*pointerEmbeddedSuite]) {
+		runSuite(t, &pointerEmbeddedSuite{Suite: new(axiom.Suite), called: &called}, func(s *axiom.SuiteRunner[*pointerEmbeddedSuite]) {
 			s.Test("TestPointerEmbeddedSuite", (*pointerEmbeddedSuite).TestPointerEmbeddedSuite)
 		})
 	})
@@ -368,7 +368,7 @@ func TestSuite_AllowsNestedEmbeddedSuite(t *testing.T) {
 	called := false
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &nestedEmbeddedSuite{called: &called}, func(s *axiom.BoundSuite[*nestedEmbeddedSuite]) {
+		runSuite(t, &nestedEmbeddedSuite{called: &called}, func(s *axiom.SuiteRunner[*nestedEmbeddedSuite]) {
 			s.Test("TestNestedEmbeddedSuite", (*nestedEmbeddedSuite).TestNestedEmbeddedSuite)
 		})
 	})
@@ -392,7 +392,7 @@ func TestSuite_UsesDefaultRunnerWhenOptionIsMissing(t *testing.T) {
 	var seenRunner *axiom.Runner
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.BoundSuite[*defaultRunnerSuite]) {
+		runSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.SuiteRunner[*defaultRunnerSuite]) {
 			s.Test("TestDefaultRunner", (*defaultRunnerSuite).TestDefaultRunner)
 		})
 	})
@@ -404,7 +404,7 @@ func TestSuite_UsesDefaultRunnerWhenOptionSetsNilRunner(t *testing.T) {
 	var seenRunner *axiom.Runner
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.BoundSuite[*defaultRunnerSuite]) {
+		runSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.SuiteRunner[*defaultRunnerSuite]) {
 			s.Test("TestDefaultRunner", (*defaultRunnerSuite).TestDefaultRunner)
 		}, axiom.WithSuiteConfigRunner(nil))
 	})
@@ -417,7 +417,7 @@ func TestSuite_TestOptionUsesSuiteRunnerWhenRunnerIsNil(t *testing.T) {
 	runner := axiom.NewRunner()
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.BoundSuite[*defaultRunnerSuite]) {
+		runSuite(t, &defaultRunnerSuite{seenRunner: &seenRunner}, func(s *axiom.SuiteRunner[*defaultRunnerSuite]) {
 			s.Test("TestDefaultRunner", (*defaultRunnerSuite).TestDefaultRunner, axiom.WithSuiteTestRunner(nil))
 		}, axiom.WithSuiteConfigRunner(runner))
 	})
@@ -451,10 +451,10 @@ func TestSuite_NewSuiteFactoryPanicsWhenFactoryIsNil(t *testing.T) {
 	})
 }
 
-func TestSuite_BuildSuitePanicsWhenBoundSuiteIsNil(t *testing.T) {
-	var boundSuite *axiom.BoundSuite[*emptySuite]
+func TestSuite_BuildSuitePanicsWhenSuiteRunnerIsNil(t *testing.T) {
+	var boundSuite *axiom.SuiteRunner[*emptySuite]
 
-	assert.PanicsWithValue(t, "suite: nil BoundSuite", func() {
+	assert.PanicsWithValue(t, "suite: nil SuiteRunner", func() {
 		_ = boundSuite.BuildSuite()
 	})
 }
@@ -534,12 +534,12 @@ func TestSuiteFactory_UsesFreshSuiteInstanceForEachRegisteredTest(t *testing.T) 
 	runner := axiom.NewRunner()
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuiteFactory(t, func() *factoryInstanceSuite {
+		runSuiteFactory(t, func() *factoryInstanceSuite {
 			return &factoryInstanceSuite{
 				id:   nextID.Add(1),
 				seen: &seen,
 			}
-		}, func(s *axiom.BoundSuite[*factoryInstanceSuite]) {
+		}, func(s *axiom.SuiteRunner[*factoryInstanceSuite]) {
 			s.Test("TestFirst", (*factoryInstanceSuite).TestFirst)
 			s.Test("TestSecond", (*factoryInstanceSuite).TestSecond)
 		}, axiom.WithSuiteConfigRunner(runner))
@@ -589,14 +589,14 @@ func TestSuiteFactory_RunsParallelSuiteTestsWithSeparateInstances(t *testing.T) 
 	}()
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuiteFactory(t, func() *parallelFactorySuite {
+		runSuiteFactory(t, func() *parallelFactorySuite {
 			return &parallelFactorySuite{
 				id:      nextID.Add(1),
 				ready:   ready,
 				release: release,
 				records: records,
 			}
-		}, func(s *axiom.BoundSuite[*parallelFactorySuite]) {
+		}, func(s *axiom.SuiteRunner[*parallelFactorySuite]) {
 			s.Test("first", (*parallelFactorySuite).TestParallel)
 			s.Test("second", (*parallelFactorySuite).TestParallel)
 		}, axiom.WithSuiteConfigRunner(runner), axiom.WithSuiteConfigParallel())
@@ -671,7 +671,7 @@ func TestSuite_TestOptionRunnerOverridesSuiteRunner(t *testing.T) {
 	}
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*suiteTestRunnerSuite]) {
+		runSuite(t, suite, func(s *axiom.SuiteRunner[*suiteTestRunnerSuite]) {
 			s.Test("TestDefaultRunner", (*suiteTestRunnerSuite).TestDefaultRunner)
 			s.Test("TestCustomRunner", (*suiteTestRunnerSuite).TestCustomRunner, axiom.WithSuiteTestRunner(customRunner))
 		}, axiom.WithSuiteConfigRunner(defaultRunner))
@@ -723,7 +723,7 @@ func TestSuite_RestoresSuiteRunnerAfterSuiteTestMethod(t *testing.T) {
 	}
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*suiteTestRunnerRestoreSuite]) {
+		runSuite(t, suite, func(s *axiom.SuiteRunner[*suiteTestRunnerRestoreSuite]) {
 			s.Test("TestRecoveringPanic", (*suiteTestRunnerRestoreSuite).TestRecoveringPanic, axiom.WithSuiteTestRunner(customRunner))
 		}, axiom.WithSuiteConfigRunner(defaultRunner))
 	})
@@ -760,7 +760,7 @@ func TestSuite_ReusesSameSuiteTestRunnerLifecycle(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &repeatedSuiteTestRunnerSuite{events: &events}, func(s *axiom.BoundSuite[*repeatedSuiteTestRunnerSuite]) {
+		runSuite(t, &repeatedSuiteTestRunnerSuite{events: &events}, func(s *axiom.SuiteRunner[*repeatedSuiteTestRunnerSuite]) {
 			s.Test("TestFirst", (*repeatedSuiteTestRunnerSuite).TestFirst, axiom.WithSuiteTestRunner(runner))
 			s.Test("TestSecond", (*repeatedSuiteTestRunnerSuite).TestSecond, axiom.WithSuiteTestRunner(runner))
 		})
@@ -813,14 +813,14 @@ func TestSuite_BindsRootAndSubTestingT(t *testing.T) {
 	var caseT string
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &rootAndSubTSuite{
+		runSuite(t, &rootAndSubTSuite{
 			rootName: &rootName,
 			subName:  &subName,
 			suiteT:   &suiteT,
 			caseRoot: &caseRoot,
 			caseSub:  &caseSub,
 			caseT:    &caseT,
-		}, func(s *axiom.BoundSuite[*rootAndSubTSuite]) {
+		}, func(s *axiom.SuiteRunner[*rootAndSubTSuite]) {
 			s.Test("TestTBinding", (*rootAndSubTSuite).TestTBinding)
 		})
 	})
@@ -848,17 +848,17 @@ func TestSuite_RunsBeforeAllAfterAllEvenWithoutTestMethods(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &emptySuite{}, nil, axiom.WithSuiteConfigRunner(runner))
+		runSuite(t, &emptySuite{}, nil, axiom.WithSuiteConfigRunner(runner))
 		assert.Equal(t, []string{"before"}, order)
 	})
 
 	assert.Equal(t, []string{"before", "after"}, order)
 }
 
-func TestSuite_TestPanicsWhenBoundSuiteIsNil(t *testing.T) {
-	var boundSuite *axiom.BoundSuite[*emptySuite]
+func TestSuite_TestPanicsWhenSuiteRunnerIsNil(t *testing.T) {
+	var boundSuite *axiom.SuiteRunner[*emptySuite]
 
-	assert.PanicsWithValue(t, "suite: nil BoundSuite", func() {
+	assert.PanicsWithValue(t, "suite: nil SuiteRunner", func() {
 		boundSuite.Test("empty", func(s *emptySuite) {})
 	})
 }
@@ -897,10 +897,10 @@ func TestSuite_TestPanicsAfterRun(t *testing.T) {
 	})
 }
 
-func TestSuite_RunPanicsWhenBoundSuiteIsNil(t *testing.T) {
-	var boundSuite *axiom.BoundSuite[*emptySuite]
+func TestSuite_RunPanicsWhenSuiteRunnerIsNil(t *testing.T) {
+	var boundSuite *axiom.SuiteRunner[*emptySuite]
 
-	assert.PanicsWithValue(t, "suite: nil BoundSuite", func() {
+	assert.PanicsWithValue(t, "suite: nil SuiteRunner", func() {
 		boundSuite.Run()
 	})
 }
@@ -1070,7 +1070,7 @@ func (s *runCaseWithoutSubTSuite) TestRunCaseWithoutSubT() {
 
 func TestSuite_RunCasePanicsWhenCalledOutsideSuiteTestMethod(t *testing.T) {
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &runCaseWithoutSubTSuite{}, func(s *axiom.BoundSuite[*runCaseWithoutSubTSuite]) {
+		runSuite(t, &runCaseWithoutSubTSuite{}, func(s *axiom.SuiteRunner[*runCaseWithoutSubTSuite]) {
 			s.Test("TestRunCaseWithoutSubT", (*runCaseWithoutSubTSuite).TestRunCaseWithoutSubT)
 		})
 	})
@@ -1081,7 +1081,7 @@ func TestSuite_TestReceivesOriginalSuiteInstance(t *testing.T) {
 	var seen *emptySuite
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*emptySuite]) {
+		runSuite(t, suite, func(s *axiom.SuiteRunner[*emptySuite]) {
 			s.Test("identity", func(suite *emptySuite) {
 				seen = suite
 			})
@@ -1127,7 +1127,7 @@ func TestSuite_AllowsMultipleCasesInsideSingleSuiteMethod(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &multipleCasesSuite{order: &order}, func(s *axiom.BoundSuite[*multipleCasesSuite]) {
+		runSuite(t, &multipleCasesSuite{order: &order}, func(s *axiom.SuiteRunner[*multipleCasesSuite]) {
 			s.Test("TestSeveralCases", (*multipleCasesSuite).TestSeveralCases)
 		}, axiom.WithSuiteConfigRunner(runner))
 	})
@@ -1174,7 +1174,7 @@ func TestSuite_FixturesAreCreatedPerCase(t *testing.T) {
 	)
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, &fixtureIsolationSuite{values: &values}, func(s *axiom.BoundSuite[*fixtureIsolationSuite]) {
+		runSuite(t, &fixtureIsolationSuite{values: &values}, func(s *axiom.SuiteRunner[*fixtureIsolationSuite]) {
 			s.Test("TestFirst", (*fixtureIsolationSuite).TestFirst)
 			s.Test("TestSecond", (*fixtureIsolationSuite).TestSecond)
 		}, axiom.WithSuiteConfigRunner(runner))
@@ -1212,7 +1212,7 @@ func TestSuite_RebindsSubTForEachSuiteMethod(t *testing.T) {
 	suite := &subTResetSuite{names: &names}
 
 	t.Run("suite", func(t *testing.T) {
-		runBoundSuite(t, suite, func(s *axiom.BoundSuite[*subTResetSuite]) {
+		runSuite(t, suite, func(s *axiom.SuiteRunner[*subTResetSuite]) {
 			s.Test("TestFirst", (*subTResetSuite).TestFirst)
 			s.Test("TestSecond", (*subTResetSuite).TestSecond)
 		})

@@ -18,22 +18,22 @@ type TestingSuite interface {
 	RunCase(Case, TestAction)
 }
 
-type BoundSuite[T TestingSuite] struct {
+type SuiteRunner[T TestingSuite] struct {
 	rootT   *testing.T
 	suite   T
 	factory func() T
 	config  SuiteConfig
-	tests   []boundSuiteTest[T]
+	tests   []suiteRunnerTest[T]
 	ran     bool
 }
 
-type boundSuiteTest[T TestingSuite] struct {
+type suiteRunnerTest[T TestingSuite] struct {
 	name   string
 	action func(T)
 	config SuiteTestConfig
 }
 
-func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOption) *BoundSuite[T] {
+func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOption) *SuiteRunner[T] {
 	if t == nil {
 		panic("suite: nil *testing.T")
 	}
@@ -48,15 +48,15 @@ func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOptio
 	suite.SetSubT(nil)
 	suite.SetRunner(cfg.Runner)
 
-	return &BoundSuite[T]{
+	return &SuiteRunner[T]{
 		rootT:  t,
 		suite:  suite,
 		config: cfg,
-		tests:  make([]boundSuiteTest[T], 0),
+		tests:  make([]suiteRunnerTest[T], 0),
 	}
 }
 
-func NewSuiteFactory[T TestingSuite](t *testing.T, factory func() T, options ...SuiteConfigOption) *BoundSuite[T] {
+func NewSuiteFactory[T TestingSuite](t *testing.T, factory func() T, options ...SuiteConfigOption) *SuiteRunner[T] {
 	if t == nil {
 		panic("suite: nil *testing.T")
 	}
@@ -64,11 +64,11 @@ func NewSuiteFactory[T TestingSuite](t *testing.T, factory func() T, options ...
 		panic("suite: nil suite factory")
 	}
 
-	return &BoundSuite[T]{
+	return &SuiteRunner[T]{
 		rootT:   t,
 		factory: factory,
 		config:  NewSuiteConfig(options...),
-		tests:   make([]boundSuiteTest[T], 0),
+		tests:   make([]suiteRunnerTest[T], 0),
 	}
 }
 
@@ -88,9 +88,9 @@ func validateSuiteInstance(suite any) {
 	}
 }
 
-func (s *BoundSuite[T]) Test(name string, action func(T), options ...SuiteTestConfigOption) {
+func (s *SuiteRunner[T]) Test(name string, action func(T), options ...SuiteTestConfigOption) {
 	if s == nil {
-		panic("suite: nil BoundSuite")
+		panic("suite: nil SuiteRunner")
 	}
 	if s.ran {
 		panic("suite: cannot register test after Run")
@@ -112,16 +112,16 @@ func (s *BoundSuite[T]) Test(name string, action func(T), options ...SuiteTestCo
 		panic("suite: parallel suite tests require NewSuiteFactory")
 	}
 
-	s.tests = append(s.tests, boundSuiteTest[T]{
+	s.tests = append(s.tests, suiteRunnerTest[T]{
 		name:   name,
 		action: action,
 		config: cfg,
 	})
 }
 
-func (s *BoundSuite[T]) Run() {
+func (s *SuiteRunner[T]) Run() {
 	if s == nil {
-		panic("suite: nil BoundSuite")
+		panic("suite: nil SuiteRunner")
 	}
 	if s.ran {
 		panic("suite: suite already ran")
@@ -158,9 +158,9 @@ func (s *BoundSuite[T]) Run() {
 	}
 }
 
-func (s *BoundSuite[T]) BuildSuite() T {
+func (s *SuiteRunner[T]) BuildSuite() T {
 	if s == nil {
-		panic("suite: nil BoundSuite")
+		panic("suite: nil SuiteRunner")
 	}
 	if s.factory == nil {
 		return s.suite
