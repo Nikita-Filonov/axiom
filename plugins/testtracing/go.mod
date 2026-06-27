@@ -1,5 +1,5 @@
 module github.com/Nikita-Filonov/axiom/plugins/testtracing
 
-go 1.25.2
+go 1.25.5
 
 require github.com/Nikita-Filonov/axiom v1.4.0
