@@ -37,7 +37,7 @@ jobs:
     needs: lint
 
   release-plugin-tags:
-    name: 🔖 plugins
+    name: 🔖 release plugin tags
     runs-on: ubuntu-latest
     needs: test
     permissions:
