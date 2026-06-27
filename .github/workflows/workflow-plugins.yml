@@ -1,0 +1,184 @@
+name: 🔖 Plugins
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version part to increment for each plugin tag.
+        type: choice
+        required: true
+        default: minor
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: Calculate tags without pushing them.
+        type: boolean
+        required: true
+        default: false
+      create_releases:
+        description: Create GitHub Releases for the new plugin tags.
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: 🧹 lint
+    uses: ./.github/workflows/reusable-lint.yml
+
+  test:
+    name: 🧪 test
+    uses: ./.github/workflows/reusable-test.yml
+    needs: lint
+
+  release-plugin-tags:
+    name: 🔖 plugins
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculate next plugin tags
+        id: plan
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+
+          git fetch --force --tags
+
+          bump_version() {
+            local version="$1"
+            local bump="$2"
+            local major minor patch
+
+            IFS=. read -r major minor patch <<< "$version"
+
+            case "$bump" in
+              major)
+                major=$((major + 1))
+                minor=0
+                patch=0
+                ;;
+              minor)
+                minor=$((minor + 1))
+                patch=0
+                ;;
+              patch)
+                patch=$((patch + 1))
+                ;;
+              *)
+                echo "unsupported bump: $bump" >&2
+                exit 1
+                ;;
+            esac
+
+            echo "${major}.${minor}.${patch}"
+          }
+
+          latest_version_for_plugin() {
+            local plugin="$1"
+
+            git tag --list "${plugin}/v*" \
+              | sed "s#^${plugin}/v##" \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -t. -k1,1n -k2,2n -k3,3n \
+              | tail -n 1
+          }
+
+          find plugins -mindepth 2 -maxdepth 2 -name go.mod -print \
+            | sed 's#/go.mod$##' \
+            | sort > plugin-modules.txt
+
+          if [ ! -s plugin-modules.txt ]; then
+            echo "No plugin modules found." >&2
+            exit 1
+          fi
+
+          : > plugin-tags.txt
+          {
+            echo "### Plugin tag plan"
+            echo
+            echo "| Plugin | Previous tag | Next tag |"
+            echo "|---|---:|---:|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          while IFS= read -r plugin; do
+            latest="$(latest_version_for_plugin "$plugin" || true)"
+            if [ -z "$latest" ]; then
+              latest="0.0.0"
+            fi
+
+            next="$(bump_version "$latest" "$BUMP")"
+            tag="${plugin}/v${next}"
+
+            if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+              echo "Tag already exists: ${tag}" >&2
+              exit 1
+            fi
+
+            echo "$tag" >> plugin-tags.txt
+            echo "| \`${plugin}\` | \`v${latest}\` | \`${tag}\` |" >> "$GITHUB_STEP_SUMMARY"
+          done < plugin-modules.txt
+
+          {
+            echo "tags<<EOF"
+            cat plugin-tags.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create local tags
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r tag; do
+            git tag -a "$tag" -m "$tag"
+          done < plugin-tags.txt
+
+      - name: Push tags
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r tag; do
+            git push origin "refs/tags/${tag}"
+          done < plugin-tags.txt
+
+      - name: Create GitHub Releases
+        if: ${{ !inputs.dry_run && inputs.create_releases }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r tag; do
+            gh release create "$tag" \
+              --target "$GITHUB_SHA" \
+              --title "$tag" \
+              --notes "Plugin release ${tag}"
+          done < plugin-tags.txt
+
+      - name: Dry-run notice
+        if: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo
+            echo "Dry run only. No tags or releases were created."
+          } >> "$GITHUB_STEP_SUMMARY"
