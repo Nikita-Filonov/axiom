@@ -5,6 +5,7 @@
 ## 📑 Table of Contents
 
 - [Overview](#overview)
+- [Plugin Contract](#plugin-contract)
 - [Installing Plugins](#installing-plugins)
 - [Writing a Plugin](#writing-a-plugin)
 - [Built-in Plugins](#built-in-plugins)
@@ -29,6 +30,31 @@ A plugin does **not** execute tests or steps — it only decorates execution by 
 
 ---
 
+## Plugin Contract
+
+Plugins are installation-time decorators for a built `Config`.
+
+A plugin should:
+
+- register hooks, wraps, sinks, context, metadata, skip rules, or other execution configuration
+- be deterministic and safe to apply more than once across retry attempts
+- return without executing test logic
+
+A plugin should not:
+
+- call `cfg.Test`, `cfg.Step`, `cfg.Setup`, or `cfg.Teardown` during installation
+- create irreversible external side effects during installation
+- depend on being applied only once for the whole runner lifetime
+
+Runner-level plugins are applied before case-level plugins.
+
+Axiom may build more than one `Config` for a case, for example when calculating execution policy and when running retry
+attempts. Because of that, plugin installation must stay cheap, deterministic, and side-effect-light.
+
+A plugin is a configuration decorator, not a test execution point.
+
+---
+
 ## Installing Plugins
 
 Axiom plugins are distributed as **regular Go modules**. There is no plugin manager, registry, or custom installation
@@ -41,19 +67,20 @@ Plugins are installed and versioned using standard Go tooling.
 Use `go get` with the plugin module path:
 
 ```bash
-go get github.com/Nikita-Filonov/axiom/plugins/testtags@v0.1.0
+go get github.com/Nikita-Filonov/axiom/plugins/testtags
 ```
 
 This will add the plugin as a dependency to your `go.mod` file:
 
 ```text
 require (
-	github.com/Nikita-Filonov/axiom v0.3.0
-	github.com/Nikita-Filonov/axiom/plugins/testtags v0.1.0
+	github.com/Nikita-Filonov/axiom
+	github.com/Nikita-Filonov/axiom/plugins/testtags
 )
 ```
 
-Each plugin is **versioned** independently of the Axiom core.
+Each plugin is **versioned independently** of the Axiom core. Pin the version with `@vX.Y.Z` if your project needs
+reproducible builds.
 
 ---
 
