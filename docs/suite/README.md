@@ -313,7 +313,7 @@ func UserFixture(cfg *axiom.Config) (any, func(), error) {
 
 func TimingPlugin() axiom.Plugin {
 	return func(cfg *axiom.Config) {
-		cfg.Runtime.TestWraps = append(cfg.Runtime.TestWraps, func(next axiom.TestAction) axiom.TestAction {
+		cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
 			return func(c *axiom.Config) {
 				start := time.Now()
 				next(c)
