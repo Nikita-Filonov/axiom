@@ -52,114 +52,48 @@ and supercharges it.
 go get github.com/Nikita-Filonov/axiom
 ```
 
-For version pinning:
-
-```bash
-go get github.com/Nikita-Filonov/axiom@v1.4.0
-```
-
 ---
 
 ## 🚀 Quick Start
 
-This example demonstrates the core power of **Axiom**: fixtures, metadata, hooks, plugins, steps, and retryable
-subtests — all working together seamlessly.
+This example shows the smallest useful Axiom flow: define a runner, describe a case, and execute steps inside standard 
+`go test`.
 
 ```go
 package example_test
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/Nikita-Filonov/axiom"
-	"github.com/Nikita-Filonov/axiom/plugins/testallure"
-	"github.com/Nikita-Filonov/axiom/plugins/teststats"
-	"github.com/Nikita-Filonov/axiom/plugins/testtags"
-)
-
-// -----------------------------------------------------------------------------
-// Fixtures
-// -----------------------------------------------------------------------------
-
-// DBFixture simulates a database connection with automatic teardown.
-func DBFixture(cfg *axiom.Config) (any, func(), error) {
-	// setup
-	db := fmt.Sprintf("db-connection-%s", cfg.Case.ID)
-
-	// teardown
-	cleanup := func() {
-		fmt.Printf("Closing %s\n", db)
-	}
-
-	return db, cleanup, nil
-}
-
-// UserFixture depends on the DB fixture and derives a user from it.
-func UserFixture(cfg *axiom.Config) (any, func(), error) {
-	db := axiom.GetFixture[string](cfg, "db")
-	user := fmt.Sprintf("user-from-%s", db)
-	return user, nil, nil
-}
-
-// -----------------------------------------------------------------------------
-// Global Runner (shared test environment)
-// -----------------------------------------------------------------------------
-
-var runner = axiom.NewRunner(
-	axiom.WithRunnerMeta(
-		axiom.WithMetaEpic("authentication"),
-		axiom.WithMetaFeature("login"),
-		axiom.WithMetaSeverity(axiom.SeverityCritical),
-	),
-
-	// Plugins extend the runtime behavior:
-	axiom.WithRunnerPlugins(
-		testtags.Plugin(testtags.WithConfigInclude("smoke")), // filter by tag
-		teststats.Plugin(teststats.NewStats()),               // metrics
-		testallure.Plugin(),                                  // reporting
-	),
-
-	// Global retry configuration (per test case):
-	axiom.WithRunnerRetry(
-		axiom.WithRetryTimes(3),
-		axiom.WithRetryDelay(15*time.Second),
-	),
-
-	// Global fixtures:
-	axiom.WithRunnerFixture("db", DBFixture),
-
-	// Enable parallel execution across test cases:
-	axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 )
 
 func TestUserLogin(t *testing.T) {
-	c := axiom.NewCase(
-		axiom.WithCaseName("user can login with valid credentials"),
-		axiom.WithCaseMeta(
-			axiom.WithMetaTag("smoke"),
-			axiom.WithMetaStory("valid login"),
-			axiom.WithMetaLabel("component", "auth-service"),
-		),
+	runner := axiom.NewRunner()
 
-		// Local fixtures:
-		axiom.WithCaseFixture("user", UserFixture),
+	c := axiom.NewCase(
+		axiom.WithCaseName("user can login"),
 	)
 
 	runner.RunCase(t, c, func(cfg *axiom.Config) {
-		cfg.Step("prepare user", func() {
-			user := axiom.GetFixture[string](cfg, "user")
-			fmt.Println("Using:", user)
+		var token string
+
+		cfg.Step("submit credentials", func() {
+			token = "access-token"
 		})
 
-		cfg.Step("validate response", func() {
-			fmt.Println("Login OK")
+		cfg.Step("check login result", func() {
+			if token == "" {
+				t.Fatal("expected access token")
+			}
 		})
 	})
 }
 
 ```
+
+For a full project layout with shared runners, fixtures, metadata, and domain-specific test organization, see
+[./docs/usage](./docs/usage).
 
 ---
 
