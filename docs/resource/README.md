@@ -72,6 +72,24 @@ User AfterAll hooks run
 Resource cleanup is executed once
 ```
 
+When resources depend on other resources, cleanup runs in reverse setup order:
+
+```text
+db setup
+client setup
+session setup
+session cleanup
+client cleanup
+db cleanup
+```
+
+Resource cleanups are stored on a dedicated stack separate from user `AfterAll` hooks. User `AfterAll` hooks run first
+and can still observe live resources; Axiom then drains the resource cleanup stack in LIFO order. This is the same
+pattern fixtures use at the test scope, but at the runner scope.
+
+If a resource constructor returns an error, its cleanup is not registered and the value is not cached. The error is
+cached for the lifetime of the runner — see [Concurrency model](#concurrency-model).
+
 ---
 
 ## Resource API
