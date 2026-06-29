@@ -2,6 +2,7 @@ package axiom
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -9,6 +10,8 @@ import (
 type Runner struct {
 	beforeOnce sync.Once
 	afterOnce  sync.Once
+
+	managed atomic.Bool
 
 	Meta      Meta
 	Skip      Skip
@@ -130,7 +133,9 @@ func (r *Runner) Join(other *Runner) *Runner {
 
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 	r.ApplyStart()
-	t.Cleanup(r.ApplyFinish)
+	if !r.managed.Load() {
+		t.Cleanup(r.ApplyFinish)
+	}
 
 	r.runCase(t, c, action)
 }

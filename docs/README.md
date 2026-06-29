@@ -11,6 +11,7 @@ framework. Each subfolder provides focused reference material and examples.
 - [./philosophy](./philosophy) — design principles and how Axiom fits into the Go testing ecosystem
 - [./runner](./runner) — global execution environment, hooks, shared fixtures, retries
 - [./suite](./suite) — optional execution boundary for grouped tests, shared runners, resources, and lifecycle
+- [./package](./package) — `TestMain` lifecycle boundary for runners shared across many top-level `TestXxx` functions
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./local](./local) — per-attempt typed local state stored on Config

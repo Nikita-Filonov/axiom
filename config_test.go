@@ -173,6 +173,30 @@ func TestConfig_ApplyPlugins_OrderAndRunnerCase(t *testing.T) {
 	assert.Equal(t, []string{"runner", "case"}, calls)
 }
 
+func TestConfig_ApplyPlugins_CanDecorateMultipleBuiltConfigs(t *testing.T) {
+	var installs int
+	r := axiom.NewRunner(
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
+			installs++
+			cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
+				return func(cfg *axiom.Config) { next(cfg) }
+			})
+		}),
+	)
+
+	first := axiom.NewCase()
+	firstCfg := r.BuildConfig(t, &first)
+	firstCfg.ApplyPlugins()
+
+	second := axiom.NewCase()
+	secondCfg := r.BuildConfig(t, &second)
+	secondCfg.ApplyPlugins()
+
+	assert.Equal(t, 2, installs)
+	assert.Len(t, firstCfg.Runtime.TestWraps, 1)
+	assert.Len(t, secondCfg.Runtime.TestWraps, 1)
+}
+
 func TestConfig_ApplyExecutionPolicy_Parallel_DoesNotPanic(t *testing.T) {
 	cfg := &axiom.Config{
 		RootT:    t,
@@ -435,6 +459,37 @@ func TestConfig_StepPanic_EmitsPanicFact(t *testing.T) {
 	assert.Equal(t, axiom.EventTypeStepPanic, events[1].Type)
 	assert.Equal(t, "boom", events[1].Message)
 	assert.Equal(t, axiom.EventTypeStepFinish, events[2].Type)
+}
+
+func TestConfig_StepPanic_DoesNotStopNextStep(t *testing.T) {
+	fakeT := &testing.T{}
+
+	var calls []string
+	var events []axiom.Event
+	cfg := &axiom.Config{
+		Runtime: axiom.NewRuntime(
+			axiom.WithRuntimeEventSink(func(e axiom.Event) {
+				events = append(events, e)
+			}),
+		),
+		SubT: fakeT,
+	}
+
+	cfg.Step("first", func() {
+		calls = append(calls, "first")
+		panic("boom")
+	})
+	cfg.Step("second", func() {
+		calls = append(calls, "second")
+	})
+
+	assert.Equal(t, []string{"first", "second"}, calls)
+	require.Len(t, events, 5)
+	assert.Equal(t, axiom.EventTypeStepStart, events[0].Type)
+	assert.Equal(t, axiom.EventTypeStepPanic, events[1].Type)
+	assert.Equal(t, axiom.EventTypeStepFinish, events[2].Type)
+	assert.Equal(t, axiom.EventTypeStepStart, events[3].Type)
+	assert.Equal(t, axiom.EventTypeStepFinish, events[4].Type)
 }
 
 func TestConfig_Setup_EmitsStartAndFinishFacts(t *testing.T) {

@@ -377,6 +377,27 @@ func TestRunner_AfterAll_PerEachTestingT(t *testing.T) {
 	assert.Equal(t, 1, afterCount)
 }
 
+func TestRunner_AfterAll_RunsWhenOwningTestingTCompletes(t *testing.T) {
+	var calls []string
+	r := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithAfterAll(func(r *axiom.Runner) { calls = append(calls, "after-all") }),
+		),
+	)
+	c := axiom.NewCase(axiom.WithCaseName("dummy"))
+
+	t.Run("first", func(t *testing.T) {
+		r.RunCase(t, c, func(cfg *axiom.Config) { calls = append(calls, "first-case") })
+		calls = append(calls, "first-test-end")
+	})
+	calls = append(calls, "between-tests")
+	t.Run("second", func(t *testing.T) {
+		r.RunCase(t, c, func(cfg *axiom.Config) { calls = append(calls, "second-case") })
+	})
+
+	assert.Equal(t, []string{"first-case", "first-test-end", "after-all", "between-tests", "second-case"}, calls)
+}
+
 func TestRunner_BeforeAll_ExecutesBeforeTestLogic(t *testing.T) {
 	var order []string
 
