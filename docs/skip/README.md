@@ -14,6 +14,43 @@ This model enables:
 
 ---
 
+## Merge semantics
+
+`Skip` distinguishes between **not set** and **explicitly set to false** through the `EnabledSet` flag:
+
+| Builder                       | `Enabled` | `EnabledSet` | Reason       |
+|-------------------------------|-----------|--------------|--------------|
+| `SkipBecause("…")`            | `true`    | `true`       | `"…"`        |
+| `WithSkipEnabled(true)`       | `true`    | `true`       | unchanged    |
+| `WithSkipEnabled(false)`      | `false`   | `true`       | unchanged    |
+| `WithSkipDisabled()`          | `false`   | `true`       | unchanged    |
+| `WithSkipReason("…")` (only)  | unchanged | `false`      | `"…"`        |
+
+`Skip.Join(other)` replaces `Enabled` only when `other.EnabledSet` is `true`. This means a `Case` can do all of:
+
+- inherit `Runner` skip (do not call any skip builder)
+- override `Runner` skip with a different reason (`SkipBecause(...)`)
+- **explicitly turn off** an inherited Runner skip (`WithSkipDisabled()`)
+
+Without `EnabledSet` the case-level `Enabled: false` would be indistinguishable from the zero value, so an override
+back to "run this test" would be impossible. This mirrors how `Retry.TimesSet` and `Parallel.EnabledSet` work for the
+same reason.
+
+```go
+runner := axiom.NewRunner(
+    axiom.WithRunnerSkip(axiom.SkipBecause("maintenance window")),
+)
+
+// This case opts out of the runner-level skip even though Enabled=false is the
+// zero value of bool — EnabledSet makes the override explicit.
+c := axiom.NewCase(
+    axiom.WithCaseName("smoke test that must always run"),
+    axiom.WithCaseSkip(axiom.WithSkipDisabled()),
+)
+```
+
+---
+
 ## Example
 
 ```go
