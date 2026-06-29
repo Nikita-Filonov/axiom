@@ -42,7 +42,12 @@ type Event struct {
 
 ## Event Types
 
-Lifecycle events are represented by their type:
+Events come in two flavours: **lifecycle events** tied to a specific phase, and **fact events** that can be emitted
+from any phase.
+
+### Lifecycle events
+
+Lifecycle events follow the `subject.phase.outcome` shape:
 
 - `case.start`, `case.finish`, `case.panic`
 - `step.start`, `step.finish`, `step.panic`
@@ -54,7 +59,30 @@ Lifecycle events are represented by their type:
 - `resource.cleanup.start`, `resource.cleanup.finish`, `resource.cleanup.panic`
 - `runner.before-all.start`, `runner.before-all.finish`, `runner.before-all.panic`
 - `runner.after-all.start`, `runner.after-all.finish`, `runner.after-all.panic`
-- `log`, `assert`, `artefact`
+
+### Fact events
+
+Fact events are single data points that can fire from the test body, hooks, fixture factories, steps, or
+setup/teardown blocks. They are not bound to a phase, so they stay flat without a subject prefix:
+
+- `log`
+- `assert`
+- `artefact`
+
+Subscribing code can distinguish the two classes easily:
+
+```go
+switch {
+case e.Type == axiom.EventTypeLog,
+    e.Type == axiom.EventTypeAssert,
+    e.Type == axiom.EventTypeArtefact:
+    // fact event — happened somewhere inside the test, phase is implicit from
+    // the surrounding lifecycle stream
+
+case strings.HasPrefix(string(e.Type), "case."):
+    // case lifecycle (start/finish/panic)
+}
+```
 
 There is no generic `status` field. A failure or panic is its own event.
 
