@@ -21,6 +21,7 @@ _Made with ❤️ by [@NikitaFilonov](https://t.me/sound_right)_
 - 📦 [Installation](#-installation)
 - 🚀 [Quick Start](#-quick-start)
 - ❓ [Why Axiom?](#-why-axiom)
+- 🧪 [IDE Support](#-ide-support)
 - 📘 [Documentation](#-documentation)
 
 ---
@@ -138,6 +139,25 @@ It’s not a “magic” wrapper.
 
 **Axiom is a test runtime engine** that unlocks capabilities traditionally found in frameworks like _pytest_, _JUnit5_,
 and _Allure_, but implemented the Go way: simple, explicit, and pragmatic.
+
+---
+
+## 🧪 IDE Support
+
+**GoLand / IntelliJ IDEA Ultimate** — install the official
+[**Axiom Test Runner** plugin](https://plugins.jetbrains.com/plugin/32606-axiom-test-runner)
+([source](https://github.com/Nikita-Filonov/axiom-jetbrains)) from JetBrains Marketplace to get:
+
+- 🟢 Green gutter icon on every `TestXxx` method of an Axiom suite.
+- ▶️ Full native menu — Run, Debug, Run with Coverage, Profile (CPU/Memory/Blocking).
+- 🌳 Results in the standard *Test Results* tool window.
+- ⚡ Zero configuration — works with any struct passed to `axiom.NewSuite`
+  or `axiom.NewSuiteFactory`, regardless of what it embeds.
+
+```bash
+# Or install directly from the IDE:
+#   Settings → Plugins → Marketplace → search "Axiom Test Runner"
+```
 
 ---
 
