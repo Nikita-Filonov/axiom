@@ -8,7 +8,7 @@ re-evaluate and hooks to re-run, ensuring isolated, deterministic attempts.
 
 This model enables:
 
-- consistent flaky-test handling
+- repeated attempt lifecycles for diagnostics
 - predictable overrides (`Case` > `Runner`)
 - isolated fixture lifecycles per attempt
 - configurable retry delays
@@ -22,9 +22,31 @@ This model enables:
 - `Delay` is always normalized to a minimum of `0`
 - Case-level retry settings override Runner-level settings **per field**
 - Unset fields inherit values from the Runner
+- When Retry and Parallel are both enabled, the Case runs in parallel while its attempts run sequentially
+- A failure already reported to Go's `testing.T` remains part of the final test result even if a later attempt passes
 
 Normalization guarantees that retries are always safe and deterministic, even when invalid values are explicitly
 provided.
+
+## Parallel Cases
+
+Retry attempts must finish before Axiom can decide whether to run the next attempt. For a parallel Case, Axiom therefore
+applies `t.Parallel()` once to the Case wrapper and executes the attempt subtests sequentially inside it:
+
+Schematically:
+
+```text
+parallel case
+├── attempt 1
+├── attempt 2
+└── attempt 3
+```
+
+Different Cases can still run concurrently. Hooks, plugins, Config, local fixtures, and fixture cleanup are recreated or
+applied for every attempt as they are for a sequential retry.
+
+Go does not allow a failed `testing.T` to become successful again. Retry therefore re-executes the Case lifecycle, but
+does not erase a failure already reported by an earlier attempt.
 
 ---
 
@@ -74,7 +96,7 @@ func TestRetryExample(t *testing.T) {
 		fmt.Println("attempt:", attempt)
 
 		if attempt < 3 {
-			t.Fail() // trigger retry
+			cfg.T().Fail() // fail the current attempt and trigger retry
 		}
 
 		cfg.Step("finalize", func() {

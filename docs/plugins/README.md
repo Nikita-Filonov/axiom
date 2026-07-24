@@ -51,6 +51,19 @@ Runner-level plugins are applied before case-level plugins.
 Axiom may build more than one `Config` for a case, for example when calculating execution policy and when running retry
 attempts. Because of that, plugin installation must stay cheap, deterministic, and side-effect-light.
 
+Every build starts from a fresh copy of the declared `Case`. Mutations made by one plugin application do not become the
+input of the next retry attempt. This makes decorators such as the following valid without accumulating prefixes:
+
+```go
+func NamePlugin() axiom.Plugin {
+	return func(cfg *axiom.Config) {
+		cfg.Case.Name = fmt.Sprintf("[%s] %s", cfg.Meta.Feature, cfg.Case.Name)
+	}
+}
+```
+
+For a Case named `name` with feature `Feature`, every attempt sees `[Feature] name`; the declared Case remains `name`.
+
 A plugin is a configuration decorator, not a test execution point.
 
 ---

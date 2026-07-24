@@ -64,6 +64,27 @@ func TestParallelExample(t *testing.T) {
 
 ---
 
+## Parallel With Retry
+
+When a Case enables both Parallel and Retry, Axiom applies `t.Parallel()` once to the Case wrapper. Retry attempts then
+run sequentially inside that wrapper, so Axiom receives the result of one attempt before deciding whether to start the
+next:
+
+```text
+parallel case
+├── attempt 1
+├── attempt 2
+└── attempt 3
+```
+
+Different parallel Cases can overlap, while hooks, plugins, Config, local fixtures, and fixture cleanup remain scoped to
+each concrete attempt.
+
+A failure reported to Go's `testing.T` cannot be erased. A later successful attempt stops further retries, but the
+earlier failure remains part of the final test result.
+
+---
+
 ## Suite-Level Parallelism
 
 Suite-level parallelism is intentionally separate from Runner/Case parallelism.

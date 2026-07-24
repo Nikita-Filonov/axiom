@@ -129,17 +129,14 @@ func (c *Config) ApplyPlugins() {
 	}
 }
 
-func (c *Config) ApplyExecutionPolicy() {
-	t := c.RootT
-	if c.SubT != nil {
-		t = c.SubT
-	}
-
+func (c *Config) applySkipPolicy() {
 	if c.Skip.Enabled {
-		t.Skip(c.Skip.Reason)
+		c.T().Skip(c.Skip.Reason)
 	}
+}
 
+func (c *Config) applyParallelPolicy() {
 	if c.Parallel.Enabled {
-		t.Parallel()
+		c.T().Parallel()
 	}
 }

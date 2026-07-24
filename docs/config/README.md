@@ -139,10 +139,12 @@ Runner.Parallel + Case.Parallel → Config.Parallel
 
 `Config.Local` starts empty for every attempt.
 
-Then plugins are applied:
+For execution, Axiom first builds a Config used to resolve the Case name and execution policy:
 
 ```text
 Config → Plugin1 → Plugin2 → ...
 ```
 
-Then retry loop begins, and each attempt creates a fresh `Config`.
+Each concrete attempt then starts from a fresh copy of the declared Case, builds its own `Config`, and applies the same
+plugin pipeline before running. Plugin mutations from the policy Config or an earlier attempt are never reused as input
+for the next attempt.

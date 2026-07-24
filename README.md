@@ -124,7 +124,7 @@ Instead of replacing Go’s testing ecosystem, Axiom extends it with a powerful 
 
 - **Fixtures** — lazy-evaluated, cached resources with automatic cleanup
 - **Hooks** — before/after test, step, and subtest
-- **Retries** — deterministic flaky-test handling
+- **Retries** — isolated repeat attempts with configurable delay
 - **Metadata** — tags, severity, labels, epics, features, stories
 - **Step model** — structured execution with reporting support
 - **Plugins** — clean extension mechanism for integrating tooling (Allure, metrics, filtering, etc.)

@@ -4,7 +4,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 type Runner struct {
@@ -141,30 +140,8 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 }
 
 func (r *Runner) runCase(t *testing.T, c Case, action TestAction) {
-	baseCase := c.Copy()
-	baseCfg := r.BuildConfig(t, &baseCase)
-	baseCfg.ApplyPlugins()
-	baseCfg.ApplyExecutionPolicy()
-
-	for attempt := 1; attempt <= baseCfg.Retry.Times; attempt++ {
-		if attempt > 1 && baseCfg.Retry.Delay > 0 {
-			time.Sleep(baseCfg.Retry.Delay)
-		}
-
-		attemptCase := c.Copy()
-		cfg := r.BuildConfig(t, &attemptCase)
-		cfg.ApplyPlugins()
-
-		ok := t.Run(cfg.Case.Name, func(st *testing.T) {
-			cfg.SubT = st
-			cfg.ApplyExecutionPolicy()
-			cfg.Test(action)
-		})
-
-		if ok {
-			break
-		}
-	}
+	execution := newCaseExecution(r, t, c, action)
+	execution.run()
 }
 
 func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {

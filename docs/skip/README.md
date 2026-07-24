@@ -3,7 +3,8 @@
 `Skip` allows marking a test as skipped, either statically or dynamically. A skip definition may include an optional
 reason, and may be applied at both `Runner` and `Case` level. Case-level skip overrides Runner-level skip.
 
-A skipped test does not execute fixtures, steps, hooks, or plugins (except those involved in reporting skip state).
+A skipped test does not execute its action, fixtures, steps, or test hooks. Plugin installation still runs because a
+plugin may contribute skip rules or reporting configuration.
 
 This model enables:
 

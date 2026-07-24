@@ -149,7 +149,7 @@ Axiom focuses on problems that Go’s testing package intentionally leaves open:
 
 - test lifecycle and execution model
 - resource management (fixtures)
-- retries and flaky tests
+- isolated retry attempt lifecycles
 - metadata and test classification
 - hooks and extensibility
 - predictable composition of global and local configuration

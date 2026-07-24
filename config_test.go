@@ -197,16 +197,6 @@ func TestConfig_ApplyPlugins_CanDecorateMultipleBuiltConfigs(t *testing.T) {
 	assert.Len(t, secondCfg.Runtime.TestWraps, 1)
 }
 
-func TestConfig_ApplyExecutionPolicy_Parallel_DoesNotPanic(t *testing.T) {
-	cfg := &axiom.Config{
-		RootT:    t,
-		Runtime:  axiom.NewRuntime(),
-		Parallel: axiom.Parallel{Enabled: true},
-	}
-
-	cfg.ApplyExecutionPolicy()
-}
-
 func TestConfig_Log_DelegatesToRuntimeSink(t *testing.T) {
 	var received axiom.Log
 	var events []axiom.Event

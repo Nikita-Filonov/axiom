@@ -191,6 +191,10 @@ NewSuiteFactory
 `Config`, `Local`, fixtures, toolsets, retry attempts, and case hooks still belong to a concrete case attempt. Runner
 resources are shared through the runner and should be safe for the way you use them.
 
+Runner/Case parallelism remains separate from Suite method parallelism. If one registered Suite method calls `RunCase`
+multiple times, those parallel Cases may overlap. When such a Case also enables Retry, its Case wrapper is parallel but
+its retry attempts run sequentially.
+
 ### Hooks And Parallel Suite Tests
 
 Parallel suite tests do not introduce a second hook model. Hooks still belong to `Runner` and `Case`.

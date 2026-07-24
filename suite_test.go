@@ -1142,6 +1142,37 @@ func TestSuite_AllowsMultipleCasesInsideSingleSuiteMethod(t *testing.T) {
 	}, order)
 }
 
+type multipleParallelCasesSuite struct {
+	axiom.Suite
+	completed *atomic.Int64
+}
+
+func (s *multipleParallelCasesSuite) TestSeveralCases() {
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("first case")), func(cfg *axiom.Config) {
+		s.completed.Add(1)
+	})
+	s.RunCase(axiom.NewCase(axiom.WithCaseName("second case")), func(cfg *axiom.Config) {
+		s.completed.Add(1)
+	})
+}
+
+func TestSuite_AllowsMultipleRunnerParallelCasesInsideSingleSuiteMethod(t *testing.T) {
+	var completed atomic.Int64
+	runner := axiom.NewRunner(
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+	)
+
+	t.Run("suite", func(t *testing.T) {
+		runSuiteFactory(t, func() *multipleParallelCasesSuite {
+			return &multipleParallelCasesSuite{completed: &completed}
+		}, func(s *axiom.SuiteRunner[*multipleParallelCasesSuite]) {
+			s.Test("TestSeveralCases", (*multipleParallelCasesSuite).TestSeveralCases)
+		}, axiom.WithSuiteConfigRunner(runner))
+	})
+
+	assert.Equal(t, int64(2), completed.Load())
+}
+
 type fixtureIsolationSuite struct {
 	axiom.Suite
 	values *[]string
