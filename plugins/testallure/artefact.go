@@ -6,13 +6,16 @@ import (
 )
 
 const (
-	contentTypeJSON = "application/json"
-	contentTypeText = "text/plain"
+	contentTypeBytes = "application/octet-stream"
+	contentTypeJSON  = "application/json"
+	contentTypeText  = "text/plain"
 )
 
 func handleArtefact(ctx *allure.Context, cfg *axiom.Config, a axiom.Artefact) {
 	var contentType string
 	switch a.Type {
+	case axiom.ArtefactTypeBytes:
+		contentType = contentTypeBytes
 	case axiom.ArtefactTypeJSON:
 		contentType = contentTypeJSON
 	case axiom.ArtefactTypeText:

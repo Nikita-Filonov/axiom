@@ -23,7 +23,7 @@ func TestPlugin_UnsupportedArtefactDoesNothing(t *testing.T) {
 
 	cfg.Runtime.Artefact(axiom.Artefact{
 		Name: "unsupported",
-		Type: axiom.ArtefactTypeBytes,
+		Type: axiom.ArtefactType("unsupported"),
 		Data: []byte("123"),
 	})
 

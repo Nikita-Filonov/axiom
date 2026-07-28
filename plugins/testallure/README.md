@@ -38,7 +38,7 @@ The plugin projects Axiom runtime events into Allure:
 - wraps each `cfg.Step(...)` in an Allure step
 - reports each `cfg.Setup(...)` and `cfg.Teardown(...)` as an Allure step
 - converts Axiom metadata into Allure options
-- attaches emitted artefacts to the current test
+- attaches JSON, text and binary artefacts to the current test
 
 ### Execution model
 

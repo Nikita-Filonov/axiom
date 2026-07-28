@@ -17,6 +17,7 @@ import (
 func TestPlugin_WritesAllureResultsToFilesystem(t *testing.T) {
 	resultsDir := filepath.Join(t.TempDir(), "allure-results")
 	t.Setenv("ALLURE_RESULTS_DIR", resultsDir)
+	binaryPayload := []byte{0x00, 0x01, 0x7f, 0x80, 0xfe, 0xff}
 
 	runner := axiom.NewRunner(
 		axiom.WithRunnerPlugins(testallure.Plugin()),
@@ -49,6 +50,7 @@ func TestPlugin_WritesAllureResultsToFilesystem(t *testing.T) {
 					Type: axiom.ArtefactTypeText,
 					Data: []byte("status=200"),
 				})
+				cfg.Artefact(axiom.NewBytesArtefact("response.bin", binaryPayload))
 			})
 		})
 		cfg.Teardown("remove user", func() {})
@@ -99,15 +101,20 @@ func TestPlugin_WritesAllureResultsToFilesystem(t *testing.T) {
 	require.Len(t, requestStep.Steps, 1)
 	responseStep := requestStep.Steps[0]
 	assert.Equal(t, "validate response", responseStep.Name)
-	require.Len(t, responseStep.Attachments, 1)
-	responseAttachment := responseStep.Attachments[0]
-	assert.Equal(t, "response.txt", responseAttachment.Name)
+	require.Len(t, responseStep.Attachments, 2)
+	responseAttachments := attachmentsByName(responseStep.Attachments)
+
+	responseAttachment := responseAttachments["response.txt"]
 	assert.Equal(t, "text/plain", responseAttachment.Type)
 	assert.Equal(t, "status=200", string(readAllureAttachment(t, resultsDir, responseAttachment)))
 
+	binaryAttachment := responseAttachments["response.bin"]
+	assert.Equal(t, "application/octet-stream", binaryAttachment.Type)
+	assert.Equal(t, binaryPayload, readAllureAttachment(t, resultsDir, binaryAttachment))
+
 	entries, err := os.ReadDir(resultsDir)
 	require.NoError(t, err)
-	assert.Len(t, entries, 3, "one result and two attachment files expected")
+	assert.Len(t, entries, 4, "one result and three attachment files expected")
 }
 
 func readAllureResult(t *testing.T, resultsDir string) model.TestResult {
@@ -144,4 +151,12 @@ func readAllureAttachment(
 	require.NoError(t, err)
 	assert.Equal(t, attachment.Size, int64(len(data)))
 	return data
+}
+
+func attachmentsByName(attachments []model.Attachment) map[string]model.Attachment {
+	result := make(map[string]model.Attachment, len(attachments))
+	for _, attachment := range attachments {
+		result[attachment.Name] = attachment
+	}
+	return result
 }
