@@ -43,6 +43,7 @@ func TestBuildAllureOptions_AllFields(t *testing.T) {
 
 	assert.Equal(t, "MyTest", result.Name)
 	assert.Equal(t, "Test description", result.Description)
+	assert.Equal(t, "ID123", result.TestCaseID)
 	assertLabelValues(t, result.Labels, "ALLURE_ID", "ID123")
 	assertLabelValues(t, result.Labels, "tag", "fast", "api")
 	assertLabelValues(t, result.Labels, "epic", "Epic1")

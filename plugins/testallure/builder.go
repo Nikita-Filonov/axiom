@@ -12,7 +12,11 @@ func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	var options []allure.Option
 
 	if cfg.Case != nil && cfg.Case.ID != "" {
-		options = append(options, allure.WithAllureID(cfg.Case.ID))
+		options = append(
+			options,
+			allure.WithAllureID(cfg.Case.ID),
+			allure.WithTestCaseID(cfg.Case.ID),
+		)
 	}
 	if cfg.Case != nil && cfg.Case.Name != "" {
 		options = append(options, allure.WithDisplayName(cfg.Case.Name))

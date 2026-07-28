@@ -58,7 +58,7 @@ func TestPlugin_WritesAllureResultsToFilesystem(t *testing.T) {
 
 	assert.NotEmpty(t, result.UUID)
 	assert.NotEmpty(t, result.FullName)
-	assert.NotEmpty(t, result.TestCaseID)
+	assert.Equal(t, "AUTH-42", result.TestCaseID)
 	assert.NotEmpty(t, result.HistoryID)
 	assert.Equal(t, "user can login", result.Name)
 	assert.Equal(t, "Valid credentials create a session.", result.Description)
