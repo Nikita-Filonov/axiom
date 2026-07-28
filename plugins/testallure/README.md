@@ -14,7 +14,8 @@
 ## Overview
 
 Generates Allure reports by projecting Axiom runtime events into the Allure execution model using
-`dailymotion/allure-go`.
+the official [`allure-framework/allure-go`](https://github.com/allure-framework/allure-go)
+`commons/gotest` integration.
 
 The plugin integrates with the Axiom runtime and automatically maps:
 
@@ -31,12 +32,19 @@ The plugin does not change test logic — it only observes and decorates executi
 
 At runtime, the plugin:
 
-- wraps each test attempt in `allure.Test(...)`
-- wraps each `cfg.Step(...)` in `allure.Step(...)`
-- wraps each `cfg.Setup(...)` in `allure.BeforeTest(...)`
-- wraps each `cfg.Teardown(...)` in `allure.AfterTest(...)`
+- wraps each test attempt in `allure.Wrap(...)`
+- wraps each `cfg.Step(...)` in an Allure step
+- reports each `cfg.Setup(...)` and `cfg.Teardown(...)` as an Allure step
 - converts Axiom metadata into Allure options
 - attaches emitted artefacts to the current test
+
+The official `commons/gotest` API uses an explicit per-test Allure context. The plugin keeps that
+context isolated inside each Axiom attempt, including parallel cases and retries. Test goroutines
+must finish before the test action returns; events emitted by a background goroutine after the
+test has completed cannot be attached to the closed result.
+
+`commons/gotest` does not expose high-level before/after fixture helpers. Setup and teardown calls
+therefore remain visible in the report as regular steps with their original names.
 
 ---
 
@@ -101,7 +109,7 @@ func TestAllureExample(t *testing.T) {
 
 	runner.RunCase(t, c, func(cfg *axiom.Config) {
 		cfg.Setup("prepare test data", func() {
-			// Appears in Allure as a "before test" section
+			// Appears in Allure as a step
 		})
 
 		cfg.Step("prepare request", func() {
@@ -126,8 +134,11 @@ func TestAllureExample(t *testing.T) {
 		})
 
 		cfg.Teardown("cleanup test data", func() {
-			// Appears in Allure as an "after test" section
+			// Appears in Allure as a step
 		})
 	})
 }
 ```
+
+By default, results are written to `./allure-results`. Set `ALLURE_RESULTS_DIR` to select another
+directory.

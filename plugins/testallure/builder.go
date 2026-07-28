@@ -1,50 +1,63 @@
 package testallure
 
 import (
+	"sort"
+
 	"github.com/Nikita-Filonov/axiom"
-	"github.com/dailymotion/allure-go"
-	"github.com/dailymotion/allure-go/severity"
+	allure "github.com/allure-framework/allure-go/commons/gotest"
 )
 
 func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	var options []allure.Option
 
 	if cfg.Case != nil && cfg.Case.ID != "" {
-		options = append(options, allure.ID(cfg.Case.ID))
+		options = append(options, allure.WithAllureID(cfg.Case.ID))
 	}
 	if cfg.Case != nil && cfg.Case.Name != "" {
-		options = append(options, allure.Name(cfg.Case.Name))
+		options = append(options, allure.WithDisplayName(cfg.Case.Name))
 	}
-	if len(cfg.Meta.Tags) > 0 {
-		options = append(options, allure.Tags(cfg.Meta.Tags...))
+	if cfg.Case != nil && cfg.Case.Description != "" {
+		options = append(options, allure.WithDescription(cfg.Case.Description))
+	}
+	for _, tag := range cfg.Meta.Tags {
+		options = append(options, allure.WithTag(tag))
 	}
 	if cfg.Meta.Epic != "" {
-		options = append(options, allure.Epic(cfg.Meta.Epic))
+		options = append(options, allure.WithEpic(cfg.Meta.Epic))
 	}
 	if cfg.Meta.Suite != "" {
-		options = append(options, allure.Suite(cfg.Meta.Suite))
+		options = append(options, allure.WithSuite(cfg.Meta.Suite))
 	}
 	if cfg.Meta.Story != "" {
-		options = append(options, allure.Story(cfg.Meta.Story))
+		options = append(options, allure.WithStory(cfg.Meta.Story))
 	}
 	if cfg.Meta.Layer != "" {
-		options = append(options, allure.Layer(cfg.Meta.Layer))
+		options = append(options, allure.WithLabel("layer", cfg.Meta.Layer))
+	}
+	if cfg.Meta.Platform != "" {
+		options = append(options, allure.WithLabel("platform", cfg.Meta.Platform))
 	}
 	if cfg.Meta.Feature != "" {
-		options = append(options, allure.Feature(cfg.Meta.Feature))
+		options = append(options, allure.WithFeature(cfg.Meta.Feature))
 	}
 	if cfg.Meta.Severity != "" {
-		options = append(options, allure.Severity(severity.Severity(cfg.Meta.Severity)))
+		options = append(options, allure.WithSeverity(string(cfg.Meta.Severity)))
 	}
 	if cfg.Meta.SubSuite != "" {
-		options = append(options, allure.SubSuite(cfg.Meta.SubSuite))
+		options = append(options, allure.WithSubSuite(cfg.Meta.SubSuite))
 	}
 	if cfg.Meta.ParentSuite != "" {
-		options = append(options, allure.ParentSuite(cfg.Meta.ParentSuite))
+		options = append(options, allure.WithParentSuite(cfg.Meta.ParentSuite))
 	}
 
-	for k, v := range cfg.Meta.Labels {
-		options = append(options, allure.Label(k, v))
+	labelNames := make([]string, 0, len(cfg.Meta.Labels))
+	for name := range cfg.Meta.Labels {
+		labelNames = append(labelNames, name)
+	}
+	sort.Strings(labelNames)
+
+	for _, name := range labelNames {
+		options = append(options, allure.WithLabel(name, cfg.Meta.Labels[name]))
 	}
 
 	return options

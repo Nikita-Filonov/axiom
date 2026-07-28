@@ -5,8 +5,11 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testallure"
-	"github.com/dailymotion/allure-go"
+	allure "github.com/allure-framework/allure-go/commons/gotest"
+	"github.com/allure-framework/allure-go/commons/model"
+	"github.com/allure-framework/allure-go/commons/writer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuildAllureOptions_AllFields(t *testing.T) {
@@ -17,6 +20,7 @@ func TestBuildAllureOptions_AllFields(t *testing.T) {
 			Suite:       "Suite1",
 			Story:       "Story1",
 			Layer:       "API",
+			Platform:    "backend",
 			Feature:     "Feature1",
 			Severity:    axiom.SeverityCritical,
 			SubSuite:    "SubSuite1",
@@ -26,26 +30,34 @@ func TestBuildAllureOptions_AllFields(t *testing.T) {
 				"owner": "nikita",
 			},
 		},
-		Case: &axiom.Case{ID: "ID123", Name: "MyTest"},
+		Case: &axiom.Case{
+			ID:          "ID123",
+			Name:        "MyTest",
+			Description: "Test description",
+		},
 	}
 
-	opts := testallure.BuildAllureOptions(cfg)
+	result := recordResult(t, cfg)
 
-	assert.GreaterOrEqual(t, len(opts), 8)
-
-	assert.NotPanics(t, func() {
-		allure.Test(t, opts...)
-	})
+	assert.Equal(t, "MyTest", result.Name)
+	assert.Equal(t, "Test description", result.Description)
+	assertLabelValues(t, result.Labels, "ALLURE_ID", "ID123")
+	assertLabelValues(t, result.Labels, "tag", "fast", "api")
+	assertLabelValues(t, result.Labels, "epic", "Epic1")
+	assertLabelValues(t, result.Labels, "suite", "Suite1")
+	assertLabelValues(t, result.Labels, "story", "Story1")
+	assertLabelValues(t, result.Labels, "layer", "API")
+	assertLabelValues(t, result.Labels, "platform", "backend")
+	assertLabelValues(t, result.Labels, "feature", "Feature1")
+	assertLabelValues(t, result.Labels, "severity", "critical")
+	assertLabelValues(t, result.Labels, "subSuite", "SubSuite1")
+	assertLabelValues(t, result.Labels, "parentSuite", "ParentSuite1")
+	assertLabelValues(t, result.Labels, "team", "backend")
+	assertLabelValues(t, result.Labels, "owner", "nikita")
 }
 
 func TestBuildAllureOptions_EmptyConfig(t *testing.T) {
-	cfg := &axiom.Config{
-		Meta: axiom.Meta{},
-	}
-
-	opts := testallure.BuildAllureOptions(cfg)
-
-	assert.Equal(t, 0, len(opts))
+	assert.Empty(t, testallure.BuildAllureOptions(&axiom.Config{}))
 }
 
 func TestBuildAllureOptions_OnlyLabels(t *testing.T) {
@@ -58,13 +70,10 @@ func TestBuildAllureOptions_OnlyLabels(t *testing.T) {
 		},
 	}
 
-	opts := testallure.BuildAllureOptions(cfg)
+	result := recordResult(t, cfg)
 
-	assert.Equal(t, 2, len(opts))
-
-	assert.NotPanics(t, func() {
-		allure.Test(t, opts...)
-	})
+	assertLabelValues(t, result.Labels, "a", "1")
+	assertLabelValues(t, result.Labels, "b", "2")
 }
 
 func TestBuildAllureOptions_SeverityConversion(t *testing.T) {
@@ -74,11 +83,36 @@ func TestBuildAllureOptions_SeverityConversion(t *testing.T) {
 		},
 	}
 
-	opts := testallure.BuildAllureOptions(cfg)
+	result := recordResult(t, cfg)
 
-	assert.Equal(t, 1, len(opts))
+	assertLabelValues(t, result.Labels, "severity", "minor")
+}
 
-	assert.NotPanics(t, func() {
-		allure.Test(t, opts...)
-	})
+func recordResult(t *testing.T, cfg *axiom.Config) model.TestResult {
+	t.Helper()
+
+	memoryWriter := writer.NewInMemoryWriter()
+	options := append(
+		testallure.BuildAllureOptions(cfg),
+		allure.WithWriter(memoryWriter),
+	)
+
+	allure.Wrap(t, func(*allure.Context) {}, options...)
+
+	snapshot := memoryWriter.Snapshot()
+	require.Len(t, snapshot.Results, 1)
+	return snapshot.Results[0]
+}
+
+func assertLabelValues(t *testing.T, labels []model.Label, name string, expected ...string) {
+	t.Helper()
+
+	var actual []string
+	for _, label := range labels {
+		if label.Name == name {
+			actual = append(actual, label.Value)
+		}
+	}
+
+	assert.ElementsMatch(t, expected, actual, "label %q", name)
 }
