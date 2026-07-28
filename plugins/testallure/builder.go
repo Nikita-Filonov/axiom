@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	allure "github.com/allure-framework/allure-go/commons/gotest"
+	"github.com/allure-framework/allure-go/commons/model"
 )
 
 func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
@@ -48,6 +49,24 @@ func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	}
 	if cfg.Meta.ParentSuite != "" {
 		options = append(options, allure.WithParentSuite(cfg.Meta.ParentSuite))
+	}
+	for _, issue := range cfg.Meta.Issues {
+		if issue == "" {
+			continue
+		}
+		options = append(
+			options,
+			allure.WithLink(issue, issue, string(model.LinkTypeIssue)),
+		)
+	}
+	for _, testCase := range cfg.Meta.TestCases {
+		if testCase == "" {
+			continue
+		}
+		options = append(
+			options,
+			allure.WithLink(testCase, testCase, string(model.LinkTypeTMS)),
+		)
 	}
 
 	labelNames := make([]string, 0, len(cfg.Meta.Labels))

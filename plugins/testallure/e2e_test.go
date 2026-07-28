@@ -30,6 +30,8 @@ func TestPlugin_WritesAllureResultsToFilesystem(t *testing.T) {
 			axiom.WithMetaFeature("login"),
 			axiom.WithMetaSeverity(axiom.SeverityCritical),
 			axiom.WithMetaTag("e2e"),
+			axiom.WithMetaIssue("AXIOM-42"),
+			axiom.WithMetaTestCase("USERS-001"),
 		),
 	)
 
@@ -69,6 +71,18 @@ func TestPlugin_WritesAllureResultsToFilesystem(t *testing.T) {
 	assertLabelValues(t, result.Labels, "feature", "login")
 	assertLabelValues(t, result.Labels, "severity", "critical")
 	assertLabelValues(t, result.Labels, "tag", "e2e")
+	assert.ElementsMatch(t, []model.Link{
+		{
+			Name: "AXIOM-42",
+			URL:  "AXIOM-42",
+			Type: string(model.LinkTypeIssue),
+		},
+		{
+			Name: "USERS-001",
+			URL:  "USERS-001",
+			Type: string(model.LinkTypeTMS),
+		},
+	}, result.Links)
 
 	require.Len(t, result.Steps, 3)
 	assert.Equal(t, "prepare user", result.Steps[0].Name)

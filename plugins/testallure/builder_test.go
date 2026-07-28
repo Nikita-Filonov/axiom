@@ -25,6 +25,8 @@ func TestBuildAllureOptions_AllFields(t *testing.T) {
 			Severity:    axiom.SeverityCritical,
 			SubSuite:    "SubSuite1",
 			ParentSuite: "ParentSuite1",
+			Issues:      []string{"AXIOM-42", "", "API/7"},
+			TestCases:   []string{"", "USERS-001"},
 			Labels: map[string]string{
 				"team":  "backend",
 				"owner": "nikita",
@@ -54,6 +56,23 @@ func TestBuildAllureOptions_AllFields(t *testing.T) {
 	assertLabelValues(t, result.Labels, "parentSuite", "ParentSuite1")
 	assertLabelValues(t, result.Labels, "team", "backend")
 	assertLabelValues(t, result.Labels, "owner", "nikita")
+	assert.ElementsMatch(t, []model.Link{
+		{
+			Name: "AXIOM-42",
+			URL:  "AXIOM-42",
+			Type: string(model.LinkTypeIssue),
+		},
+		{
+			Name: "API/7",
+			URL:  "API/7",
+			Type: string(model.LinkTypeIssue),
+		},
+		{
+			Name: "USERS-001",
+			URL:  "USERS-001",
+			Type: string(model.LinkTypeTMS),
+		},
+	}, result.Links)
 }
 
 func TestBuildAllureOptions_EmptyConfig(t *testing.T) {

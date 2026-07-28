@@ -21,7 +21,7 @@ The plugin integrates with the Axiom runtime and automatically maps:
 
 - test execution → Allure tests
 - steps → Allure steps
-- metadata → Allure labels, tags, severity
+- metadata → Allure labels, tags, severity, issue and TMS links
 - artefacts → Allure attachments
 
 The plugin does not change test logic — it only observes and decorates execution.
@@ -39,12 +39,20 @@ At runtime, the plugin:
 - attaches emitted artefacts to the current test
 
 The official `commons/gotest` API uses an explicit per-test Allure context. The plugin keeps that
-context isolated inside each Axiom attempt, including parallel cases and retries. Test goroutines
-must finish before the test action returns; events emitted by a background goroutine after the
-test has completed cannot be attached to the closed result.
+context isolated inside each Axiom attempt, including parallel cases and retries.
+
+Steps within one case must execute synchronously. Parallel cases are supported, but concurrent
+steps started by different goroutines within the same case are not: `commons/gotest` represents
+step nesting as one stack per test result. All test goroutines must also finish before the test
+action returns; events emitted after the test has completed cannot be attached to the closed
+result.
 
 `commons/gotest` does not expose high-level before/after fixture helpers. Setup and teardown calls
 therefore remain visible in the report as regular steps with their original names.
+
+`Meta.Issues` and `Meta.TestCases` are emitted as links with the standard `issue` and `tms` types.
+Their short identifiers are used as both the link name and raw URL, allowing Allure link patterns
+to expand them into full URLs while generating the report.
 
 ---
 
@@ -62,8 +70,8 @@ This will add the plugin to your `go.mod` file:
 
 ```text
 require (
-	github.com/Nikita-Filonov/axiom v0.3.0
-	github.com/Nikita-Filonov/axiom/plugins/testallure v0.1.0
+	github.com/Nikita-Filonov/axiom v1.7.0
+	github.com/Nikita-Filonov/axiom/plugins/testallure v0.20.0
 )
 ```
 
