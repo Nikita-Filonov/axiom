@@ -36,6 +36,25 @@ Axiom separates _declarative configuration_ from _runtime behavior_:
 
 Everything that happens **during** a test run flows through `Config`.
 
+## Attempt lifecycle
+
+`Config.Test` executes one complete attempt inside runtime test middleware:
+
+```text
+case.start
+TestWrap enter
+  BeforeTest
+  action
+  AfterTest
+  fixture cleanup (LIFO)
+TestWrap exit
+case.finish
+```
+
+Fixture cleanup is therefore able to use `cfg.Log`, `cfg.Step`, `cfg.Teardown`, `cfg.Assert`, and `cfg.Artefact` while
+attempt-scoped plugins are still active. `cfg.Setup` and `cfg.Teardown` execute their functions immediately; automatic
+end-of-attempt scheduling comes from the cleanup returned by a fixture.
+
 ---
 
 ## Example

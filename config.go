@@ -22,6 +22,10 @@ type Config struct {
 	Fixtures Fixtures
 }
 
+type testLifecyclePanic struct {
+	value any
+}
+
 func (c *Config) T() *testing.T {
 	if c.SubT != nil {
 		return c.SubT
@@ -58,6 +62,10 @@ func (c *Config) Test(action TestAction) {
 	c.Event(NewEvent(EventTypeCaseStart))
 	defer func() {
 		if r := recover(); r != nil {
+			if lifecyclePanic, ok := r.(testLifecyclePanic); ok {
+				panic(lifecyclePanic.value)
+			}
+
 			c.Event(NewEvent(EventTypeCasePanic, WithEventMessage(r)))
 			if c.SubT != nil {
 				c.SubT.Helper()
@@ -65,13 +73,23 @@ func (c *Config) Test(action TestAction) {
 			}
 		}
 
-		defer c.Fixtures.Teardown(c)
-		c.Hooks.ApplyAfterTest(c)
 		c.Event(NewEvent(EventTypeCaseFinish))
 	}()
 
-	c.Hooks.ApplyBeforeTest(c)
-	c.Runtime.Test(c, action)
+	c.Runtime.Test(c, func(current *Config) {
+		defer func() {
+			defer func() {
+				if r := recover(); r != nil {
+					panic(testLifecyclePanic{value: r})
+				}
+			}()
+			defer current.Fixtures.Teardown(current)
+			current.Hooks.ApplyAfterTest(current)
+		}()
+
+		current.Hooks.ApplyBeforeTest(current)
+		action(current)
+	})
 }
 
 func (c *Config) Event(e Event) { c.Runtime.Event(e) }

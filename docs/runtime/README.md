@@ -10,15 +10,18 @@ test execution.
 
 ## What Runtime Controls
 
-A `Runtime` provides five extension points:
+A `Runtime` provides these extension points:
 
-| Capability        | Description                                             |
-|-------------------|---------------------------------------------------------|
-| **TestWraps**     | Middleware around the entire test execution             |
-| **StepWraps**     | Middleware around each `cfg.Step(...)`                  |
-| **LogSinks**      | Receivers of structured logs emitted via `cfg.Log(...)` |
-| **EventSinks**    | Receivers of raw events emitted via `cfg.Event(...)`    |
-| **ArtefactSinks** | Receivers of artefacts emitted via `cfg.Artefact(...)`  |
+| Capability         | Description                                                        |
+|--------------------|--------------------------------------------------------------------|
+| **TestWraps**      | Middleware around the full per-attempt test lifecycle               |
+| **StepWraps**      | Middleware around each `cfg.Step(...)`                              |
+| **SetupWraps**     | Middleware around each immediate `cfg.Setup(...)` operation         |
+| **TeardownWraps**  | Middleware around each immediate `cfg.Teardown(...)` operation      |
+| **LogSinks**       | Receivers of structured logs emitted via `cfg.Log(...)`             |
+| **EventSinks**     | Receivers of raw events emitted via `cfg.Event(...)`                |
+| **AssertSinks**    | Receivers of structured assertions emitted via `cfg.Assert(...)`    |
+| **ArtefactSinks**  | Receivers of artefacts emitted via `cfg.Artefact(...)`              |
 
 All runtime behavior is **additive and ordered**. Multiple runtimes (`Runner` + `Case`) are merged deterministically.
 
@@ -40,6 +43,46 @@ cfg.Test / cfg.Step / cfg.Log / cfg.Event / cfg.Artefact
 - `Case` runtime is applied after
 - wraps are executed outer → inner
 - sinks are invoked in registration order
+
+## Per-attempt lifecycle
+
+`TestWraps` enclose the whole executable lifecycle of one attempt, not only the user action:
+
+```text
+case.start event
+TestWrap enter
+  BeforeTest hooks
+  test action
+  AfterTest hooks
+  fixture cleanups (LIFO)
+TestWrap exit
+case.finish event
+```
+
+This boundary allows a runtime plugin to keep attempt-scoped state active while hooks and fixture cleanups emit logs,
+steps, assertions, or artefacts. Reporting plugins can therefore accept final attachments from a fixture cleanup before
+they close the test result.
+
+`cfg.Setup(name, fn)` and `cfg.Teardown(name, fn)` are execution primitives, not schedulers. Both run `fn` immediately.
+To schedule teardown automatically, return a cleanup from a fixture and optionally decorate that cleanup with
+`cfg.Teardown`:
+
+```go
+func ReportFixture(cfg *axiom.Config) (any, func(), error) {
+	report := NewReport()
+
+	return report, func() {
+		cfg.Teardown("finalize report", func() {
+			report.Finalize(cfg)
+		})
+	}, nil
+}
+```
+
+If the test action or a `BeforeTest` hook panics, Axiom still runs `AfterTest` and fixture cleanups inside the active
+wrap, then records the panic as a case failure. Panics raised by `AfterTest` or fixture cleanup also unwind through the
+active wraps, but retain their historical behavior and propagate to the caller unchanged. `SkipNow` and `FailNow`
+still execute the deferred lifecycle before the attempt goroutine exits.
 
 ## Defining Runtime Behavior
 

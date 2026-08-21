@@ -24,7 +24,8 @@ Fixtures have a per-attempt lifecycle:
 - the created value is cached for the current `Config`
 - repeated access returns the cached value and does not register cleanup twice
 - each retry attempt receives a fresh `Config`, fixture cache, and cleanup lifecycle
-- fixture cleanups run automatically after the test body finishes
+- fixture cleanups run automatically after the test body and `AfterTest` hooks finish
+- cleanup remains inside the active runtime test wraps, so it may emit runtime steps, logs, assertions, and artefacts
 
 When fixtures depend on other fixtures, cleanup runs in reverse setup order:
 
@@ -41,9 +42,44 @@ Fixture cleanups are stored separately from user `AfterTest` hooks. User `AfterT
 fixture cleanups. That means `AfterTest` hooks can still observe live fixtures, while cleanup is still guaranteed if an
 `AfterTest` hook panics.
 
+The complete attempt boundary is:
+
+```text
+TestWrap enter
+  BeforeTest
+  test action
+  AfterTest
+  fixture cleanup (LIFO)
+TestWrap exit
+```
+
+This matters for plugins that own attempt-scoped state. For example, a reporting plugin keeps its test context open
+until fixture cleanup has emitted final attachments.
+
 If a fixture setup returns an error, its cleanup is not registered and the value is not cached. If setup succeeds and
 returns a cleanup, Axiom registers that cleanup even when the caller requested the wrong type, preventing leaked setup
 work.
+
+### Reporting cleanup as teardown
+
+The cleanup returned by a fixture is scheduled automatically. `cfg.Teardown` does not schedule work; it executes the
+provided function immediately and lets teardown runtime wrappers observe it. The two APIs can be composed:
+
+```go
+func ReportFixture(cfg *axiom.Config) (any, func(), error) {
+	report := NewReport()
+
+	return report, func() {
+		cfg.Teardown("finalize flow report", func() {
+			report.Finalize()
+			cfg.Artefact(axiom.NewTextArtefact("flow-result.txt", report.String()))
+		})
+	}, nil
+}
+```
+
+The cleanup still runs automatically at the end of the attempt. A runtime reporter may display the operation as a
+teardown step and attach the emitted artefact to that step.
 
 ---
 

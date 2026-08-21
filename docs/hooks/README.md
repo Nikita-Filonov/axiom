@@ -105,10 +105,14 @@ down and any subsequent test sees closed resources.
 
 ### Test-level hooks
 
-| Hook              | When it fires                        |
-|-------------------|--------------------------------------|
-| `BeforeTest(cfg)` | right before executing the test body |
-| `AfterTest(cfg)`  | after finishing the test body        |
+| Hook              | When it fires                                                       |
+|-------------------|---------------------------------------------------------------------|
+| `BeforeTest(cfg)` | after runtime test wraps enter, before executing the test body       |
+| `AfterTest(cfg)`  | after the body, before fixture cleanup and runtime test-wrap exit     |
+
+The deferred test lifecycle is installed before `BeforeTest` begins. Consequently, `AfterTest` and any registered
+fixture cleanups still run if a `BeforeTest` hook or the test body panics. Both hook phases execute while runtime test
+wraps are active, allowing reporting and tracing plugins to observe their steps and artefacts.
 
 ### Step-level hooks
 
@@ -204,13 +208,16 @@ For two test cases inside one runner:
 → BEFORE ALL (suite setup)
 
 Case 1:
-  → before test
-    → before step prepare
-    → after step prepare
-    → inside test body
-    → before step finish
-    → after step finish
-  → after test
+  → test wraps enter
+    → before test
+      → before step prepare
+      → after step prepare
+      → inside test body
+      → before step finish
+      → after step finish
+    → after test
+    → fixture cleanup (LIFO)
+  → test wraps exit
 
 Case 2:
   → before test

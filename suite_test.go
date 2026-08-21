@@ -253,8 +253,8 @@ func TestSuite_UsesFullRunnerConfiguration(t *testing.T) {
 	assert.Equal(t, 1, fixtureCleaned)
 	assert.Equal(t, []string{
 		"before-all",
-		"before-test",
 		"wrap-test-before",
+		"before-test",
 		"body",
 		"env:staging",
 		"role:admin",
@@ -268,8 +268,8 @@ func TestSuite_UsesFullRunnerConfiguration(t *testing.T) {
 		"step:validate",
 		"wrap-step-after:validate",
 		"after-step:validate",
-		"wrap-test-after",
 		"after-test",
+		"wrap-test-after",
 		"after-all",
 	}, seen)
 }

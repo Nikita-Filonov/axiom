@@ -45,6 +45,11 @@ The plugin projects Axiom runtime events into Allure:
 The official `commons/gotest` API uses an explicit per-test Allure context. The plugin keeps that
 context isolated inside each Axiom attempt, including parallel cases and retries.
 
+The context remains active for `BeforeTest`, the test action, `AfterTest`, and fixture cleanup. Final
+artefacts emitted by cleanup are therefore written before the Allure result closes. A cleanup can call
+`cfg.Teardown(...)` when it should appear as a named teardown step; attachments emitted inside that call
+belong to the step.
+
 Every retry attempt produces a separate Allure result. Attempts with the same Axiom Case ID share
 the same Allure test case and history IDs, allowing Allure to group them as retries.
 
@@ -54,8 +59,9 @@ the same Allure test case and history IDs, allowing Allure to group them as retr
   synchronously. `commons/gotest` maintains one Step stack per test result.
 - **Background goroutines:** all test goroutines must finish before the test action returns. Events
   emitted after completion cannot be attached to the closed result.
-- **Fixtures:** `commons/gotest` does not expose high-level before/after fixture helpers. Setup and
-  teardown therefore appear as regular Steps.
+- **Fixtures:** `commons/gotest` does not expose high-level before/after fixture helpers. Calls to
+  `cfg.Setup(...)` and `cfg.Teardown(...)`, including calls made by fixture setup or cleanup, therefore
+  appear as regular Steps.
 - **Pre-execution skips:** a runtime skip is reported as an Allure `skipped` result, but
   `axiom.WithCaseSkip(...)` runs before the Allure lifecycle and produces no result.
 - **Issue and TMS links:** `Meta.Issues` and `Meta.TestCases` are emitted with the standard `issue`

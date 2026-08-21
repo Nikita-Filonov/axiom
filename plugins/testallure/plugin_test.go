@@ -91,6 +91,115 @@ func TestPlugin_ReportsTestStepsAndArtefacts(t *testing.T) {
 	assert.JSONEq(t, `{"user":"alice"}`, string(snapshot.Attachments[attachment.Source]))
 }
 
+func TestPlugin_ReportsFixtureCleanupArtefacts(t *testing.T) {
+	memoryWriter := writer.NewInMemoryWriter()
+	cfg := &axiom.Config{
+		SubT: t,
+		Case: &axiom.Case{
+			Name: "fixture cleanup is reported",
+		},
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{
+				"report": func(cfg *axiom.Config) (any, func(), error) {
+					return struct{}{}, func() {
+						cfg.Artefact(axiom.NewTextArtefact("final-report.txt", "finished"))
+					}, nil
+				},
+			},
+			Cache: map[string]axiom.FixtureResult{},
+		},
+	}
+	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+
+	cfg.Test(func(current *axiom.Config) {
+		axiom.GetFixture[struct{}](current, "report")
+	})
+
+	snapshot := memoryWriter.Snapshot()
+	require.Len(t, snapshot.Results, 1)
+	require.Len(t, snapshot.Results[0].Attachments, 1)
+
+	attachment := snapshot.Results[0].Attachments[0]
+	assert.Equal(t, "final-report.txt", attachment.Name)
+	assert.Equal(t, "text/plain", attachment.Type)
+	assert.Equal(t, "finished", string(snapshot.Attachments[attachment.Source]))
+}
+
+func TestPlugin_ReportsFixtureCleanupAsTeardownStep(t *testing.T) {
+	memoryWriter := writer.NewInMemoryWriter()
+	cfg := &axiom.Config{
+		SubT: t,
+		Case: &axiom.Case{
+			Name: "fixture cleanup teardown is reported",
+		},
+		Fixtures: axiom.Fixtures{
+			Registry: map[string]axiom.Fixture{
+				"report": func(cfg *axiom.Config) (any, func(), error) {
+					return struct{}{}, func() {
+						cfg.Teardown("finalize flow report", func() {
+							cfg.Artefact(axiom.NewTextArtefact("flow-result.txt", "finished"))
+						})
+					}, nil
+				},
+			},
+			Cache: map[string]axiom.FixtureResult{},
+		},
+	}
+	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+
+	cfg.Test(func(current *axiom.Config) {
+		axiom.GetFixture[struct{}](current, "report")
+	})
+
+	snapshot := memoryWriter.Snapshot()
+	require.Len(t, snapshot.Results, 1)
+	require.Len(t, snapshot.Results[0].Steps, 1)
+
+	teardown := snapshot.Results[0].Steps[0]
+	assert.Equal(t, "finalize flow report", teardown.Name)
+	assert.Equal(t, model.StatusPassed, teardown.Status)
+	require.Len(t, teardown.Attachments, 1)
+
+	attachment := teardown.Attachments[0]
+	assert.Equal(t, "flow-result.txt", attachment.Name)
+	assert.Equal(t, "text/plain", attachment.Type)
+	assert.Equal(t, "finished", string(snapshot.Attachments[attachment.Source]))
+}
+
+func TestPlugin_ReportsSetupAndTeardownCalledFromTestHooks(t *testing.T) {
+	memoryWriter := writer.NewInMemoryWriter()
+	cfg := &axiom.Config{
+		SubT: t,
+		Case: &axiom.Case{
+			Name: "hook lifecycle is reported",
+		},
+		Hooks: axiom.Hooks{
+			BeforeTest: []axiom.TestHook{
+				func(cfg *axiom.Config) {
+					cfg.Setup("prepare hook state", func() {})
+				},
+			},
+			AfterTest: []axiom.TestHook{
+				func(cfg *axiom.Config) {
+					cfg.Teardown("release hook state", func() {})
+				},
+			},
+		},
+	}
+	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+
+	cfg.Test(func(current *axiom.Config) {
+		current.Step("test body", func() {})
+	})
+
+	snapshot := memoryWriter.Snapshot()
+	require.Len(t, snapshot.Results, 1)
+	require.Len(t, snapshot.Results[0].Steps, 3)
+	assert.Equal(t, "prepare hook state", snapshot.Results[0].Steps[0].Name)
+	assert.Equal(t, "test body", snapshot.Results[0].Steps[1].Name)
+	assert.Equal(t, "release hook state", snapshot.Results[0].Steps[2].Name)
+}
+
 func TestPlugin_ParallelCasesKeepContextsIsolated(t *testing.T) {
 	memoryWriter := writer.NewInMemoryWriter()
 	var started sync.WaitGroup
@@ -98,6 +207,12 @@ func TestPlugin_ParallelCasesKeepContextsIsolated(t *testing.T) {
 
 	runner := axiom.NewRunner(
 		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerFixture("report", func(cfg *axiom.Config) (any, func(), error) {
+			caseName := cfg.Case.Name
+			return struct{}{}, func() {
+				cfg.Artefact(axiom.NewTextArtefact(caseName+" cleanup.txt", caseName))
+			}, nil
+		}),
 		axiom.WithRunnerPlugins(
 			testallure.Plugin(allure.WithWriter(memoryWriter)),
 		),
@@ -108,6 +223,7 @@ func TestPlugin_ParallelCasesKeepContextsIsolated(t *testing.T) {
 			name := name
 			testCase := axiom.NewCase(axiom.WithCaseName(name))
 			runner.RunCase(t, testCase, func(cfg *axiom.Config) {
+				axiom.GetFixture[struct{}](cfg, "report")
 				started.Done()
 				started.Wait()
 
@@ -140,5 +256,10 @@ func TestPlugin_ParallelCasesKeepContextsIsolated(t *testing.T) {
 		attachment := result.Steps[0].Attachments[0]
 		assert.Equal(t, name+".txt", attachment.Name)
 		assert.Equal(t, name, string(snapshot.Attachments[attachment.Source]))
+
+		require.Len(t, result.Attachments, 1)
+		cleanupAttachment := result.Attachments[0]
+		assert.Equal(t, name+" cleanup.txt", cleanupAttachment.Name)
+		assert.Equal(t, name, string(snapshot.Attachments[cleanupAttachment.Source]))
 	}
 }
