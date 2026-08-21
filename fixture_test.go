@@ -981,6 +981,134 @@ func TestConfig_Test_DeferredLifecyclePreservesOriginalPanicValue(t *testing.T) 
 	assert.Same(t, original, recovered)
 }
 
+func TestConfig_Test_DeferredLifecyclePanicPrecedence(t *testing.T) {
+	tests := []struct {
+		name           string
+		bodyPanic      bool
+		afterPanic     bool
+		cleanupPanic   bool
+		wantRecovered  any
+		wantFailed     bool
+		wantCasePanic  bool
+		wantCaseFinish bool
+	}{
+		{
+			name:           "normal lifecycle",
+			wantCaseFinish: true,
+		},
+		{
+			name:           "body panic",
+			bodyPanic:      true,
+			wantFailed:     true,
+			wantCasePanic:  true,
+			wantCaseFinish: true,
+		},
+		{
+			name:          "after-test panic",
+			afterPanic:    true,
+			wantRecovered: "after-test boom",
+		},
+		{
+			name:          "cleanup panic",
+			cleanupPanic:  true,
+			wantRecovered: "cleanup boom",
+		},
+		{
+			name:          "after-test panic replaces body panic",
+			bodyPanic:     true,
+			afterPanic:    true,
+			wantRecovered: "after-test boom",
+		},
+		{
+			name:          "cleanup panic replaces body panic",
+			bodyPanic:     true,
+			cleanupPanic:  true,
+			wantRecovered: "cleanup boom",
+		},
+		{
+			name:          "cleanup panic replaces after-test panic",
+			afterPanic:    true,
+			cleanupPanic:  true,
+			wantRecovered: "cleanup boom",
+		},
+		{
+			name:          "cleanup panic replaces body and after-test panics",
+			bodyPanic:     true,
+			afterPanic:    true,
+			cleanupPanic:  true,
+			wantRecovered: "cleanup boom",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var order []string
+			var events []axiom.Event
+			fakeT := &testing.T{}
+
+			cfg := &axiom.Config{
+				Case: &axiom.Case{Name: test.name},
+				Hooks: axiom.Hooks{
+					AfterTest: []axiom.TestHook{
+						func(*axiom.Config) {
+							order = append(order, "after-test")
+							if test.afterPanic {
+								panic("after-test boom")
+							}
+						},
+					},
+				},
+				Fixtures: axiom.Fixtures{
+					Registry: map[string]axiom.Fixture{
+						"report": func(*axiom.Config) (any, func(), error) {
+							return "report", func() {
+								order = append(order, "fixture-cleanup")
+								if test.cleanupPanic {
+									panic("cleanup boom")
+								}
+							}, nil
+						},
+					},
+					Cache: map[string]axiom.FixtureResult{},
+				},
+				Runtime: axiom.NewRuntime(
+					axiom.WithRuntimeEventSink(func(event axiom.Event) {
+						events = append(events, event)
+					}),
+				),
+				SubT: fakeT,
+			}
+
+			var recovered any
+			func() {
+				defer func() { recovered = recover() }()
+				cfg.Test(func(current *axiom.Config) {
+					_ = axiom.GetFixture[string](current, "report")
+					order = append(order, "body")
+					if test.bodyPanic {
+						panic("body boom")
+					}
+				})
+			}()
+
+			assert.Equal(t, test.wantRecovered, recovered)
+			assert.Equal(t, test.wantFailed, fakeT.Failed())
+			assert.Equal(t, []string{"body", "after-test", "fixture-cleanup"}, order)
+
+			containsEvent := func(eventType axiom.EventType) bool {
+				for _, event := range events {
+					if event.Type == eventType {
+						return true
+					}
+				}
+				return false
+			}
+			assert.Equal(t, test.wantCasePanic, containsEvent(axiom.EventTypeCasePanic))
+			assert.Equal(t, test.wantCaseFinish, containsEvent(axiom.EventTypeCaseFinish))
+		})
+	}
+}
+
 func TestConfig_Test_SkipNowRunsDeferredLifecycleInsideRuntime(t *testing.T) {
 	var order []string
 	var events []axiom.Event
