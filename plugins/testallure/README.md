@@ -84,7 +84,7 @@ This will add the plugin to your `go.mod` file:
 
 ```text
 require (
-	github.com/Nikita-Filonov/axiom v1.7.0
+	github.com/Nikita-Filonov/axiom v1.8.0
 	github.com/Nikita-Filonov/axiom/plugins/testallure v0.20.0
 )
 ```
