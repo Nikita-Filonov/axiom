@@ -521,6 +521,23 @@ func TestResourcesCopy_DeepCopyRegistryAndCache(t *testing.T) {
 	assert.NotContains(t, r.Cache, "cached2")
 }
 
+func TestResourcesCopy_DeepCopiesCleanups(t *testing.T) {
+	var calls []string
+	r := axiom.Resources{
+		Cleanups: []axiom.ResourceCleanup{
+			func(*axiom.Runner) { calls = append(calls, "original") },
+		},
+	}
+
+	cp := r.Copy()
+	cp.Cleanups[0] = func(*axiom.Runner) { calls = append(calls, "copy") }
+
+	r.Cleanups[0](nil)
+	cp.Cleanups[0](nil)
+
+	assert.Equal(t, []string{"original", "copy"}, calls)
+}
+
 func TestResourcesJoin_MergesRegistryAndCache(t *testing.T) {
 	r1 := axiom.Resources{
 		Registry: map[string]axiom.Resource{
@@ -581,6 +598,40 @@ func TestResourcesJoin_DoesNotMutateSources(t *testing.T) {
 	assert.NotContains(t, r2.Registry, "c")
 	assert.NotContains(t, r1.Cache, "z")
 	assert.NotContains(t, r2.Cache, "z")
+}
+
+func TestResourcesJoin_InitializesEmptyReceiverAndMergesCleanups(t *testing.T) {
+	var base axiom.Resources
+	cleanupCalls := 0
+	other := axiom.Resources{
+		Registry: map[string]axiom.Resource{
+			"user": func(*axiom.Runner) (any, func(), error) { return "user", nil, nil },
+		},
+		Cache: map[string]axiom.ResourceResult{
+			"token": {Value: "token"},
+		},
+		Cleanups: []axiom.ResourceCleanup{
+			func(*axiom.Runner) { cleanupCalls++ },
+		},
+	}
+
+	joined := base.Join(other)
+
+	assert.NotNil(t, joined.Registry)
+	assert.Contains(t, joined.Registry, "user")
+	assert.NotNil(t, joined.Cache)
+	assert.Equal(t, "token", joined.Cache["token"].Value)
+	assert.Len(t, joined.Cleanups, 1)
+	joined.Cleanups[0](nil)
+	assert.Equal(t, 1, cleanupCalls)
+}
+
+func TestMustResource_PanicsOnLookupError(t *testing.T) {
+	runner := axiom.NewRunner()
+
+	assert.PanicsWithError(t, `resource "missing" not found`, func() {
+		_ = axiom.MustResource[string](runner, "missing")
+	})
 }
 
 func TestGetResource_UsesPrewarmedCacheWithoutFactoryCall(t *testing.T) {

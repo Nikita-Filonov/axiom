@@ -66,6 +66,14 @@ func TestNewMeta_WithOptions(t *testing.T) {
 	assert.Equal(t, "prod", m.Labels["env"])
 }
 
+func TestWithMetaLabels_InitializesLabels(t *testing.T) {
+	m := axiom.NewMeta(
+		axiom.WithMetaLabels(map[string]string{"env": "prod"}),
+	)
+
+	assert.Equal(t, map[string]string{"env": "prod"}, m.Labels)
+}
+
 func TestMetaNormalize_InitializesLabels(t *testing.T) {
 	var m axiom.Meta
 	assert.Nil(t, m.Labels)

@@ -382,19 +382,38 @@ func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
 		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
+		axiom.WithRuntimeSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction { return next }),
+		axiom.WithRuntimeTeardownWrap(func(name string, next axiom.TeardownAction) axiom.TeardownAction { return next }),
 		axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
 		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
+		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
+		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) {}),
 	)
 
 	cp := rt.Copy()
 	cp.TestWraps = append(cp.TestWraps, func(next axiom.TestAction) axiom.TestAction { return next })
 	cp.StepWraps = append(cp.StepWraps, func(name string, next axiom.StepAction) axiom.StepAction { return next })
+	cp.SetupWraps = append(cp.SetupWraps, func(name string, next axiom.SetupAction) axiom.SetupAction { return next })
+	cp.TeardownWraps = append(cp.TeardownWraps, func(name string, next axiom.TeardownAction) axiom.TeardownAction { return next })
 	cp.LogSinks = append(cp.LogSinks, func(l axiom.Log) {})
 	cp.EventSinks = append(cp.EventSinks, func(e axiom.Event) {})
+	cp.AssertSinks = append(cp.AssertSinks, func(a axiom.Assert) {})
+	cp.ArtefactSinks = append(cp.ArtefactSinks, func(a axiom.Artefact) {})
 
 	assert.Len(t, rt.TestWraps, 1)
 	assert.Len(t, rt.StepWraps, 1)
+	assert.Len(t, rt.SetupWraps, 1)
+	assert.Len(t, rt.TeardownWraps, 1)
 	assert.Len(t, rt.LogSinks, 1)
 	assert.Len(t, rt.EventSinks, 1)
+	assert.Len(t, rt.AssertSinks, 1)
+	assert.Len(t, rt.ArtefactSinks, 1)
 	assert.Len(t, cp.TestWraps, 2)
+	assert.Len(t, cp.StepWraps, 2)
+	assert.Len(t, cp.SetupWraps, 2)
+	assert.Len(t, cp.TeardownWraps, 2)
+	assert.Len(t, cp.LogSinks, 2)
+	assert.Len(t, cp.EventSinks, 2)
+	assert.Len(t, cp.AssertSinks, 2)
+	assert.Len(t, cp.ArtefactSinks, 2)
 }

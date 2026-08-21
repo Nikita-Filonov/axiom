@@ -122,6 +122,22 @@ func TestFixturesJoin_DoesNotMutateOriginalFixtures(t *testing.T) {
 	assert.NotContains(t, f2.Cache, "x")
 }
 
+func TestFixturesJoin_InitializesRegistryForEmptyReceiver(t *testing.T) {
+	var base axiom.Fixtures
+	other := axiom.NewFixtures(
+		axiom.WithFixture("user", func(*axiom.Config) (any, func(), error) {
+			return "user", nil, nil
+		}),
+	)
+
+	result := base.Join(other)
+
+	assert.NotNil(t, result.Registry)
+	assert.Equal(t, "user", getFixtureValue(t, result, "user"))
+	assert.NotNil(t, result.Cache)
+	assert.Empty(t, result.Cleanups)
+}
+
 func TestGetFixture_HappyPath(t *testing.T) {
 	callCount := 0
 	cleanupCalled := false
@@ -1250,4 +1266,21 @@ func TestFixturesCopy_DeepCopyMaps(t *testing.T) {
 
 	assert.NotContains(t, f.Registry, "y")
 	assert.NotContains(t, f.Cache, "y")
+}
+
+func TestFixturesCopy_DeepCopiesCleanups(t *testing.T) {
+	var calls []string
+	f := axiom.Fixtures{
+		Cleanups: []axiom.FixtureCleanup{
+			func(*axiom.Config) { calls = append(calls, "original") },
+		},
+	}
+
+	cp := f.Copy()
+	cp.Cleanups[0] = func(*axiom.Config) { calls = append(calls, "copy") }
+
+	f.Cleanups[0](nil)
+	cp.Cleanups[0](nil)
+
+	assert.Equal(t, []string{"original", "copy"}, calls)
 }

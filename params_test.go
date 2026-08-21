@@ -40,52 +40,68 @@ func TestGetParams_PointerSuccess(t *testing.T) {
 	assert.Equal(t, 999, p.Bar)
 }
 
-func TestGetParams_Panic_WrongType(t *testing.T) {
+func TestGetParams_Fatal_WrongType(t *testing.T) {
+	fakeT := &testing.T{}
 	cfg := &axiom.Config{
+		SubT: fakeT,
 		Case: &axiom.Case{
 			Params: "not the right type",
 		},
 	}
 
-	assert.Panics(t, func() {
+	runParamsFatal(func() {
 		_ = axiom.GetParams[sampleParams](cfg)
 	})
+
+	assert.True(t, fakeT.Failed())
 }
 
-func TestGetParams_Panic_Nil(t *testing.T) {
+func TestGetParams_Fatal_Nil(t *testing.T) {
+	fakeT := &testing.T{}
 	cfg := &axiom.Config{
+		SubT: fakeT,
 		Case: &axiom.Case{
 			Params: nil,
 		},
 	}
 
-	assert.Panics(t, func() {
+	runParamsFatal(func() {
 		_ = axiom.GetParams[sampleParams](cfg)
 	})
+
+	assert.True(t, fakeT.Failed())
 }
 
-func TestGetParams_Panic_ValueProvidedButPointerExpected(t *testing.T) {
+func TestGetParams_Fatal_ValueProvidedButPointerExpected(t *testing.T) {
+	fakeT := &testing.T{}
 	cfg := &axiom.Config{
+		SubT: fakeT,
 		Case: &axiom.Case{
 			Params: sampleParams{Foo: "x"},
 		},
 	}
 
-	assert.Panics(t, func() {
-		_ = axiom.GetParams[*sampleParams](cfg) // expecting *sampleParams
+	runParamsFatal(func() {
+		_ = axiom.GetParams[*sampleParams](cfg)
 	})
+
+	assert.True(t, fakeT.Failed())
 }
 
-func TestGetParams_Panic_PointerProvidedButValueExpected(t *testing.T) {
+func TestGetParams_Fatal_PointerProvidedButValueExpected(t *testing.T) {
+	fakeT := &testing.T{}
 	cfg := &axiom.Config{
+		SubT: fakeT,
 		Case: &axiom.Case{
 			Params: &sampleParams{Foo: "x"},
 		},
 	}
 
-	assert.Panics(t, func() {
-		_ = axiom.GetParams[sampleParams](cfg) // expecting value, but got pointer
+	runParamsFatal(func() {
+		_ = axiom.GetParams[sampleParams](cfg)
 	})
+
+	assert.True(t, fakeT.Failed())
 }
 
 func TestGetParams_Panic_NilConfig(t *testing.T) {
@@ -119,4 +135,13 @@ func TestGetParams_Panic_NilSubT_TakesPrecedenceOverTypeMismatch(t *testing.T) {
 	assert.PanicsWithValue(t, "params: nil subT", func() {
 		_ = axiom.GetParams[sampleParams](cfg)
 	})
+}
+
+func runParamsFatal(fn func()) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		fn()
+	}()
+	<-done
 }

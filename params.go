@@ -13,9 +13,7 @@ func GetParams[T any](cfg *Config) T {
 
 	v, ok := cfg.Case.Params.(T)
 	if !ok {
-		var zero T
-		cfg.SubT.Fatalf("params: expected type %T, got %T", zero, cfg.Case.Params)
-		return zero
+		cfg.SubT.Fatalf("params: expected type %T, got %T", v, cfg.Case.Params)
 	}
 	return v
 }

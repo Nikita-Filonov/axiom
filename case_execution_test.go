@@ -31,6 +31,18 @@ func runCaseExecutionHelper(t *testing.T, testName string, env ...string) (strin
 	return string(output), err
 }
 
+func TestCaseExecution_WaitBeforeAttempt_AppliesRetryDelay(t *testing.T) {
+	const delay = 5 * time.Millisecond
+	execution := &caseExecution{
+		baseConfig: &Config{Retry: Retry{Delay: delay}},
+	}
+
+	started := time.Now()
+	execution.waitBeforeAttempt(2)
+
+	assert.GreaterOrEqual(t, time.Since(started), delay)
+}
+
 func TestCaseExecution_ParallelRetry_RunsFreshLifecycleForEveryFailureKind(t *testing.T) {
 	for _, failure := range []string{"error", "panic", "fail-now"} {
 		t.Run(failure, func(t *testing.T) {
