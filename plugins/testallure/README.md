@@ -9,6 +9,7 @@
   - [Execution model](#execution-model)
   - [Current limitations](#current-limitations)
 - [Installation](#installation)
+- [Reporting assertion failures](#reporting-assertion-failures)
 - [Example](#example)
 
 ---
@@ -90,6 +91,31 @@ require (
 ```
 
 Each plugin is versioned independently from the Axiom core.
+
+---
+
+## Reporting assertion failures
+
+`commons/gotest` records a failure message only when the failure goes through the Allure context or a
+panic. Assertion libraries like `testify` fail via `*testing.T` directly (`t.Errorf` + `t.FailNow`), so
+Allure marks the step failed but stores no message or stack.
+
+`testallure.T(cfg)` bridges that: use it in place of the raw `*testing.T` and testify failures are
+mirrored into the active Allure result. It requires `testallure.Plugin` to be installed.
+
+```go
+req := require.New(testallure.T(cfg))
+req.Equal(expected, actual, "values must match")
+```
+
+On failure it stores the assertion message as the Allure status message (with the stack inlined),
+attaches the stack as a plain-text `Stacktrace`, and keeps the status `failed`.
+
+Options (both on by default): `WithInlineStack(bool)`, `WithStackAttachment(bool)`, plus
+`WithStackAttachmentName(string)`.
+
+> The native Allure `Trace` field is not filled: `commons/gotest` sets it only on a panic (which forces
+> `broken`), so the stack is delivered via the message and the attachment instead.
 
 ---
 

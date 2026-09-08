@@ -81,6 +81,29 @@ func TestPlugin_FailedCaseWritesFailedResult(t *testing.T) {
 	assertResultAttachment(t, result, "failed-case-cleanup.txt")
 }
 
+func TestPlugin_AssertionFailureRecordsMessageAndStack(t *testing.T) {
+	results := runLifecycleProbe(t, "assert-fail", true)
+	require.Len(t, results, 1)
+
+	result := results[0]
+	assert.Equal(t, model.StatusFailed, result.Status)
+
+	require.NotNil(t, result.StatusDetails)
+	assert.Contains(t, result.StatusDetails.Message, "values must match")
+	assert.Contains(t, result.StatusDetails.Message, "expected-value")
+	assert.Contains(t, result.StatusDetails.Message, "actual-value")
+	assert.Contains(t, result.StatusDetails.Message, "--- Stack trace ---")
+
+	assertResultStep(t, result, "compare values", model.StatusFailed)
+	require.NotNil(t, result.Steps[0].StatusDetails)
+	assert.Contains(t, result.Steps[0].StatusDetails.Message, "values must match")
+
+	require.Len(t, result.Steps[0].Attachments, 1)
+	attachment := result.Steps[0].Attachments[0]
+	assert.Equal(t, "Stacktrace", attachment.Name)
+	assert.Equal(t, "text/plain", attachment.Type)
+}
+
 func TestPlugin_PanicInsideStepWritesBrokenStep(t *testing.T) {
 	results := runLifecycleProbe(t, "step-panic", true)
 	require.Len(t, results, 1)
@@ -156,6 +179,8 @@ func TestPlugin_LifecycleProbe(t *testing.T) {
 		runParallelRetryProbe(t)
 	case "failed":
 		runFailedProbe(t)
+	case "assert-fail":
+		runAssertFailProbe(t)
 	case "step-panic":
 		runStepPanicProbe(t)
 	case "runtime-skip":
@@ -274,6 +299,23 @@ func runFailedProbe(t *testing.T) {
 				"actual":   8,
 			}))
 			cfg.SubT.Error("inventory mismatch: expected 7, got 8")
+		})
+	})
+}
+
+func runAssertFailProbe(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(testallure.Plugin()),
+	)
+	testCase := axiom.NewCase(
+		axiom.WithCaseID("ASSERT-FAIL-1"),
+		axiom.WithCaseName("assertion failure records message and stack"),
+	)
+
+	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
+		cfg.Step("compare values", func() {
+			assertions := require.New(testallure.T(cfg))
+			assertions.Equal("expected-value", "actual-value", "values must match")
 		})
 	})
 }

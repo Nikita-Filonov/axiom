@@ -7,6 +7,8 @@ import (
 	allure "github.com/allure-framework/allure-go/commons/gotest"
 )
 
+const contextStateKey = "github.com/Nikita-Filonov/axiom/plugins/testallure.state"
+
 type allureContextState struct {
 	current atomic.Pointer[allure.Context]
 }
@@ -16,6 +18,7 @@ func Plugin(options ...allure.Option) axiom.Plugin {
 
 	return func(cfg *axiom.Config) {
 		state := &allureContextState{}
+		cfg.Context.SetData(contextStateKey, state)
 
 		cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
 			return func(c *axiom.Config) {
