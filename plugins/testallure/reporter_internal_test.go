@@ -8,6 +8,24 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// gomegaTestingT mirrors gomega.types.GomegaTestingT, and requireTestingT mirrors
+// testify's require.TestingT. They assert, at compile time, that *TestingT can be
+// passed to both gomega.NewWithT and require.New without importing either library.
+type gomegaTestingT interface {
+	Helper()
+	Fatalf(format string, args ...any)
+}
+
+type requireTestingT interface {
+	Errorf(format string, args ...any)
+	FailNow()
+}
+
+var (
+	_ gomegaTestingT  = (*TestingT)(nil)
+	_ requireTestingT = (*TestingT)(nil)
+)
+
 type fakeReporter struct {
 	messages    []string
 	attachments []fakeAttachment
@@ -58,6 +76,8 @@ func TestFilterStack_DropsNoiseFramesKeepsHeaderAndUserCode(t *testing.T) {
 		"\t/repo/plugins/testallure/reporter.go:140 +0x11",
 		"github.com/stretchr/testify/assert.Fail(...)",
 		"\t/repo/testify/assert/assertions.go:100 +0x22",
+		"github.com/onsi/gomega/internal.(*AsyncAssertion).match(...)",
+		"\t/repo/gomega/internal/async_assertion.go:200 +0x44",
 		"backend-integration-tests/tests.TestCreateAtm(...)",
 		"\t/repo/tests/atm_test.go:42 +0x33",
 		"testing.tRunner(...)",
@@ -74,6 +94,7 @@ func TestFilterStack_DropsNoiseFramesKeepsHeaderAndUserCode(t *testing.T) {
 		"runtime/debug.Stack()",
 		"(*TestingT).Errorf",
 		"github.com/stretchr/testify/assert.Fail",
+		"github.com/onsi/gomega/internal.(*AsyncAssertion).match",
 	} {
 		if strings.Contains(filtered, dropped) {
 			t.Fatalf("expected %q to be dropped, got:\n%s", dropped, filtered)
@@ -217,6 +238,45 @@ func TestTestingT_FailNowWithoutFailerIsNoop(t *testing.T) {
 
 	// Must not panic when there is no underlying *testing.T.
 	adapter.FailNow()
+}
+
+func TestTestingT_Fatalf_RecordsMessageAndStopsTest(t *testing.T) {
+	reporter := &fakeReporter{}
+	fail := &fakeFailer{}
+	adapter := newTestingT(fail, constantReporter(reporter), defaultTOptions())
+
+	// gomega.NewWithT invokes the reporter as t.Fatalf("\n%s", message).
+	adapter.Fatalf("\n%s", "Timed out after 60s.\nExpected\n    <bool>: false\nto be true")
+
+	if len(reporter.messages) != 1 {
+		t.Fatalf("expected one reported message, got %d", len(reporter.messages))
+	}
+	if !strings.Contains(reporter.messages[0], "Timed out after 60s.") {
+		t.Fatalf("expected gomega message recorded, got:\n%s", reporter.messages[0])
+	}
+	if !strings.Contains(reporter.messages[0], stackSectionHeader) {
+		t.Fatalf("expected inlined stack header, got:\n%s", reporter.messages[0])
+	}
+	if len(reporter.attachments) != 1 {
+		t.Fatalf("expected one stack attachment, got %d", len(reporter.attachments))
+	}
+	if fail.failNow != 1 {
+		t.Fatalf("expected the test to be stopped once, got %d", fail.failNow)
+	}
+}
+
+func TestTestingT_Fatalf_WithoutReporterFallsBackToFailer(t *testing.T) {
+	fail := &fakeFailer{}
+	adapter := newTestingT(fail, constantReporter(nil), defaultTOptions())
+
+	adapter.Fatalf("boom %d", 7)
+
+	if len(fail.messages) != 1 || fail.messages[0] != "boom 7" {
+		t.Fatalf("expected fallback message on failer, got %v", fail.messages)
+	}
+	if fail.failNow != 1 {
+		t.Fatalf("expected FailNow once, got %d", fail.failNow)
+	}
 }
 
 func TestTestingT_HelperDelegatesToFailer(t *testing.T) {

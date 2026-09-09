@@ -100,12 +100,18 @@ Each plugin is versioned independently from the Axiom core.
 panic. Assertion libraries like `testify` fail via `*testing.T` directly (`t.Errorf` + `t.FailNow`), so
 Allure marks the step failed but stores no message or stack.
 
-`testallure.T(cfg)` bridges that: use it in place of the raw `*testing.T` and testify failures are
-mirrored into the active Allure result. It requires `testallure.Plugin` to be installed.
+`testallure.T(cfg)` bridges that: use it in place of the raw `*testing.T` and failures are mirrored
+into the active Allure result. It requires `testallure.Plugin` to be installed, and works with both
+`testify` (`require.TestingT` / `assert.TestingT`) and `gomega` (`gomega.types.GomegaTestingT`):
 
 ```go
+// testify
 req := require.New(testallure.T(cfg))
 req.Equal(expected, actual, "values must match")
+
+// gomega — including async Eventually/Consistently
+g := gomega.NewWithT(testallure.T(cfg))
+g.Eventually(fetch, "60s", "1s").Should(gomega.BeTrue(), "record must appear")
 ```
 
 On failure it stores the assertion message as the Allure status message (with the stack inlined),

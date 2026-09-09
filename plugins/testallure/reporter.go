@@ -16,6 +16,7 @@ const (
 var stackDropPrefixes = []string{
 	"runtime/debug.",
 	"github.com/stretchr/testify/",
+	"github.com/onsi/gomega/",
 	"github.com/Nikita-Filonov/axiom/plugins/testallure.",
 }
 
@@ -104,6 +105,11 @@ func (a *TestingT) Errorf(format string, args ...any) {
 	if a.opts.attachStack && stack != "" {
 		reporter.Attachment(a.opts.attachmentName, []byte(stack), contentTypeText)
 	}
+}
+
+func (a *TestingT) Fatalf(format string, args ...any) {
+	a.Errorf(format, args...)
+	a.FailNow()
 }
 
 func (a *TestingT) FailNow() {
