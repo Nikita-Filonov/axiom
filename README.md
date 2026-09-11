@@ -178,6 +178,7 @@ following folders:
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup
 - [./docs/resource](./docs/resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown
+- [./docs/keys](./docs/keys) — typed keys and self-describing definitions for fixtures and resources
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
 - [./docs/log](./docs/log) — structured logging via Runtime log sinks
 - [./docs/assert](./docs/assert) — structured assertion events and runtime assert sinks

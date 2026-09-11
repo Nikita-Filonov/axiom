@@ -106,12 +106,50 @@ func WithRunnerFixture(name string, fx Fixture) RunnerOption {
 	}
 }
 
+func WithRunnerFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) RunnerOption {
+	key.validate()
+	if build == nil {
+		panic("fixture: nil constructor")
+	}
+
+	return WithRunnerFixture(key.name, func(cfg *Config) (any, func(), error) {
+		return build(cfg)
+	})
+}
+
+func WithRunnerFixtures(defs ...FixtureRegistrar) RunnerOption {
+	return func(r *Runner) {
+		for _, def := range defs {
+			def.registerFixture(r)
+		}
+	}
+}
+
 func WithRunnerResource(name string, rs Resource) RunnerOption {
 	return func(r *Runner) {
 		if r.Resources.Registry == nil {
 			r.Resources.Registry = map[string]Resource{}
 		}
 		r.Resources.Registry[name] = rs
+	}
+}
+
+func WithRunnerResourceKey[T any](key ResourceKey[T], build TypedResource[T]) RunnerOption {
+	key.validate()
+	if build == nil {
+		panic("resource: nil constructor")
+	}
+
+	return WithRunnerResource(key.name, func(r *Runner) (any, func(), error) {
+		return build(r)
+	})
+}
+
+func WithRunnerResources(defs ...ResourceRegistrar) RunnerOption {
+	return func(r *Runner) {
+		for _, def := range defs {
+			def.registerResource(r)
+		}
 	}
 }
 

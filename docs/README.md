@@ -20,6 +20,7 @@ framework. Each subfolder provides focused reference material and examples.
 - [./events](./events) — raw event stream for facts that hooks and wraps cannot observe directly
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
 - [./resource](./resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown
+- [./keys](./keys) — typed keys and self-describing definitions for fixtures and resources
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers
 - [./log](./log) — structured logging via Runtime log sinks
 - [./assert](./assert) — structured assertion events and runtime assert sinks
