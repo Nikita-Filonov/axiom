@@ -14,6 +14,20 @@ typed bundle.
 
 ---
 
+## 📑 Table of Contents
+
+- [Why Toolset exists](#why-toolset-exists)
+- [API](#api)
+- [Example](#example)
+- [Naming](#naming)
+- [Generic Service Toolsets](#generic-service-toolsets)
+- [Lifecycle](#lifecycle)
+- [Concurrency](#concurrency)
+- [Missing Bind](#missing-bind)
+- [Use vs Action](#use-vs-action)
+
+---
+
 ## Why `Toolset` exists
 
 Without a toolset, every test body may end up repeating setup code:

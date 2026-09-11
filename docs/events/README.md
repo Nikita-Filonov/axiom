@@ -2,6 +2,15 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [Overview](#overview)
+- [Event Shape](#event-shape)
+- [Event Types](#event-types)
+- [Emitting Events](#emitting-events)
+
+---
+
 ## Overview
 
 Events are a small raw fact stream emitted by Axiom when something happens that cannot be observed cleanly through hooks

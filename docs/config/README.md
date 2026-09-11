@@ -16,6 +16,16 @@ Every retry attempt receives a **fresh** `Config`, ensuring deterministic test b
 
 ---
 
+## 📑 Table of Contents
+
+- [Why Config exists](#why-config-exists)
+- [Attempt lifecycle](#attempt-lifecycle)
+- [Example](#example)
+- [Local State](#local-state)
+- [How Config Is Built (Merging Model)](#how-config-is-built-merging-model)
+
+---
+
 ## Why `Config` exists
 
 Axiom separates _declarative configuration_ from _runtime behavior_:

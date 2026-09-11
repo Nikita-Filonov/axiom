@@ -9,6 +9,18 @@ Every retry receives a fresh `Config`, so every retry also receives fresh `Local
 
 ---
 
+## 📑 Table of Contents
+
+- [Why Local exists](#why-local-exists)
+- [API](#api)
+- [Example](#example)
+- [Lifecycle](#lifecycle)
+- [Concurrency](#concurrency)
+- [Local vs Other State](#local-vs-other-state)
+- [When to use Local](#when-to-use-local)
+
+---
+
 ## Why `Local` exists
 
 Some values are not part of test declaration, and they are not long-lived infrastructure. They are created while the

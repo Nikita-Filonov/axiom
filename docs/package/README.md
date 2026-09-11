@@ -10,6 +10,19 @@ external service stub).
 
 ---
 
+## 📑 Table of Contents
+
+- [Why it exists](#why-it-exists)
+- [API](#api)
+- [How it works under the hood](#how-it-works-under-the-hood)
+- [Lifecycle edge cases](#lifecycle-edge-cases)
+- [When to use RunPackage](#when-to-use-runpackage)
+- [When not to use RunPackage](#when-not-to-use-runpackage)
+- [Comparison with the other lifecycle boundaries](#comparison-with-the-other-lifecycle-boundaries)
+- [Example](#example)
+
+---
+
 ## Why it exists
 
 Without an explicit lifecycle boundary, a package-level `Runner` is tied to whichever `*testing.T` happened to call

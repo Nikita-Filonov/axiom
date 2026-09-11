@@ -8,6 +8,16 @@ wraps) and sinks that observe or instrument test execution.
 A `Runtime` is not executed directly. It is merged from `Runner` and `Case`, then invoked indirectly via `Config` during
 test execution.
 
+## 📑 Table of Contents
+
+- [What Runtime Controls](#what-runtime-controls)
+- [Lifecycle Placement](#lifecycle-placement)
+- [Per-attempt lifecycle](#per-attempt-lifecycle)
+- [Defining Runtime Behavior](#defining-runtime-behavior)
+- [Example](#example)
+
+---
+
 ## What Runtime Controls
 
 A `Runtime` provides these extension points:

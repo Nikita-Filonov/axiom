@@ -33,6 +33,14 @@ This model enables:
 
 ---
 
+## 📑 Table of Contents
+
+- [Minimal Example](#minimal-example)
+- [Parallel Suite Tests](#parallel-suite-tests)
+- [Complete Example](#complete-example)
+
+---
+
 ## Minimal Example
 
 ```go

@@ -16,6 +16,15 @@ This model enables:
 
 ---
 
+## 📑 Table of Contents
+
+- [Lifecycle guarantees](#lifecycle-guarantees)
+- [Preloading fixtures with UseFixtures](#preloading-fixtures-with-usefixtures)
+- [Example](#example)
+- [Typed keys](#typed-keys)
+
+---
+
 ## Lifecycle guarantees
 
 Fixtures have a per-attempt lifecycle:

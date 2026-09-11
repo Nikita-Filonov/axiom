@@ -12,6 +12,15 @@ or test body panics, but panics inside hooks still propagate like ordinary test 
 
 ---
 
+## 📑 Table of Contents
+
+- [Available Hooks](#-available-hooks)
+- [Cleanup Boundary](#cleanup-boundary)
+- [Example](#example)
+- [Execution Order Overview](#execution-order-overview)
+
+---
+
 ## ✔ Available Hooks
 
 ### Suite-level hooks
