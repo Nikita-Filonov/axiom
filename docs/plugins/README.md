@@ -171,3 +171,8 @@ These plugins are intended both for direct use and as reference implementations 
 - **✅ Assert Plugin:** [testassert](../../plugins/testassert). Bridges Axiom’s structured runtime assertions with
   `stretchr/testify/assert`. Allows test code to emit declarative assertion events without coupling to a specific
   assertion backend.
+- **⏱ Timeout Plugin:** [testtimeout](../../plugins/testtimeout). Enforces a per-case wall-clock deadline, failing a
+  hanging case with a readable message and an attached goroutine dump instead of stalling the whole test binary.
+- **🧟 Quarantine Plugin:** [testquarantine](../../plugins/testquarantine). Quarantines known-flaky cases by skipping
+  them before execution with a recorded reason, so they stay visible without gating the suite. Can be configured to run
+  them anyway in non-gating jobs.
