@@ -92,3 +92,46 @@ func TestContextExample(t *testing.T) {
 }
 
 ```
+
+---
+
+## Typed keys
+
+`ContextKey[T]` is a typed handle for a value in `Data`. It is the additive, typed counterpart of `WithContextData` /
+`GetContextValue`: a key and plain string access under the same name are interchangeable, so existing context values
+keep working unchanged.
+
+```go
+type ContextKey[T any]
+
+func NewContextKey[T any](name string) ContextKey[T]
+
+func (k ContextKey[T]) Name() string
+func (k ContextKey[T]) Value(value T) ContextOption      // set; composes with WithRunnerContext / WithCaseContext
+func (k ContextKey[T]) Get(c *Context) T                 // typed MustContextValue[T]; panics if missing
+func (k ContextKey[T]) TryGet(c *Context) (T, bool)      // typed GetContextValue[T]
+```
+
+`Get` / `TryGet` mirror [`ResourceKey`](../resource#typed-keys): `Get` returns the value directly (the common case) and `TryGet`
+reports presence with a bool. A key carries both the name and the value type, so a name/type mismatch is impossible by
+construction and reads need no call-site assertion.
+
+```go
+var RequestID = axiom.NewContextKey[string]("request_id")
+
+runner := axiom.NewRunner(
+	axiom.WithRunnerContext(RequestID.Value("abc-123")),
+)
+
+runner.RunCase(t, c, func(cfg *axiom.Config) {
+	id := RequestID.Get(&cfg.Context)
+	fmt.Println("request:", id)
+})
+```
+
+`ContextKey` is to `Context.Data` what [`LocalKey`](../local) is to `Local`: a typed key over an untyped store. Prefer
+namespaced names in reusable packages, exactly as for string data:
+
+```go
+var RequestID = axiom.NewContextKey[string]("httpservice.request_id")
+```

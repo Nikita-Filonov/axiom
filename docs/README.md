@@ -18,9 +18,8 @@ framework. Each subfolder provides focused reference material and examples.
 - [./toolset](./toolset) — typed helper bundles built into Local and consumed as cfg.Tools
 - [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./events](./events) — raw event stream for facts that hooks and wraps cannot observe directly
-- [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup
-- [./resource](./resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown
-- [./keys](./keys) — typed keys and self-describing definitions for fixtures and resources
+- [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup, typed keys and definitions
+- [./resource](./resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown, typed keys
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers
 - [./log](./log) — structured logging via Runtime log sinks
 - [./assert](./assert) — structured assertion events and runtime assert sinks

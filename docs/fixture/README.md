@@ -196,3 +196,196 @@ func TestFixtureExample(t *testing.T) {
 }
 
 ```
+
+---
+
+## Typed keys
+
+`FixtureKey[T]` and `FixtureDef[T]` are a thin, **additive** layer over the string-based fixture registry. They collapse
+the usual `const` name plus `any` constructor plus typed getter wrapper into a single typed handle that carries the
+registry **name** and the value **type** together. Nothing about the [lifecycle](#lifecycle-guarantees) changes — keys
+write into the same registry, so fixtures still follow the per-attempt lifecycle described above.
+
+Without a key, a package that exposes a fixture repeats the same three-part boilerplate:
+
+```go
+const ClientFixtureKey = "service-client"
+
+func SetClientFixture(cfg *axiom.Config) (any, func(), error) { return newClient(cfg), nil, nil }
+
+func GetClientFixture(cfg *axiom.Config) ServiceClient {
+	return axiom.GetFixture[ServiceClient](cfg, ClientFixtureKey)
+}
+```
+
+A typed key removes the `any` and the getter wrapper, and makes a name/type mismatch impossible by construction.
+
+### Two levels
+
+Both levels are opt-in.
+
+**Level 1 — typed key.** A `FixtureKey[T]` is a typed handle for a name. Use it when the constructor lives elsewhere, is
+registered separately, or is chosen dynamically.
+
+```go
+var ClientFixture = axiom.NewFixtureKey[ServiceClient]("service-client")
+
+axiom.WithRunnerFixtureKey(ClientFixture, buildClient) // register somewhere
+client := ClientFixture.Get(cfg)                       // read anywhere with a *Config
+```
+
+**Level 2 — self-describing definition.** A `FixtureDef[T]` bundles the key with its constructor, so a fixture is
+declared once and both registered and read through the same value.
+
+```go
+var ClientFixture = axiom.DefineFixture("service-client", buildClient)
+
+axiom.WithRunnerFixtures(ClientFixture) // batch registration
+client := ClientFixture.Get(cfg)
+```
+
+`DefineFixture` is `NewFixtureKey` plus its constructor; `def.Key()` returns the underlying level-1 key.
+
+### API
+
+```go
+type TypedFixture[T any] func(cfg *Config) (T, func(), error)
+
+type FixtureKey[T any]
+
+func NewFixtureKey[T any](name string) FixtureKey[T]
+func (k FixtureKey[T]) Name() string
+func (k FixtureKey[T]) Get(cfg *Config) T // = GetFixture[T](cfg, k.Name())
+
+type FixtureDef[T any]
+
+func DefineFixture[T any](name string, build TypedFixture[T]) FixtureDef[T]
+func (d FixtureDef[T]) Key() FixtureKey[T]
+func (d FixtureDef[T]) Name() string
+func (d FixtureDef[T]) Get(cfg *Config) T
+```
+
+- `Get` resolves the fixture for the current test, constructing and caching it on first use. It is a typed shortcut for
+  `GetFixture[T]`, so it inherits the full lifecycle above: lazy setup, per-attempt caching, and LIFO cleanup.
+- A zero-value key panics with `fixture: key must be created with NewFixtureKey`; an empty name panics with
+  `fixture: key name must not be empty`.
+
+### Registration
+
+```go
+func WithRunnerFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) RunnerOption
+func WithRunnerFixtures(defs ...FixtureRegistrar) RunnerOption
+```
+
+`WithRunnerFixtureKey` registers a level-1 key with an explicit constructor; `WithRunnerFixtures` registers a batch of
+level-2 definitions. A `nil` constructor panics with `fixture: nil constructor`. `FixtureRegistrar` is an interface with
+an intentionally unexported method, so only `FixtureDef` values can be passed.
+
+### Interoperability
+
+Typed keys are purely additive: they write into and read from the **same** registry as `WithRunnerFixture`, so the two
+styles are interchangeable and a package can migrate one fixture at a time without breaking existing string-based access.
+
+```go
+var Greeting = axiom.NewFixtureKey[string]("greeting")
+
+runner := axiom.NewRunner(
+	// string registration
+	axiom.WithRunnerFixture("greeting", func(cfg *axiom.Config) (any, func(), error) {
+		return "hello", nil, nil
+	}),
+)
+
+runner.RunCase(t, c, func(cfg *axiom.Config) {
+	// typed read of the same slot
+	fmt.Println(Greeting.Get(cfg)) // "hello"
+})
+```
+
+### Example — self-describing definition
+
+`DefineFixture` keeps the name, type, and constructor in one value. `WithRunnerFixtures` registers any number of them.
+
+```go
+package example_test
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/Nikita-Filonov/axiom"
+)
+
+type Client struct{ base string }
+
+func newClient() *Client { return &Client{base: "https://api"} }
+
+// ClientFixture is declared once, then registered and read through the same value.
+var ClientFixture = axiom.DefineFixture(
+	"service-client",
+	func(cfg *axiom.Config) (*Client, func(), error) {
+		return newClient(), nil, nil
+	},
+)
+
+func TestFixtureDefExample(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerFixtures(ClientFixture),
+	)
+
+	c := axiom.NewCase(axiom.WithCaseName("fixture def"))
+
+	runner.RunCase(t, c, func(cfg *axiom.Config) {
+		client := ClientFixture.Get(cfg)
+		fmt.Println("client base:", client.base)
+	})
+}
+```
+
+### Configuring a fixture
+
+There is no dedicated "configurable fixture" primitive, and there does not need to be. Beyond reading a
+[`Resource`](../resource) inside the constructor or varying behavior per case through [`Params`](../params), the
+idiomatic way to produce configured variants is an ordinary factory that returns a `FixtureDef`:
+
+```go
+type dbOptions struct{ readOnly bool }
+type dbOption func(*dbOptions)
+
+func WithReadOnly() dbOption { return func(o *dbOptions) { o.readOnly = true } }
+
+// DBFixture builds a self-describing fixture configured by options.
+func DBFixture(name string, opts ...dbOption) axiom.FixtureDef[*DB] {
+	options := dbOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	return axiom.DefineFixture(name, func(cfg *axiom.Config) (*DB, func(), error) {
+		db := openDB(options.readOnly)
+		return db, func() { db.Close() }, nil
+	})
+}
+
+var PrimaryDB = DBFixture("db.primary")
+var ReplicaDB = DBFixture("db.replica", WithReadOnly())
+
+// runner: axiom.WithRunnerFixtures(PrimaryDB, ReplicaDB)
+```
+
+Each variant is a distinct registry entry with its own name and typed accessor, and no framework state is involved.
+
+### Naming
+
+Key names are registry names. Prefer namespaced, stable names, exactly as for string registrations:
+
+```go
+var ClientFixture = axiom.DefineFixture("cardsservice.client", buildCardsClient)
+var DatabaseFixture = axiom.DefineFixture("cardsservice.database", buildCardsDatabase)
+```
+
+Avoid generic names such as `"client"` or `"db"` in shared packages, since a name collision silently overrides the
+earlier registration.
+
+> The same two-level pattern applies to runner-scoped [resources](../resource#typed-keys) (`ResourceKey` /
+> `DefineResource`) and to per-test [context values](../context#typed-keys) (`ContextKey`).

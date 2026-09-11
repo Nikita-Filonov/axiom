@@ -11,6 +11,7 @@
 - [Concurrency model](#concurrency-model)
 - [Registering resources](#registering-resources)
 - [Example](#example)
+- [Typed keys](#typed-keys)
 - [Resources vs Fixtures](#resources-vs-fixtures)
 - [When to use a Resource](#when-to-use-a-resource)
 - [When not to use a Resource](#when-not-to-use-a-resource)
@@ -253,6 +254,96 @@ using in test: shared-client
 using in test: shared-client
 closing client
 ```
+
+---
+
+## Typed keys
+
+`ResourceKey[T]` and `ResourceDef[T]` are the runner-scoped mirror of
+[`FixtureKey` / `FixtureDef`](../fixture#typed-keys): a thin, additive layer over the string resource registry that
+carries the registry name and the value type in one typed handle. They follow the same **two levels** (a bare key vs. a
+self-describing `DefineResource`) and change nothing about the [resource lifecycle](#resource-lifecycle) — reads resolve
+against the runner and stay runner-cached.
+
+### API
+
+```go
+type TypedResource[T any] func(r *Runner) (T, func(), error)
+
+type ResourceKey[T any]
+
+func NewResourceKey[T any](name string) ResourceKey[T]
+func (k ResourceKey[T]) Name() string
+func (k ResourceKey[T]) Get(runner *Runner) T             // = MustResource[T](runner, k.Name())
+func (k ResourceKey[T]) TryGet(runner *Runner) (T, error) // = GetResource[T](runner, k.Name())
+
+type ResourceDef[T any]
+
+func DefineResource[T any](name string, build TypedResource[T]) ResourceDef[T]
+func (d ResourceDef[T]) Key() ResourceKey[T]
+func (d ResourceDef[T]) Name() string
+func (d ResourceDef[T]) Get(runner *Runner) T
+func (d ResourceDef[T]) TryGet(runner *Runner) (T, error)
+```
+
+- `Get` returns the value directly and panics if the resource is missing or fails to build; `TryGet` returns the error
+  instead. Both inherit the full lifecycle above: single construction, runner-level caching, deterministic teardown.
+- A zero-value key panics with `resource: key must be created with NewResourceKey`.
+
+### Registration
+
+```go
+func WithRunnerResourceKey[T any](key ResourceKey[T], build TypedResource[T]) RunnerOption
+func WithRunnerResources(defs ...ResourceRegistrar) RunnerOption
+```
+
+`WithRunnerResourceKey` registers a level-1 key with a constructor; `WithRunnerResources` registers a batch of
+`DefineResource` definitions. A `nil` constructor panics with `resource: nil constructor`, and `ResourceRegistrar` is
+closed to `ResourceDef` values by an intentionally unexported method.
+
+### Example
+
+```go
+package example_test
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/Nikita-Filonov/axiom"
+)
+
+type Pool struct{ name string }
+
+// PoolResource is a shared, runner-scoped resource behind a typed key.
+var PoolResource = axiom.DefineResource(
+	"pool",
+	func(r *axiom.Runner) (*Pool, func(), error) {
+		return &Pool{name: "shared-pool"}, func() { fmt.Println("closing pool") }, nil
+	},
+)
+
+func TestResourceKeyExample(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerResources(PoolResource),
+	)
+
+	// Constructed once, reused everywhere the runner is available.
+	pool := PoolResource.Get(runner)
+	fmt.Println("pre-warmed:", pool.name)
+
+	c := axiom.NewCase(axiom.WithCaseName("resource key"))
+
+	runner.RunCase(t, c, func(cfg *axiom.Config) {
+		if pool, err := PoolResource.TryGet(cfg.Runner); err == nil {
+			fmt.Println("using in test:", pool.name)
+		}
+	})
+}
+```
+
+For the full typed-keys rationale — the boilerplate they remove, the two-level model, interoperability with the string
+registry, and naming — see [Typed keys](../fixture#typed-keys) in the fixture documentation.
 
 ---
 

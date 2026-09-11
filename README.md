@@ -176,9 +176,8 @@ following folders:
 - [./docs/local](./docs/local) — per-attempt typed local state stored on Config
 - [./docs/toolset](./docs/toolset) — typed helper bundles built into Local and consumed as cfg.Tools
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
-- [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup
-- [./docs/resource](./docs/resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown
-- [./docs/keys](./docs/keys) — typed keys and self-describing definitions for fixtures and resources
+- [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup, typed keys and definitions
+- [./docs/resource](./docs/resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown, typed keys
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
 - [./docs/log](./docs/log) — structured logging via Runtime log sinks
 - [./docs/assert](./docs/assert) — structured assertion events and runtime assert sinks
