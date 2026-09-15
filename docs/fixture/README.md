@@ -22,6 +22,7 @@ This model enables:
 - [Preloading fixtures with UseFixtures](#preloading-fixtures-with-usefixtures)
 - [Example](#example)
 - [Typed keys](#typed-keys)
+- [Parameterised fixtures](#parameterised-fixtures)
 
 ---
 
@@ -283,12 +284,16 @@ func (d FixtureDef[T]) Get(cfg *Config) T
 
 ```go
 func WithRunnerFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) RunnerOption
-func WithRunnerFixtures(defs ...FixtureRegistrar) RunnerOption
+func WithRunnerFixtures(defs ...RunnerFixtureRegistrar) RunnerOption
+
+func WithCaseFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) CaseOption
+func WithCaseFixtures(defs ...CaseFixtureRegistrar) CaseOption
 ```
 
-`WithRunnerFixtureKey` registers a level-1 key with an explicit constructor; `WithRunnerFixtures` registers a batch of
-level-2 definitions. A `nil` constructor panics with `fixture: nil constructor`. `FixtureRegistrar` is an interface with
-an intentionally unexported method, so only `FixtureDef` values can be passed.
+`WithRunnerFixtureKey` / `WithCaseFixtureKey` register a level-1 key with an explicit constructor at runner or case
+scope; `WithRunnerFixtures` / `WithCaseFixtures` register a batch of level-2 definitions. A `nil` constructor panics with
+`fixture: nil constructor`. `RunnerFixtureRegistrar` and `CaseFixtureRegistrar` are interfaces with an intentionally
+unexported method, so only `FixtureDef` values (and parameterised per-case variants) can be passed.
 
 ### Interoperability
 
@@ -398,3 +403,81 @@ earlier registration.
 
 > The same two-level pattern applies to runner-scoped [resources](../resource#typed-keys) (`ResourceKey` /
 > `DefineResource`) and to per-test [context values](../context#typed-keys) (`ContextKey`).
+
+---
+
+## Parameterised fixtures
+
+A `ParamFixture[P, T]` is a single typed fixture with a fixed name whose constructor is **parameterised** by `P`. Each
+case selects one variant with `For(params)`; every variant shares the same key, so a toolset reads it back with a single
+`Get`. This removes the "carry the variant in `Params`, then `switch` in the body" pattern: the param→constructor binding
+lives at declaration and the selection is declarative in the case.
+
+Like [typed keys](#typed-keys), a param fixture is purely additive — a variant is registered through the ordinary
+case/runner fixture registries, so the lifecycle (lazy setup, per-attempt caching, LIFO cleanup, retry isolation) is
+unchanged.
+
+```go
+type ParamFixture[P, T any]
+
+func DefineParamFixture[P, T any](name string, build func(*Config, P) (T, func(), error)) ParamFixture[P, T]
+
+func (f ParamFixture[P, T]) Name() string
+func (f ParamFixture[P, T]) Key() FixtureKey[T]                // shared key, for the plain key API
+func (f ParamFixture[P, T]) For(params P) CaseFixtureRegistrar // select a variant for one case
+func (f ParamFixture[P, T]) Default(params P) RunnerOption     // runner-level fallback, overridden by For
+func (f ParamFixture[P, T]) Get(cfg *Config) T                 // typed GetFixture[T]
+```
+
+A selected variant is attached to a case through `WithCaseFixtures`, the case-level counterpart of
+`WithRunnerFixtures`:
+
+```go
+func WithCaseFixtures(fixtures ...CaseFixtureRegistrar) CaseOption
+```
+
+`WithCaseFixtures` accepts both a self-describing `FixtureDef` (a fixed variant) and `pf.For(params)` (a
+parameterised variant). Because case fixtures are merged over runner fixtures, `pf.Default(params)` provides a
+fallback that any individual case can override with its own `For`.
+
+### Example
+
+```go
+// One key, many builders — the status is bound at selection time.
+var ByStatus = axiom.DefineParamFixture(
+	"atm-by-status",
+	func(cfg *axiom.Config, status atmdata.Status) (StatefulATM, func(), error) {
+		prepared, err := GRPCFactoryFixture.Get(cfg).CreateWithStatus(status)
+		return prepared, nil, err
+	},
+)
+
+// Each case selects its own variant, declaratively, next to the other options.
+enabled := axiom.NewCase(
+	axiom.WithCaseID("107401"),
+	axiom.WithCaseName("atm status is enabled"),
+	axiom.WithCaseFixtures(ByStatus.For(atmdata.StatusEnabled)),
+)
+
+blocked := axiom.NewCase(
+	axiom.WithCaseID("107414"),
+	axiom.WithCaseName("atm status is blocked"),
+	axiom.WithCaseFixtures(ByStatus.For(atmdata.StatusBlocked)),
+)
+
+// The toolset reads the selected variant with a single accessor:
+//   func (t *tools) PreparedATM() StatefulATM { return ByStatus.Get(t.cfg) }
+```
+
+### Param fixture vs factory
+
+Both parameterise a fixture; they differ in how many registry entries exist and when the variant is chosen.
+
+| | `ParamFixture` | Factory returning `FixtureDef` |
+|---|---|---|
+| Registry entries | one shared name | one distinct name per variant |
+| Variant chosen | per case, via `For` | at declaration |
+| Best when | each case uses exactly one variant | variants are known up front and may be used together |
+
+Use a param fixture to replace a `switch` on a case parameter; use a [factory](#configuring-a-fixture) when you need
+several named variants live at once (`PrimaryDB`, `ReplicaDB`).

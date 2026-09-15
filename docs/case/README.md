@@ -83,6 +83,8 @@ func TestCaseExample(t *testing.T) {
 
 		// Case-local fixtures
 		axiom.WithCaseFixture("user", UserFixture),
+		// Typed alternatives: WithCaseFixtureKey / WithCaseFixtures — see
+		// ../fixture#typed-keys and ../fixture#parameterised-fixtures.
 
 		// Case-specific runtime behavior
 		axiom.WithCaseRuntime(

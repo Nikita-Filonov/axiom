@@ -46,10 +46,18 @@ func (d FixtureDef[T]) Name() string { return d.key.name }
 
 func (d FixtureDef[T]) Get(cfg *Config) T { return d.key.Get(cfg) }
 
-func (d FixtureDef[T]) registerFixture(r *Runner) {
+func (d FixtureDef[T]) registerRunnerFixture(r *Runner) {
 	WithRunnerFixtureKey(d.key, d.build)(r)
 }
 
-type FixtureRegistrar interface {
-	registerFixture(*Runner)
+func (d FixtureDef[T]) registerCaseFixture(c *Case) {
+	WithCaseFixtureKey(d.key, d.build)(c)
+}
+
+type RunnerFixtureRegistrar interface {
+	registerRunnerFixture(*Runner)
+}
+
+type CaseFixtureRegistrar interface {
+	registerCaseFixture(*Case)
 }

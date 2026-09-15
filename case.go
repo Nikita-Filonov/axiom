@@ -94,6 +94,25 @@ func WithCaseFixture(name string, fx Fixture) CaseOption {
 	}
 }
 
+func WithCaseFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) CaseOption {
+	key.validate()
+	if build == nil {
+		panic("fixture: nil constructor")
+	}
+
+	return WithCaseFixture(key.name, func(cfg *Config) (any, func(), error) {
+		return build(cfg)
+	})
+}
+
+func WithCaseFixtures(fixtures ...CaseFixtureRegistrar) CaseOption {
+	return func(c *Case) {
+		for _, fixture := range fixtures {
+			fixture.registerCaseFixture(c)
+		}
+	}
+}
+
 func WithCaseDescription(desc string) CaseOption {
 	return func(c *Case) { c.Description = desc }
 }

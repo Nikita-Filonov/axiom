@@ -117,10 +117,10 @@ func WithRunnerFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) Runne
 	})
 }
 
-func WithRunnerFixtures(defs ...FixtureRegistrar) RunnerOption {
+func WithRunnerFixtures(defs ...RunnerFixtureRegistrar) RunnerOption {
 	return func(r *Runner) {
 		for _, def := range defs {
-			def.registerFixture(r)
+			def.registerRunnerFixture(r)
 		}
 	}
 }

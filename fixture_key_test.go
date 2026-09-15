@@ -95,6 +95,44 @@ func TestWithRunnerFixtureKey_PanicsOnZeroKey(t *testing.T) {
 	})
 }
 
+func TestWithCaseFixtureKey_PanicsOnNilConstructor(t *testing.T) {
+	key := axiom.NewFixtureKey[int]("x")
+
+	assert.PanicsWithValue(t, "fixture: nil constructor", func() {
+		_ = axiom.WithCaseFixtureKey(key, nil)
+	})
+}
+
+func TestWithCaseFixtureKey_PanicsOnZeroKey(t *testing.T) {
+	var key axiom.FixtureKey[int]
+
+	assert.PanicsWithValue(t, "fixture: key must be created with NewFixtureKey", func() {
+		_ = axiom.WithCaseFixtureKey(key, func(*axiom.Config) (int, func(), error) {
+			return 0, nil, nil
+		})
+	})
+}
+
+func TestWithCaseFixtureKey_RegistersAndGet(t *testing.T) {
+	key := axiom.NewFixtureKey[*dbConn]("case-db")
+	runner := axiom.NewRunner()
+
+	var got *dbConn
+	runner.RunCase(
+		t,
+		axiom.NewCase(
+			axiom.WithCaseName("case"),
+			axiom.WithCaseFixtureKey(key, func(cfg *axiom.Config) (*dbConn, func(), error) {
+				return &dbConn{dsn: cfg.Case.Name}, nil, nil
+			}),
+		),
+		func(cfg *axiom.Config) { got = key.Get(cfg) },
+	)
+
+	require.NotNil(t, got)
+	assert.Equal(t, "case", got.dsn)
+}
+
 func TestFixtureDef_SelfRegistersAndGet(t *testing.T) {
 	def := axiom.DefineFixture("db", func(cfg *axiom.Config) (*dbConn, func(), error) {
 		return &dbConn{dsn: cfg.Case.Name}, nil, nil
