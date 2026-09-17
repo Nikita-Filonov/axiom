@@ -59,6 +59,12 @@ func TestCaseExample(t *testing.T) {
 			axiom.WithRetryDelay(25),
 		),
 
+		// Lifecycle hooks scoped to this case (merged over Runner hooks)
+		axiom.WithCaseHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) {}),
+			axiom.WithAfterStep(func(cfg *axiom.Config, name string) {}),
+		),
+
 		// Arbitrary parameters passed into the test body
 		axiom.WithCaseParams(struct {
 			Username string

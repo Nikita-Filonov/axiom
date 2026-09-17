@@ -130,6 +130,30 @@ wraps are active, allowing reporting and tracing plugins to observe their steps 
 | `BeforeStep(cfg, name)` | before executing a step                           |
 | `AfterStep(cfg, name)`  | after executing a step (always, even if panicked) |
 
+### Runner vs case scope
+
+Hooks are registered with `WithRunnerHooks` (runner scope) or `WithCaseHooks` (a single case). Case hooks are merged
+over runner hooks in `BuildConfig`, so for any given case the order is *runner hooks, then case hooks*.
+
+```go
+func WithRunnerHooks(opts ...HooksOption) RunnerOption
+func WithCaseHooks(opts ...HooksOption) CaseOption
+```
+
+`WithRunnerHooks` accepts every hook. `WithCaseHooks` is meaningful only for **test- and step-scoped** hooks
+(`WithBeforeTest`, `WithAfterTest`, `WithBeforeStep`, `WithAfterStep`) — `BeforeAll`/`AfterAll` are runner-scoped and
+have no effect on a case.
+
+```go
+login := axiom.NewCase(
+	axiom.WithCaseName("flaky login"),
+	axiom.WithCaseHooks(
+		axiom.WithBeforeTest(func(cfg *axiom.Config) { /* seed data for this case only */ }),
+		axiom.WithAfterStep(func(cfg *axiom.Config, name string) { /* extra tracing */ }),
+	),
+)
+```
+
 ---
 
 ## Cleanup Boundary

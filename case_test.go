@@ -61,6 +61,59 @@ func TestWithCaseRetry(t *testing.T) {
 	assert.Equal(t, 10, int(c.Retry.Delay))
 }
 
+func TestWithCaseHooks(t *testing.T) {
+	c := axiom.NewCase(
+		axiom.WithCaseHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) {}),
+			axiom.WithAfterTest(func(cfg *axiom.Config) {}),
+		),
+		axiom.WithCaseHooks(
+			axiom.WithBeforeStep(func(cfg *axiom.Config, name string) {}),
+			axiom.WithAfterStep(func(cfg *axiom.Config, name string) {}),
+		),
+	)
+
+	assert.Len(t, c.Hooks.BeforeTest, 1)
+	assert.Len(t, c.Hooks.AfterTest, 1)
+	assert.Len(t, c.Hooks.BeforeStep, 1)
+	assert.Len(t, c.Hooks.AfterStep, 1)
+}
+
+func TestCaseHooks_FireDuringRunAndMergeOverRunner(t *testing.T) {
+	var events []string
+
+	r := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) { events = append(events, "runner:before") }),
+		),
+	)
+
+	c := axiom.NewCase(
+		axiom.WithCaseName("hooks"),
+		axiom.WithCaseHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) { events = append(events, "case:before") }),
+			axiom.WithAfterTest(func(cfg *axiom.Config) { events = append(events, "case:after") }),
+			axiom.WithBeforeStep(func(cfg *axiom.Config, name string) { events = append(events, "case:beforestep:"+name) }),
+			axiom.WithAfterStep(func(cfg *axiom.Config, name string) { events = append(events, "case:afterstep:"+name) }),
+		),
+	)
+
+	r.RunCase(t, c, func(cfg *axiom.Config) {
+		events = append(events, "action")
+		cfg.Step("login", func() { events = append(events, "step") })
+	})
+
+	assert.Equal(t, []string{
+		"runner:before",
+		"case:before",
+		"action",
+		"case:beforestep:login",
+		"step",
+		"case:afterstep:login",
+		"case:after",
+	}, events)
+}
+
 func TestWithCaseParams(t *testing.T) {
 	c := axiom.NewCase(
 		axiom.WithCaseParams(map[string]any{"u": 1}),

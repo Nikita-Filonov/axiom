@@ -56,6 +56,14 @@ func WithCaseRetry(opts ...RetryOption) CaseOption {
 	}
 }
 
+func WithCaseHooks(options ...HooksOption) CaseOption {
+	return func(c *Case) {
+		for _, option := range options {
+			option(&c.Hooks)
+		}
+	}
+}
+
 func WithCaseParams(params any) CaseOption {
 	return func(c *Case) { c.Params = params }
 }
