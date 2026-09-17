@@ -2,4 +2,4 @@ module github.com/Nikita-Filonov/axiom/plugins/testtracing
 
 go 1.25.5
 
-require github.com/Nikita-Filonov/axiom v1.12.0
+require github.com/Nikita-Filonov/axiom v1.13.0
