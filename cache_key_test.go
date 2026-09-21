@@ -180,13 +180,14 @@ func TestCacheKey_ValidatesArguments(t *testing.T) {
 
 	cache := axiom.NewCache()
 	key := axiom.NewCacheKey[int]("value")
+	var nilContext context.Context
 	for _, state := range []string{"miss", "hit"} {
 		t.Run(state, func(t *testing.T) {
 			if state == "hit" {
 				key.Set(cache, 1)
 			}
 			assert.PanicsWithValue(t, "cache: nil context", func() {
-				_, _ = key.GetOrCreate(nil, cache, func() (int, error) { return 1, nil })
+				_, _ = key.GetOrCreate(nilContext, cache, func() (int, error) { return 1, nil })
 			})
 			assert.PanicsWithValue(t, "cache: nil constructor", func() {
 				_, _ = key.GetOrCreate(t.Context(), cache, nil)
