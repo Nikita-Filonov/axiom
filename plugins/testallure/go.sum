@@ -1,5 +1,5 @@
-github.com/Nikita-Filonov/axiom v1.13.0 h1:BgZv0Rn70iJG9I+s8nQ2UCDM3ukc8TXKnw3xDXrNass=
-github.com/Nikita-Filonov/axiom v1.13.0/go.mod h1:N5tpw0of8q/Jlrf5xTCNpJXZbKCJSyu4K+r8heWOcgw=
+github.com/Nikita-Filonov/axiom v1.14.0 h1:bGdmHHH8RSUQ2yQQs7t0cB8Ay8VRTGSpUWkxQNiUaus=
+github.com/Nikita-Filonov/axiom v1.14.0/go.mod h1:N5tpw0of8q/Jlrf5xTCNpJXZbKCJSyu4K+r8heWOcgw=
 github.com/allure-framework/allure-go/commons v1.2.1 h1:eTRr1QFlI66A+/tyUWxpaJC5xZ7gO97kmJEY59QAztg=
 github.com/allure-framework/allure-go/commons v1.2.1/go.mod h1:h+DnKOe9nlqqZFi18LjWq6UVfj3uno5z8itU7+sysAE=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
