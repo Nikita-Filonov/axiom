@@ -28,6 +28,9 @@ during runner teardown.
 Resources are designed for **infrastructure-level dependencies** such as clients, connections, servers, or shared
 external systems.
 
+A resource can also own an empty [Cache](../cache), while ordinary fixtures populate it using the current test's
+Config. The cache coordinates value creation without changing resource or fixture lifecycle semantics.
+
 Unlike fixtures, resources:
 
 - are **shared across all test cases**

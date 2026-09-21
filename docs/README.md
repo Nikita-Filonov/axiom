@@ -15,6 +15,7 @@ framework. Each subfolder provides focused reference material and examples.
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./local](./local) — per-attempt typed local state stored on Config
+- [./cache](./cache) — standalone concurrent typed cache with coordinated creation and explicit ownership
 - [./toolset](./toolset) — typed helper bundles built into Local and consumed as cfg.Tools
 - [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./events](./events) — raw event stream for facts that hooks and wraps cannot observe directly

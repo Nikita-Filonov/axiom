@@ -174,6 +174,7 @@ following folders:
 - [./docs/case](./docs/case) — declarative test definitions, metadata, parameters, per-test configuration
 - [./docs/config](./docs/config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./docs/local](./docs/local) — per-attempt typed local state stored on Config
+- [./docs/cache](./docs/cache) — standalone concurrent typed cache with coordinated creation and explicit ownership
 - [./docs/toolset](./docs/toolset) — typed helper bundles built into Local and consumed as cfg.Tools
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup, typed keys and definitions

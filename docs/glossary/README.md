@@ -17,6 +17,7 @@ documents ([/docs/case](./../../docs/case), [/docs/runner](./../../docs/runner),
 | **Package**  | `TestMain`-level lifecycle boundary. `axiom.RunPackage` binds one shared `Runner` to the whole test binary so `BeforeAll`, `AfterAll`, and resource cleanups fire once per package. |
 | **Fixture**  | Lazily evaluated resource (e.g., DB connection). Created on first request, cached for the test duration, and cleaned up automatically.                                              |
 | **Resource** | Lazily evaluated runner-scoped dependency. Created on first request, shared across all test cases and retries, and cleaned up automatically.                                        |
+| **Cache**    | Standalone concurrent typed store with coordinated lazy creation. Shared by pointer, independent of test lifecycle, and does not own value cleanup.                                 |
 | **Meta**     | Test metadata: tags, epic, feature, severity, labels, stories, layers. Used for filtering, reporting, organization, and CI integration.                                             |
 | **Retry**    | Configuration controlling how many times a test may re-run and the delay between attempts.                                                                                          |
 | **Skip**     | Declarative mechanism to mark tests as skipped (static or dynamic).                                                                                                                 |
