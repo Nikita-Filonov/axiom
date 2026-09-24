@@ -6,17 +6,20 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Trace collects per-attempt event records. Its methods are safe for concurrent use.
 type Trace struct {
 	mu      sync.Mutex
 	records []TraceRecord
 }
 
+// TraceRecord stores one case's metadata and emitted events.
 type TraceRecord struct {
 	Case   axiom.Case
 	Meta   axiom.Meta
 	Events []axiom.Event
 }
 
+// NewTrace returns an empty event collector.
 func NewTrace() *Trace {
 	return &Trace{}
 }
@@ -37,6 +40,7 @@ func (t *Trace) startRecord(cfg *axiom.Config) int {
 	return len(t.records) - 1
 }
 
+// AppendToRecord adds an event to the record at index.
 func (t *Trace) AppendToRecord(index int, event axiom.Event) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -44,6 +48,7 @@ func (t *Trace) AppendToRecord(index int, event axiom.Event) {
 	t.records[index].Events = append(t.records[index].Events, event)
 }
 
+// Snapshot returns records with independent event slices and metadata copies.
 func (t *Trace) Snapshot() []TraceRecord {
 	t.mu.Lock()
 	defer t.mu.Unlock()

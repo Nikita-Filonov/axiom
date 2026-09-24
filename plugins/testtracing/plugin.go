@@ -2,6 +2,7 @@ package testtracing
 
 import "github.com/Nikita-Filonov/axiom"
 
+// Plugin records raw events from each test attempt in trace.
 func Plugin(trace *Trace) axiom.Plugin {
 	return func(cfg *axiom.Config) {
 		sink := newActiveSink(trace, cfg)
