@@ -4,6 +4,20 @@ Axiom extends Go's `testing` package. Keep it small, explicit, predictable, and
 compatible with ordinary `go test`. These rules apply to the core module, every
 plugin module, tests, examples, and documentation.
 
+## Before any pull request
+
+Every change, including a bug fix, refactor, plugin, dependency, test, or
+documentation update, starts with a written issue or discussion with the
+project author or a designated maintainer.
+
+1. Describe the observed problem, evidence or reproduction, impact, and desired
+   behavior. Establish the cause before proposing a patch to a symptom.
+2. Discuss the scope, approach, alternatives, and compatibility impact. Wait
+   for explicit maintainer agreement on the problem and proposed direction
+   before implementing or opening a PR.
+3. Link that discussion in the PR. A PR without documented prior agreement is
+   closed without an implementation review.
+
 ## Project principles
 
 - Prefer the simplest design that solves the demonstrated problem. Add a new
@@ -102,6 +116,8 @@ plugin module, tests, examples, and documentation.
 
 ### Submission and review
 
+- [ ] The PR links the prior discussion and the maintainer's agreement on the
+      problem and proposed direction.
 - [ ] The PR explains the problem, chosen approach, compatibility impact,
       affected modules, tests run, and documentation changed.
 - [ ] Formatting, vet, lint, tests, and coverage checks pass for the affected
