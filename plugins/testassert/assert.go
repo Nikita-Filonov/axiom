@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// HandleAssert evaluates a structured assertion against t.
 func HandleAssert(t *testing.T, a axiom.Assert) {
 	switch a.Type {
 
