@@ -1,5 +1,7 @@
 package axiom
 
+// GetParams returns the current Case's parameters as T. A type mismatch fails
+// the active subtest; nil cfg, Case, or SubT causes a panic.
 func GetParams[T any](cfg *Config) T {
 	if cfg == nil {
 		panic("params: nil config")
