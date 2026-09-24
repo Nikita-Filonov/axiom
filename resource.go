@@ -5,15 +5,23 @@ import (
 	"sync"
 )
 
+// Resource constructs a runner scoped value on first access through
+// [GetResource]. Successful values are shared across cases and retry attempts.
+// An optional cleanup runs after the runner's AfterAll hooks.
 type Resource func(r *Runner) (any, func(), error)
 
+// ResourceResult holds a constructed value and its optional cleanup in a
+// Runner's resource cache.
 type ResourceResult struct {
 	Value   any
 	Cleanup func()
 }
 
+// ResourceCleanup is a runner cleanup callback run in reverse setup order.
 type ResourceCleanup func(*Runner)
 
+// Resources stores definitions and values shared by a Runner. Concurrent
+// [GetResource] calls for the same name coordinate a single construction.
 type Resources struct {
 	mu    *sync.Mutex
 	onces map[string]*resourceOnce
@@ -30,8 +38,10 @@ type resourceOnce struct {
 	err     error
 }
 
+// ResourcesOption configures a Resources registry.
 type ResourcesOption func(*Resources)
 
+// NewResources creates a resource registry with the supplied options.
 func NewResources(options ...ResourcesOption) Resources {
 	r := Resources{}
 	for _, option := range options {
@@ -82,6 +92,10 @@ func (r *Resources) Copy() Resources {
 	return result
 }
 
+// Join merges definitions, cached values, and cleanup callbacks from other
+// into a new Resources value. This intentionally preserves already constructed
+// values by pointer. Each Runner retains its own cleanup stack, so a callback
+// copied into a joined Runner runs during that Runner's teardown as well.
 func (r *Resources) Join(other Resources) Resources {
 	result := r.Copy()
 
@@ -132,6 +146,10 @@ func (r *Resources) Teardown(runner *Runner) {
 	r.Cleanups = nil
 }
 
+// GetResource returns the named resource, constructing it once per runner on
+// first use. Concurrent callers share the result, including a construction
+// error, which remains cached for that runner. It returns an error for a
+// missing resource, construction failure, or type mismatch.
 func GetResource[T any](runner *Runner, name string) (T, error) {
 	var zero T
 
@@ -194,6 +212,7 @@ func GetResource[T any](runner *Runner, name string) (T, error) {
 	return out, nil
 }
 
+// MustResource returns the named resource or panics if [GetResource] fails.
 func MustResource[T any](runner *Runner, name string) T {
 	v, err := GetResource[T](runner, name)
 	if err != nil {
