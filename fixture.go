@@ -1,22 +1,33 @@
 package axiom
 
+// Fixture constructs a value on first access through [GetFixture] for one test
+// attempt. A successful construction may return a cleanup function; Axiom runs
+// it after AfterTest hooks, even when later test work fails. A construction
+// error fails the current subtest and does not register cleanup.
 type Fixture func(cfg *Config) (any, func(), error)
 
+// FixtureResult holds a constructed value and its optional cleanup in a
+// Config's fixture cache.
 type FixtureResult struct {
 	Value   any
 	Cleanup func()
 }
 
+// FixtureCleanup is an attempt cleanup callback run in reverse setup order.
 type FixtureCleanup func(*Config)
 
+// Fixtures stores definitions and attempt scoped values. Runner and Case
+// definitions are merged into a fresh registry and cache for each attempt.
 type Fixtures struct {
 	Registry map[string]Fixture
 	Cache    map[string]FixtureResult
 	Cleanups []FixtureCleanup
 }
 
+// FixturesOption configures a Fixtures registry.
 type FixturesOption func(*Fixtures)
 
+// NewFixtures creates a fixture registry with the supplied options.
 func NewFixtures(options ...FixturesOption) Fixtures {
 	f := Fixtures{}
 	for _, option := range options {
@@ -98,6 +109,9 @@ func (f *Fixtures) Teardown(cfg *Config) {
 	f.Cleanups = nil
 }
 
+// GetFixture returns the named value, constructing and caching it on first use
+// in cfg. A missing fixture, construction error, or type mismatch fails the
+// current subtest. It panics if cfg is nil.
 func GetFixture[T any](cfg *Config, name string) T {
 	var zero T
 
