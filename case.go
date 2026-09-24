@@ -1,5 +1,8 @@
 package axiom
 
+// Case describes one logical test without containing its test action. A
+// [Runner] merges its settings with the Case to build a [Config] for each
+// attempt. Each attempt receives a copy of the Case, including on retries.
 type Case struct {
 	ID          string
 	Name        string
@@ -16,8 +19,11 @@ type Case struct {
 	Description string
 }
 
+// CaseOption configures a Case during [NewCase].
 type CaseOption func(*Case)
 
+// NewCase returns a declarative Case with the supplied options. The test action
+// is passed separately to [Runner.RunCase] or [Suite.RunCase].
 func NewCase(options ...CaseOption) Case {
 	c := Case{}
 	for _, option := range options {
@@ -125,6 +131,8 @@ func WithCaseDescription(desc string) CaseOption {
 	return func(c *Case) { c.Description = desc }
 }
 
+// Copy returns a Case with independent copies of its configuration containers.
+// Values stored in Params and other user supplied values are not deep copied.
 func (c Case) Copy() Case {
 	result := Case{
 		ID:          c.ID,
