@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// EventType identifies a raw lifecycle or emitted fact in Axiom's event stream.
 type EventType string
 
 const (
@@ -51,15 +52,24 @@ func (t EventType) String() string {
 	return string(t)
 }
 
+// Event records a raw execution fact for runtime event sinks. It does not
+// determine final test status or carry merged Case metadata.
 type Event struct {
-	Time    string    `json:"time,omitempty"`
-	Name    string    `json:"name,omitempty"`
-	Type    EventType `json:"type"`
-	Message string    `json:"message,omitempty"`
+	// Time is filled by NewEvent in RFC3339Nano format when omitted.
+	Time string `json:"time,omitempty"`
+	// Name optionally identifies the step, fixture, or resource involved.
+	Name string `json:"name,omitempty"`
+	// Type identifies the fact or lifecycle transition.
+	Type EventType `json:"type"`
+	// Message holds optional text associated with the event.
+	Message string `json:"message,omitempty"`
 }
 
+// EventOption configures an Event before normalization.
 type EventOption func(*Event)
 
+// NewEvent returns an Event of eventType, assigning the current time unless
+// an option supplies one.
 func NewEvent(eventType EventType, options ...EventOption) Event {
 	e := Event{Type: eventType}
 	for _, option := range options {
@@ -78,6 +88,7 @@ func WithEventName(name string) EventOption {
 	return func(e *Event) { e.Name = name }
 }
 
+// WithEventMessage formats message as text for Event.Message.
 func WithEventMessage(message any) EventOption {
 	return func(e *Event) { e.Message = fmt.Sprint(message) }
 }
@@ -106,6 +117,7 @@ func NewArtefactEvent(a Artefact) Event {
 	)
 }
 
+// Normalize fills an empty Time with the current RFC3339Nano timestamp.
 func (e *Event) Normalize() {
 	if e.Time == "" {
 		e.Time = time.Now().Format(time.RFC3339Nano)
