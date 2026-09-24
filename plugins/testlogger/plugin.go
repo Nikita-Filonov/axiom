@@ -7,6 +7,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Plugin writes structured Axiom logs to a text slog handler on stdout.
 func Plugin() axiom.Plugin {
 	return func(cfg *axiom.Config) {
 		logger := slog.New(

@@ -6,6 +6,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// MapLevel converts an Axiom log level to its slog equivalent.
 func MapLevel(l axiom.LogLevel) slog.Level {
 	switch l {
 	case axiom.LogLevelDebug:
