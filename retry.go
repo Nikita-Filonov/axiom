@@ -47,6 +47,7 @@ func WithRetryDelay(delay time.Duration) RetryOption {
 	}
 }
 
+// Copy returns an independent Retry value.
 func (r *Retry) Copy() Retry {
 	return Retry{
 		Times:    r.Times,

@@ -18,6 +18,7 @@ func NewResourceKey[T any](name string) ResourceKey[T] {
 	return ResourceKey[T]{name: name}
 }
 
+// Name returns the resource key's name.
 func (k ResourceKey[T]) Name() string { return k.name }
 
 // Get resolves the resource and panics if it cannot be obtained.
@@ -55,12 +56,16 @@ func DefineResource[T any](name string, build TypedResource[T]) ResourceDef[T] {
 	return ResourceDef[T]{key: NewResourceKey[T](name), build: build}
 }
 
+// Key returns the typed key for this resource definition.
 func (d ResourceDef[T]) Key() ResourceKey[T] { return d.key }
 
+// Name returns the resource definition's name.
 func (d ResourceDef[T]) Name() string { return d.key.name }
 
+// Get returns this resource's value, constructing it on first access.
 func (d ResourceDef[T]) Get(runner *Runner) T { return d.key.Get(runner) }
 
+// TryGet returns this resource's value or its construction error.
 func (d ResourceDef[T]) TryGet(runner *Runner) (T, error) { return d.key.TryGet(runner) }
 
 func (d ResourceDef[T]) registerResource(r *Runner) {

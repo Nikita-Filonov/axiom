@@ -77,42 +77,49 @@ func WithAfterStep(hook StepHook) HooksOption {
 	}
 }
 
+// ApplyBeforeAll calls runner start hooks in registration order.
 func (h *Hooks) ApplyBeforeAll(r *Runner) {
 	for _, hook := range h.BeforeAll {
 		hook(r)
 	}
 }
 
+// ApplyAfterAll calls runner finish hooks in registration order.
 func (h *Hooks) ApplyAfterAll(r *Runner) {
 	for _, hook := range h.AfterAll {
 		hook(r)
 	}
 }
 
+// ApplyBeforeStep calls step start hooks in registration order.
 func (h *Hooks) ApplyBeforeStep(cfg *Config, name string) {
 	for _, hook := range h.BeforeStep {
 		hook(cfg, name)
 	}
 }
 
+// ApplyAfterStep calls step finish hooks in registration order.
 func (h *Hooks) ApplyAfterStep(cfg *Config, name string) {
 	for _, hook := range h.AfterStep {
 		hook(cfg, name)
 	}
 }
 
+// ApplyBeforeTest calls test start hooks in registration order.
 func (h *Hooks) ApplyBeforeTest(cfg *Config) {
 	for _, hook := range h.BeforeTest {
 		hook(cfg)
 	}
 }
 
+// ApplyAfterTest calls test finish hooks in registration order.
 func (h *Hooks) ApplyAfterTest(cfg *Config) {
 	for _, hook := range h.AfterTest {
 		hook(cfg)
 	}
 }
 
+// Copy returns Hooks with independent callback slices.
 func (h *Hooks) Copy() Hooks {
 	var result Hooks
 

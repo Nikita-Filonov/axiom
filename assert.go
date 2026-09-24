@@ -3,6 +3,7 @@ package axiom
 // AssertType identifies the kind of structured assertion fact.
 type AssertType string
 
+// AssertType values identify the assertion recorded by an Assert.
 const (
 	AssertEqual AssertType = "equal"
 	AssertTrue  AssertType = "true"
@@ -15,6 +16,7 @@ const (
 	AssertNotNil AssertType = "not-nil"
 )
 
+// String returns the assertion type name.
 func (t AssertType) String() string {
 	return string(t)
 }
@@ -70,6 +72,7 @@ func WithAssertError(err error) AssertOption {
 	return func(a *Assert) { a.Error = err }
 }
 
+// NewEqualAssert records expected and actual values for an equality assertion.
 func NewEqualAssert(expected, actual any, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertEqual),
@@ -79,6 +82,7 @@ func NewEqualAssert(expected, actual any, msg string) Assert {
 	)
 }
 
+// NewTrueAssert records a boolean value expected to be true.
 func NewTrueAssert(actual bool, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertTrue),
@@ -88,6 +92,7 @@ func NewTrueAssert(actual bool, msg string) Assert {
 	)
 }
 
+// NewFalseAssert records a boolean value expected to be false.
 func NewFalseAssert(actual bool, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertFalse),
@@ -97,6 +102,7 @@ func NewFalseAssert(actual bool, msg string) Assert {
 	)
 }
 
+// NewErrorAssert records an error expected to be non-nil.
 func NewErrorAssert(err error, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertError),
@@ -105,6 +111,7 @@ func NewErrorAssert(err error, msg string) Assert {
 	)
 }
 
+// NewNoErrorAssert records an error expected to be nil.
 func NewNoErrorAssert(err error, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertNoError),
@@ -113,6 +120,7 @@ func NewNoErrorAssert(err error, msg string) Assert {
 	)
 }
 
+// NewNilAssert records a value expected to be nil.
 func NewNilAssert(actual any, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertNil),
@@ -121,6 +129,7 @@ func NewNilAssert(actual any, msg string) Assert {
 	)
 }
 
+// NewNotNilAssert records a value expected to be non-nil.
 func NewNotNilAssert(actual any, msg string) Assert {
 	return NewAssert(
 		WithAssertType(AssertNotNil),

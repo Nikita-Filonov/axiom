@@ -15,6 +15,7 @@ func NewContextKey[T any](name string) ContextKey[T] {
 	return ContextKey[T]{name: name}
 }
 
+// Name returns the key's name.
 func (k ContextKey[T]) Name() string { return k.name }
 
 // Value returns an option that stores value under this key.

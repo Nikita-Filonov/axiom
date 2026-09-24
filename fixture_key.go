@@ -20,6 +20,7 @@ func NewFixtureKey[T any](name string) FixtureKey[T] {
 	return FixtureKey[T]{name: name}
 }
 
+// Name returns the fixture key's name.
 func (k FixtureKey[T]) Name() string { return k.name }
 
 // Get resolves the fixture in cfg through [GetFixture].
@@ -51,10 +52,13 @@ func DefineFixture[T any](name string, build TypedFixture[T]) FixtureDef[T] {
 	return FixtureDef[T]{key: NewFixtureKey[T](name), build: build}
 }
 
+// Key returns the typed key for this fixture definition.
 func (d FixtureDef[T]) Key() FixtureKey[T] { return d.key }
 
+// Name returns the fixture definition's name.
 func (d FixtureDef[T]) Name() string { return d.key.name }
 
+// Get returns this fixture's value for the current attempt.
 func (d FixtureDef[T]) Get(cfg *Config) T { return d.key.Get(cfg) }
 
 func (d FixtureDef[T]) registerRunnerFixture(r *Runner) {

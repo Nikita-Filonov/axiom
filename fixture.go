@@ -60,6 +60,7 @@ func WithFixturesMap(fixtures map[string]Fixture) FixturesOption {
 	}
 }
 
+// Copy returns Fixtures with independent maps and cleanup list.
 func (f *Fixtures) Copy() Fixtures {
 	result := Fixtures{}
 
@@ -81,6 +82,8 @@ func (f *Fixtures) Copy() Fixtures {
 	return result
 }
 
+// Join merges definitions from other into a new registry with an empty
+// attempt cache and cleanup list.
 func (f *Fixtures) Join(other Fixtures) Fixtures {
 	result := f.Copy()
 
@@ -96,6 +99,7 @@ func (f *Fixtures) Join(other Fixtures) Fixtures {
 	return result
 }
 
+// Normalize initializes missing registry and cache maps.
 func (f *Fixtures) Normalize() {
 	if f.Registry == nil {
 		f.Registry = map[string]Fixture{}
@@ -105,6 +109,7 @@ func (f *Fixtures) Normalize() {
 	}
 }
 
+// Teardown runs registered cleanups in reverse order.
 func (f *Fixtures) Teardown(cfg *Config) {
 	for i := len(f.Cleanups) - 1; i >= 0; i-- {
 		f.Cleanups[i](cfg)
@@ -168,6 +173,7 @@ func GetFixture[T any](cfg *Config, name string) T {
 	return out
 }
 
+// UseFixtures returns a callback that initializes named fixtures for an attempt.
 func UseFixtures(names ...string) func(cfg *Config) {
 	return func(cfg *Config) {
 		for _, name := range names {

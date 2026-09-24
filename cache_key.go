@@ -26,6 +26,7 @@ func NewCacheKey[T any](name string) CacheKey[T] {
 	return CacheKey[T]{name: name}
 }
 
+// Name returns the key's name.
 func (k CacheKey[T]) Name() string { return k.name }
 
 // Get returns a completed cached value. An absent or in-progress entry is a

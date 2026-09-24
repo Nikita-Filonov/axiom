@@ -177,6 +177,8 @@ func (s *SuiteRunner[T]) Run() {
 	}
 }
 
+// BuildSuite returns the configured suite instance or creates one with the
+// factory. It panics if the SuiteRunner is nil.
 func (s *SuiteRunner[T]) BuildSuite() T {
 	if s == nil {
 		panic("suite: nil SuiteRunner")
@@ -195,6 +197,7 @@ func (s *SuiteRunner[T]) BuildSuite() T {
 	return suite
 }
 
+// T returns the active subtest, or the root test when no subtest is active.
 func (s *Suite) T() *testing.T {
 	if s.SubT != nil {
 		return s.SubT
@@ -203,6 +206,7 @@ func (s *Suite) T() *testing.T {
 	return s.RootT
 }
 
+// SetRootT sets the test that owns the suite lifecycle.
 func (s *Suite) SetRootT(t *testing.T) {
 	if s == nil {
 		panic("suite: nil Suite")
@@ -211,6 +215,7 @@ func (s *Suite) SetRootT(t *testing.T) {
 	s.RootT = t
 }
 
+// SetSubT sets the currently active suite subtest.
 func (s *Suite) SetSubT(t *testing.T) {
 	if s == nil {
 		panic("suite: nil Suite")
@@ -219,6 +224,7 @@ func (s *Suite) SetSubT(t *testing.T) {
 	s.SubT = t
 }
 
+// SetRunner sets the runner used by subsequent suite cases.
 func (s *Suite) SetRunner(runner *Runner) {
 	if s == nil {
 		panic("suite: nil Suite")
@@ -227,6 +233,7 @@ func (s *Suite) SetRunner(runner *Runner) {
 	s.Runner = runner
 }
 
+// RunCase executes c under the active suite subtest and runner.
 func (s *Suite) RunCase(c Case, a TestAction) {
 	if s == nil {
 		panic("suite: nil Suite")

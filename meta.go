@@ -3,6 +3,7 @@ package axiom
 // Severity classifies a case for reporting and filtering.
 type Severity string
 
+// Severity values classify the reported impact of a case.
 const (
 	SeverityBlocker  Severity = "blocker"
 	SeverityCritical Severity = "critical"
@@ -140,6 +141,7 @@ func WithMetaTestCases(testCases []string) MetaOption {
 	return func(m *Meta) { m.TestCases = append(m.TestCases, testCases...) }
 }
 
+// Copy returns a Meta value with independent slices and labels map.
 func (m *Meta) Copy() Meta {
 	result := Meta{
 		Epic:        m.Epic,

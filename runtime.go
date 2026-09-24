@@ -105,6 +105,7 @@ func WithRuntimeArtefactSink(s SinkArtefactAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitArtefactSink(s) }
 }
 
+// EmitTestWrap appends a non-nil test wrapper.
 func (r *Runtime) EmitTestWrap(w WrapTestAction) {
 	if w == nil {
 		return
@@ -112,6 +113,7 @@ func (r *Runtime) EmitTestWrap(w WrapTestAction) {
 	r.TestWraps = append(r.TestWraps, w)
 }
 
+// EmitStepWrap appends a non-nil step wrapper.
 func (r *Runtime) EmitStepWrap(w WrapStepAction) {
 	if w == nil {
 		return
@@ -119,6 +121,7 @@ func (r *Runtime) EmitStepWrap(w WrapStepAction) {
 	r.StepWraps = append(r.StepWraps, w)
 }
 
+// EmitSetupWrap appends a non-nil setup wrapper.
 func (r *Runtime) EmitSetupWrap(w WrapSetupAction) {
 	if w == nil {
 		return
@@ -126,6 +129,7 @@ func (r *Runtime) EmitSetupWrap(w WrapSetupAction) {
 	r.SetupWraps = append(r.SetupWraps, w)
 }
 
+// EmitTeardownWrap appends a non-nil teardown wrapper.
 func (r *Runtime) EmitTeardownWrap(w WrapTeardownAction) {
 	if w == nil {
 		return
@@ -133,6 +137,7 @@ func (r *Runtime) EmitTeardownWrap(w WrapTeardownAction) {
 	r.TeardownWraps = append(r.TeardownWraps, w)
 }
 
+// EmitLogSink appends a non-nil log sink.
 func (r *Runtime) EmitLogSink(s SinkLogAction) {
 	if s == nil {
 		return
@@ -140,6 +145,7 @@ func (r *Runtime) EmitLogSink(s SinkLogAction) {
 	r.LogSinks = append(r.LogSinks, s)
 }
 
+// EmitEventSink appends a non-nil event sink.
 func (r *Runtime) EmitEventSink(s SinkEventAction) {
 	if s == nil {
 		return
@@ -147,6 +153,7 @@ func (r *Runtime) EmitEventSink(s SinkEventAction) {
 	r.EventSinks = append(r.EventSinks, s)
 }
 
+// EmitAssertSink appends a non-nil assertion sink.
 func (r *Runtime) EmitAssertSink(s SinkAssertAction) {
 	if s == nil {
 		return
@@ -154,6 +161,7 @@ func (r *Runtime) EmitAssertSink(s SinkAssertAction) {
 	r.AssertSinks = append(r.AssertSinks, s)
 }
 
+// EmitArtefactSink appends a non-nil artefact sink.
 func (r *Runtime) EmitArtefactSink(s SinkArtefactAction) {
 	if s == nil {
 		return
@@ -161,6 +169,7 @@ func (r *Runtime) EmitArtefactSink(s SinkArtefactAction) {
 	r.ArtefactSinks = append(r.ArtefactSinks, s)
 }
 
+// Step runs a named action through registered step wrappers.
 func (r *Runtime) Step(name string, fn func()) {
 	wrapped := fn
 	for i := len(r.StepWraps) - 1; i >= 0; i-- {
@@ -170,6 +179,7 @@ func (r *Runtime) Step(name string, fn func()) {
 	wrapped()
 }
 
+// Test runs an attempt through registered test wrappers.
 func (r *Runtime) Test(c *Config, action TestAction) {
 	wrapped := action
 	for i := len(r.TestWraps) - 1; i >= 0; i-- {
@@ -179,6 +189,7 @@ func (r *Runtime) Test(c *Config, action TestAction) {
 	wrapped(c)
 }
 
+// Setup runs a named action through registered setup wrappers.
 func (r *Runtime) Setup(name string, fn func()) {
 	wrapped := fn
 	for i := len(r.SetupWraps) - 1; i >= 0; i-- {
@@ -187,6 +198,7 @@ func (r *Runtime) Setup(name string, fn func()) {
 	wrapped()
 }
 
+// Teardown runs a named action through registered teardown wrappers.
 func (r *Runtime) Teardown(name string, fn func()) {
 	wrapped := fn
 	for i := len(r.TeardownWraps) - 1; i >= 0; i-- {
@@ -195,30 +207,35 @@ func (r *Runtime) Teardown(name string, fn func()) {
 	wrapped()
 }
 
+// Log sends a structured log to registered sinks.
 func (r *Runtime) Log(l Log) {
 	for _, sink := range r.LogSinks {
 		sink(l)
 	}
 }
 
+// Event sends a raw event to registered sinks.
 func (r *Runtime) Event(e Event) {
 	for _, sink := range r.EventSinks {
 		sink(e)
 	}
 }
 
+// Assert sends an assertion fact to registered sinks.
 func (r *Runtime) Assert(a Assert) {
 	for _, sink := range r.AssertSinks {
 		sink(a)
 	}
 }
 
+// Artefact sends an artefact to registered sinks.
 func (r *Runtime) Artefact(a Artefact) {
 	for _, sink := range r.ArtefactSinks {
 		sink(a)
 	}
 }
 
+// Copy returns a Runtime with independent wrapper and sink slices.
 func (r *Runtime) Copy() Runtime {
 	var result Runtime
 

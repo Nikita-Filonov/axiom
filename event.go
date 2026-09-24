@@ -8,6 +8,7 @@ import (
 // EventType identifies a raw lifecycle or emitted fact in Axiom's event stream.
 type EventType string
 
+// EventType values identify lifecycle and emitted facts in the event stream.
 const (
 	EventTypeRunnerBeforeAllStart  EventType = "runner.before-all.start"
 	EventTypeRunnerBeforeAllFinish EventType = "runner.before-all.finish"
@@ -48,6 +49,7 @@ const (
 	EventTypeArtefact EventType = "artefact"
 )
 
+// String returns the event type name.
 func (t EventType) String() string {
 	return string(t)
 }
@@ -96,6 +98,7 @@ func WithEventMessage(message any) EventOption {
 	return func(e *Event) { e.Message = fmt.Sprint(message) }
 }
 
+// NewLogEvent records a structured log as a raw event.
 func NewLogEvent(l Log) Event {
 	return NewEvent(
 		EventTypeLog,
@@ -104,6 +107,7 @@ func NewLogEvent(l Log) Event {
 	)
 }
 
+// NewAssertEvent records an assertion as a raw event.
 func NewAssertEvent(a Assert) Event {
 	return NewEvent(
 		EventTypeAssert,
@@ -112,6 +116,7 @@ func NewAssertEvent(a Assert) Event {
 	)
 }
 
+// NewArtefactEvent records an artefact as a raw event.
 func NewArtefactEvent(a Artefact) Event {
 	return NewEvent(
 		EventTypeArtefact,

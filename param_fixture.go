@@ -21,8 +21,10 @@ func DefineParamFixture[P, T any](
 	return ParamFixture[P, T]{key: NewFixtureKey[T](name), build: build}
 }
 
+// Name returns the parameterized fixture's name.
 func (f ParamFixture[P, T]) Name() string { return f.key.name }
 
+// Key returns the typed key for the parameterized fixture.
 func (f ParamFixture[P, T]) Key() FixtureKey[T] { return f.key }
 
 // For returns a Case fixture registration with params bound to its constructor.

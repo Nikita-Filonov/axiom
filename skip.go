@@ -54,6 +54,7 @@ func SkipBecause(reason string) SkipOption {
 	}
 }
 
+// Copy returns an independent Skip value.
 func (s *Skip) Copy() Skip {
 	return Skip{
 		Reason:     s.Reason,

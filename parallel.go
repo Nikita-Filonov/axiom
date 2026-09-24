@@ -37,6 +37,7 @@ func WithParallelDisabled() ParallelOption {
 	}
 }
 
+// Copy returns an independent Parallel value.
 func (p *Parallel) Copy() Parallel {
 	return Parallel{Enabled: p.Enabled, EnabledSet: p.EnabledSet}
 }

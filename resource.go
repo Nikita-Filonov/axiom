@@ -73,6 +73,8 @@ func WithResourcesMap(resources map[string]Resource) ResourcesOption {
 	}
 }
 
+// Copy returns Resources with independent maps and cleanup list. Cached values
+// and cleanup functions remain shared.
 func (r *Resources) Copy() Resources {
 	result := Resources{mu: &sync.Mutex{}}
 
@@ -127,6 +129,7 @@ func (r *Resources) Join(other Resources) Resources {
 	return result
 }
 
+// Normalize initializes internal synchronization and missing maps.
 func (r *Resources) Normalize() {
 	if r.mu == nil {
 		r.mu = &sync.Mutex{}
@@ -142,6 +145,7 @@ func (r *Resources) Normalize() {
 	}
 }
 
+// Teardown runs registered resource cleanups in reverse order.
 func (r *Resources) Teardown(runner *Runner) {
 	for i := len(r.Cleanups) - 1; i >= 0; i-- {
 		r.Cleanups[i](runner)
@@ -224,6 +228,7 @@ func MustResource[T any](runner *Runner, name string) T {
 	return v
 }
 
+// UseResources returns a callback that initializes named runner resources.
 func UseResources(names ...string) func(r *Runner) {
 	return func(r *Runner) {
 		for _, name := range names {

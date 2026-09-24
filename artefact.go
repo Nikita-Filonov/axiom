@@ -7,12 +7,14 @@ import (
 // ArtefactType identifies the format of an Artefact's data.
 type ArtefactType string
 
+// ArtefactType values describe the format sent to artefact sinks.
 const (
 	ArtefactTypeText  ArtefactType = "text"
 	ArtefactTypeJSON  ArtefactType = "json"
 	ArtefactTypeBytes ArtefactType = "bytes"
 )
 
+// String returns the artefact format name.
 func (t ArtefactType) String() string {
 	return string(t)
 }

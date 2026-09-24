@@ -3,6 +3,7 @@ package axiom
 // LogLevel classifies a structured Log for runtime sinks.
 type LogLevel string
 
+// LogLevel values classify structured log messages.
 const (
 	LogLevelDebug   LogLevel = "debug"
 	LogLevelInfo    LogLevel = "info"
@@ -11,6 +12,7 @@ const (
 	LogLevelFatal   LogLevel = "fatal"
 )
 
+// String returns the log level name.
 func (l LogLevel) String() string {
 	return string(l)
 }
@@ -44,6 +46,7 @@ func WithLogLevel(level LogLevel) LogOption {
 	return func(l *Log) { l.Level = level }
 }
 
+// NewDebugLog creates a debug-level log message.
 func NewDebugLog(text string) Log {
 	return NewLog(
 		WithLogLevel(LogLevelDebug),
@@ -51,6 +54,7 @@ func NewDebugLog(text string) Log {
 	)
 }
 
+// NewInfoLog creates an info-level log message.
 func NewInfoLog(text string) Log {
 	return NewLog(
 		WithLogLevel(LogLevelInfo),
@@ -58,6 +62,7 @@ func NewInfoLog(text string) Log {
 	)
 }
 
+// NewWarningLog creates a warning-level log message.
 func NewWarningLog(text string) Log {
 	return NewLog(
 		WithLogLevel(LogLevelWarning),
@@ -65,6 +70,7 @@ func NewWarningLog(text string) Log {
 	)
 }
 
+// NewErrorLog creates an error-level log message.
 func NewErrorLog(text string) Log {
 	return NewLog(
 		WithLogLevel(LogLevelError),
@@ -72,6 +78,7 @@ func NewErrorLog(text string) Log {
 	)
 }
 
+// NewFatalLog creates a fatal-level log message.
 func NewFatalLog(text string) Log {
 	return NewLog(
 		WithLogLevel(LogLevelFatal),

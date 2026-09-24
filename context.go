@@ -96,6 +96,7 @@ func (c *Context) SetData(key string, value any) {
 	c.Data[key] = value
 }
 
+// Copy returns a Context with an independent Data map.
 func (c *Context) Copy() Context {
 	result := Context{
 		Raw: c.Raw,

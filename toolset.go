@@ -59,11 +59,13 @@ func (t Toolset[T]) Action(action func(*Config, T)) TestAction {
 	}
 }
 
+// Get returns the bundle bound to cfg and whether it is present.
 func (t Toolset[T]) Get(cfg *Config) (T, bool) {
 	t.validate()
 	return GetLocal(cfg, t.key)
 }
 
+// Must returns the bundle bound to cfg or panics if it is absent.
 func (t Toolset[T]) Must(cfg *Config) T {
 	t.validate()
 	return MustLocal(cfg, t.key)
