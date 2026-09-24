@@ -24,6 +24,7 @@ func NewSuiteConfig(options ...SuiteConfigOption) SuiteConfig {
 	return cfg
 }
 
+// WithSuiteConfigRunner sets the default Runner for registered suite tests.
 func WithSuiteConfigRunner(runner *Runner) SuiteConfigOption {
 	return func(cfg *SuiteConfig) { cfg.Runner = runner }
 }

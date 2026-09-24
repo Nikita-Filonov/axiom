@@ -50,6 +50,7 @@ func NewResources(options ...ResourcesOption) Resources {
 	return r
 }
 
+// WithResource registers a named resource definition in Resources.
 func WithResource(name string, resource Resource) ResourcesOption {
 	return func(r *Resources) {
 		if r.Registry == nil {
@@ -59,6 +60,8 @@ func WithResource(name string, resource Resource) ResourcesOption {
 	}
 }
 
+// WithResourcesMap copies named definitions into Resources, replacing matching
+// names without taking ownership of the input map.
 func WithResourcesMap(resources map[string]Resource) ResourcesOption {
 	return func(r *Resources) {
 		if r.Registry == nil {

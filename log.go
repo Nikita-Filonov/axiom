@@ -34,10 +34,12 @@ func NewLog(options ...LogOption) Log {
 	return l
 }
 
+// WithLogText sets the structured log message.
 func WithLogText(text string) LogOption {
 	return func(l *Log) { l.Text = text }
 }
 
+// WithLogLevel sets the level dispatched to log sinks.
 func WithLogLevel(level LogLevel) LogOption {
 	return func(l *Log) { l.Level = level }
 }

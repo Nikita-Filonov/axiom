@@ -33,22 +33,28 @@ func NewContext(options ...ContextOption) Context {
 	return c
 }
 
+// WithContextRaw sets the base context used for unset DB, MQ, and RPC fields
+// during normalization.
 func WithContextRaw(ctx context.Context) ContextOption {
 	return func(c *Context) { c.Raw = ctx }
 }
 
+// WithContextDB sets the database execution context.
 func WithContextDB(ctx context.Context) ContextOption {
 	return func(c *Context) { c.DB = ctx }
 }
 
+// WithContextMQ sets the message queue execution context.
 func WithContextMQ(ctx context.Context) ContextOption {
 	return func(c *Context) { c.MQ = ctx }
 }
 
+// WithContextRPC sets the outbound call execution context.
 func WithContextRPC(ctx context.Context) ContextOption {
 	return func(c *Context) { c.RPC = ctx }
 }
 
+// WithContextData stores a named value, replacing an existing value for key.
 func WithContextData(key string, value any) ContextOption {
 	return func(c *Context) {
 		if c.Data == nil {

@@ -53,6 +53,7 @@ func NewRunner(options ...RunnerOption) *Runner {
 	return r
 }
 
+// WithRunnerMeta merges metadata into the Runner defaults.
 func WithRunnerMeta(options ...MetaOption) RunnerOption {
 	return func(r *Runner) {
 		m := NewMeta(options...)
@@ -60,6 +61,7 @@ func WithRunnerMeta(options ...MetaOption) RunnerOption {
 	}
 }
 
+// WithRunnerSkip merges skip settings into the Runner defaults.
 func WithRunnerSkip(options ...SkipOption) RunnerOption {
 	return func(r *Runner) {
 		s := NewSkip(options...)
@@ -67,6 +69,7 @@ func WithRunnerSkip(options ...SkipOption) RunnerOption {
 	}
 }
 
+// WithRunnerRetry merges retry settings into the Runner defaults.
 func WithRunnerRetry(options ...RetryOption) RunnerOption {
 	return func(r *Runner) {
 		rr := NewRetry(options...)
@@ -74,6 +77,7 @@ func WithRunnerRetry(options ...RetryOption) RunnerOption {
 	}
 }
 
+// WithRunnerHooks appends lifecycle hooks to the Runner.
 func WithRunnerHooks(options ...HooksOption) RunnerOption {
 	return func(r *Runner) {
 		for _, option := range options {
@@ -82,6 +86,7 @@ func WithRunnerHooks(options ...HooksOption) RunnerOption {
 	}
 }
 
+// WithRunnerContext merges execution contexts and named data into the Runner.
 func WithRunnerContext(options ...ContextOption) RunnerOption {
 	return func(r *Runner) {
 		c := NewContext(options...)
@@ -89,6 +94,7 @@ func WithRunnerContext(options ...ContextOption) RunnerOption {
 	}
 }
 
+// WithRunnerRuntime appends wrappers and sinks to the Runner runtime.
 func WithRunnerRuntime(options ...RuntimeOption) RunnerOption {
 	return func(r *Runner) {
 		c := NewRuntime(options...)
@@ -96,12 +102,14 @@ func WithRunnerRuntime(options ...RuntimeOption) RunnerOption {
 	}
 }
 
+// WithRunnerPlugins appends plugins applied before Case plugins.
 func WithRunnerPlugins(plugins ...Plugin) RunnerOption {
 	return func(r *Runner) {
 		r.Plugins = append(r.Plugins, plugins...)
 	}
 }
 
+// WithRunnerParallel sets the default parallel policy for Cases.
 func WithRunnerParallel(options ...ParallelOption) RunnerOption {
 	return func(r *Runner) {
 		p := NewParallel(options...)
@@ -109,6 +117,8 @@ func WithRunnerParallel(options ...ParallelOption) RunnerOption {
 	}
 }
 
+// WithRunnerFixture registers a named fixture definition available to Cases.
+// Each attempt still constructs and cleans up its own value.
 func WithRunnerFixture(name string, fx Fixture) RunnerOption {
 	return func(r *Runner) {
 		if r.Fixtures.Registry == nil {
@@ -118,6 +128,8 @@ func WithRunnerFixture(name string, fx Fixture) RunnerOption {
 	}
 }
 
+// WithRunnerFixtureKey registers a typed fixture definition. It panics for an
+// invalid key or nil constructor.
 func WithRunnerFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) RunnerOption {
 	key.validate()
 	if build == nil {
@@ -129,6 +141,7 @@ func WithRunnerFixtureKey[T any](key FixtureKey[T], build TypedFixture[T]) Runne
 	})
 }
 
+// WithRunnerFixtures registers a batch of typed fixture definitions.
 func WithRunnerFixtures(defs ...RunnerFixtureRegistrar) RunnerOption {
 	return func(r *Runner) {
 		for _, def := range defs {
@@ -137,6 +150,8 @@ func WithRunnerFixtures(defs ...RunnerFixtureRegistrar) RunnerOption {
 	}
 }
 
+// WithRunnerResource registers a named resource constructed on first access
+// and shared for the Runner lifecycle.
 func WithRunnerResource(name string, rs Resource) RunnerOption {
 	return func(r *Runner) {
 		if r.Resources.Registry == nil {
@@ -146,6 +161,8 @@ func WithRunnerResource(name string, rs Resource) RunnerOption {
 	}
 }
 
+// WithRunnerResourceKey registers a typed resource definition. It panics for
+// an invalid key or nil constructor.
 func WithRunnerResourceKey[T any](key ResourceKey[T], build TypedResource[T]) RunnerOption {
 	key.validate()
 	if build == nil {
@@ -157,6 +174,7 @@ func WithRunnerResourceKey[T any](key ResourceKey[T], build TypedResource[T]) Ru
 	})
 }
 
+// WithRunnerResources registers a batch of typed resource definitions.
 func WithRunnerResources(defs ...ResourceRegistrar) RunnerOption {
 	return func(r *Runner) {
 		for _, def := range defs {

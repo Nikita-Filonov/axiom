@@ -33,36 +33,44 @@ func NewHooks(options ...HooksOption) Hooks {
 	return h
 }
 
+// WithBeforeAll appends a hook run once when a Runner starts.
 func WithBeforeAll(hook AllHook) HooksOption {
 	return func(h *Hooks) {
 		h.BeforeAll = append(h.BeforeAll, hook)
 	}
 }
 
+// WithAfterAll appends a hook run once when a Runner finishes.
 func WithAfterAll(hook AllHook) HooksOption {
 	return func(h *Hooks) {
 		h.AfterAll = append(h.AfterAll, hook)
 	}
 }
 
+// WithBeforeTest appends a hook run before each test attempt body.
 func WithBeforeTest(hook TestHook) HooksOption {
 	return func(h *Hooks) {
 		h.BeforeTest = append(h.BeforeTest, hook)
 	}
 }
 
+// WithAfterTest appends a hook run after each attempt body and before fixture
+// cleanup, including when the body panics.
 func WithAfterTest(hook TestHook) HooksOption {
 	return func(h *Hooks) {
 		h.AfterTest = append(h.AfterTest, hook)
 	}
 }
 
+// WithBeforeStep appends a hook run before each named step body.
 func WithBeforeStep(hook StepHook) HooksOption {
 	return func(h *Hooks) {
 		h.BeforeStep = append(h.BeforeStep, hook)
 	}
 }
 
+// WithAfterStep appends a hook run after each named step body, including when
+// the body panics.
 func WithAfterStep(hook StepHook) HooksOption {
 	return func(h *Hooks) {
 		h.AfterStep = append(h.AfterStep, hook)

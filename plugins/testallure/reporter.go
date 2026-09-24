@@ -41,16 +41,23 @@ func defaultTOptions() tOptions {
 	return tOptions{inlineStack: true, attachStack: true, attachmentName: defaultStackAttachmentName}
 }
 
+// TOption configures the assertion adapter returned by T.
 type TOption func(*tOptions)
 
+// WithInlineStack controls whether assertion errors include a stack trace in
+// their message. It is enabled by default.
 func WithInlineStack(enabled bool) TOption {
 	return func(o *tOptions) { o.inlineStack = enabled }
 }
 
+// WithStackAttachment controls whether assertion errors attach a separate
+// stack trace. It is enabled by default.
 func WithStackAttachment(enabled bool) TOption {
 	return func(o *tOptions) { o.attachStack = enabled }
 }
 
+// WithStackAttachmentName names the stack trace attachment. An empty name
+// leaves the default name unchanged.
 func WithStackAttachmentName(name string) TOption {
 	return func(o *tOptions) {
 		if name != "" {

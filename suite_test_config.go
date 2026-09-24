@@ -20,6 +20,8 @@ func NewSuiteTestConfig(options ...SuiteTestConfigOption) SuiteTestConfig {
 	return cfg
 }
 
+// WithSuiteTestRunner selects a Runner for one registered suite test. It
+// replaces the suite Runner unless the two are explicitly composed.
 func WithSuiteTestRunner(runner *Runner) SuiteTestConfigOption {
 	return func(cfg *SuiteTestConfig) { cfg.Runner = runner }
 }

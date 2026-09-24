@@ -80,10 +80,13 @@ func NewEvent(eventType EventType, options ...EventOption) Event {
 	return e
 }
 
+// WithEventTime sets the event timestamp. An empty value is replaced with the
+// current time when the Event is normalized.
 func WithEventTime(t string) EventOption {
 	return func(e *Event) { e.Time = t }
 }
 
+// WithEventName sets the optional step, fixture, or resource name.
 func WithEventName(name string) EventOption {
 	return func(e *Event) { e.Name = name }
 }

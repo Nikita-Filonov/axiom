@@ -12,6 +12,7 @@ type Config struct {
 	Exclude []string
 }
 
+// ConfigOption configures tag filtering.
 type ConfigOption func(*Config)
 
 func NewConfig(opts ...ConfigOption) Config {
@@ -22,6 +23,7 @@ func NewConfig(opts ...ConfigOption) Config {
 	return c
 }
 
+// WithConfigInclude appends normalized tags that cases may match to run.
 func WithConfigInclude(tags ...string) ConfigOption {
 	return func(c *Config) {
 		for _, t := range tags {
@@ -30,6 +32,7 @@ func WithConfigInclude(tags ...string) ConfigOption {
 	}
 }
 
+// WithConfigExclude appends normalized tags that cause matching cases to skip.
 func WithConfigExclude(tags ...string) ConfigOption {
 	return func(c *Config) {
 		for _, t := range tags {
@@ -38,6 +41,8 @@ func WithConfigExclude(tags ...string) ConfigOption {
 	}
 }
 
+// ConfigFromEnv appends include and exclude tags from the corresponding
+// AXIOM_TEST_TAGS_INCLUDE and AXIOM_TEST_TAGS_EXCLUDE variables.
 func ConfigFromEnv() ConfigOption {
 	return func(c *Config) {
 		c.Include = append(c.Include, ParseList(os.Getenv(AxiomTestTagsInclude))...)

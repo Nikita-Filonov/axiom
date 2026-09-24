@@ -37,6 +37,7 @@ func NewFixtures(options ...FixturesOption) Fixtures {
 	return f
 }
 
+// WithFixture registers a named fixture definition in Fixtures.
 func WithFixture(name string, fixture Fixture) FixturesOption {
 	return func(f *Fixtures) {
 		if f.Registry == nil {
@@ -46,6 +47,8 @@ func WithFixture(name string, fixture Fixture) FixturesOption {
 	}
 }
 
+// WithFixturesMap copies named definitions into Fixtures, replacing matching
+// names without taking ownership of the input map.
 func WithFixturesMap(fixtures map[string]Fixture) FixturesOption {
 	return func(f *Fixtures) {
 		if f.Registry == nil {

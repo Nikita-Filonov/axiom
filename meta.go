@@ -43,58 +43,72 @@ func NewMeta(options ...MetaOption) Meta {
 	return m
 }
 
+// WithMetaEpic sets the epic classification.
 func WithMetaEpic(epic string) MetaOption {
 	return func(m *Meta) { m.Epic = epic }
 }
 
+// WithMetaSuite sets the suite name used in reports.
 func WithMetaSuite(suite string) MetaOption {
 	return func(m *Meta) { m.Suite = suite }
 }
 
+// WithMetaStory sets the story classification.
 func WithMetaStory(story string) MetaOption {
 	return func(m *Meta) { m.Story = story }
 }
 
+// WithMetaLayer sets the test layer classification.
 func WithMetaLayer(layer string) MetaOption {
 	return func(m *Meta) { m.Layer = layer }
 }
 
+// WithMetaFeature sets the feature classification.
 func WithMetaFeature(feature string) MetaOption {
 	return func(m *Meta) { m.Feature = feature }
 }
 
+// WithMetaPlatform sets the platform classification.
 func WithMetaPlatform(platform string) MetaOption {
 	return func(m *Meta) { m.Platform = platform }
 }
 
+// WithMetaSeverity sets the reported severity.
 func WithMetaSeverity(severity Severity) MetaOption {
 	return func(m *Meta) { m.Severity = severity }
 }
 
+// WithMetaSubSuite sets the nested suite name used in reports.
 func WithMetaSubSuite(subSuite string) MetaOption {
 	return func(m *Meta) { m.SubSuite = subSuite }
 }
 
+// WithMetaParentSuite sets the parent suite name used in reports.
 func WithMetaParentSuite(parentSuite string) MetaOption {
 	return func(m *Meta) { m.ParentSuite = parentSuite }
 }
 
+// WithMetaTag appends one tag.
 func WithMetaTag(tag string) MetaOption {
 	return func(m *Meta) { m.Tags = append(m.Tags, tag) }
 }
 
+// WithMetaTags appends tags in the supplied order.
 func WithMetaTags(tags ...string) MetaOption {
 	return func(m *Meta) { m.Tags = append(m.Tags, tags...) }
 }
 
+// WithMetaIssue appends one issue reference.
 func WithMetaIssue(issue string) MetaOption {
 	return func(m *Meta) { m.Issues = append(m.Issues, issue) }
 }
 
+// WithMetaIssues appends issue references in the supplied order.
 func WithMetaIssues(issues ...string) MetaOption {
 	return func(m *Meta) { m.Issues = append(m.Issues, issues...) }
 }
 
+// WithMetaLabel sets one label, replacing an existing value for key.
 func WithMetaLabel(key, value string) MetaOption {
 	return func(m *Meta) {
 		if m.Labels == nil {
@@ -104,6 +118,7 @@ func WithMetaLabel(key, value string) MetaOption {
 	}
 }
 
+// WithMetaLabels copies labels into Meta, replacing matching keys.
 func WithMetaLabels(labels map[string]string) MetaOption {
 	return func(m *Meta) {
 		if m.Labels == nil {
@@ -115,10 +130,12 @@ func WithMetaLabels(labels map[string]string) MetaOption {
 	}
 }
 
+// WithMetaTestCase appends one external test case reference.
 func WithMetaTestCase(testCase string) MetaOption {
 	return func(m *Meta) { m.TestCases = append(m.TestCases, testCase) }
 }
 
+// WithMetaTestCases appends external test case references.
 func WithMetaTestCases(testCases []string) MetaOption {
 	return func(m *Meta) { m.TestCases = append(m.TestCases, testCases...) }
 }

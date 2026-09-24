@@ -38,10 +38,12 @@ func NewArtefact(options ...ArtefactOption) Artefact {
 	return a
 }
 
+// WithArtefactName sets the name shown to artefact sinks.
 func WithArtefactName(name string) ArtefactOption {
 	return func(a *Artefact) { a.Name = name }
 }
 
+// WithArtefactType identifies the format of the artefact data.
 func WithArtefactType(t ArtefactType) ArtefactOption {
 	return func(a *Artefact) { a.Type = t }
 }

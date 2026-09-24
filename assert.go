@@ -45,22 +45,27 @@ func NewAssert(options ...AssertOption) Assert {
 	return a
 }
 
+// WithAssertType sets the kind of assertion fact.
 func WithAssertType(t AssertType) AssertOption {
 	return func(a *Assert) { a.Type = t }
 }
 
+// WithAssertMessage sets descriptive text for the assertion fact.
 func WithAssertMessage(msg string) AssertOption {
 	return func(a *Assert) { a.Message = msg }
 }
 
+// WithAssertExpected records the expected value without evaluating it.
 func WithAssertExpected(v any) AssertOption {
 	return func(a *Assert) { a.Expected = v }
 }
 
+// WithAssertActual records the observed value without evaluating it.
 func WithAssertActual(v any) AssertOption {
 	return func(a *Assert) { a.Actual = v }
 }
 
+// WithAssertError records an error for an assertion fact.
 func WithAssertError(err error) AssertOption {
 	return func(a *Assert) { a.Error = err }
 }

@@ -51,7 +51,8 @@ type Runtime struct {
 	ArtefactSinks []SinkArtefactAction
 }
 
-// RuntimeOption registers a wrapper or sink on a Runtime.
+// RuntimeOption registers a wrapper or sink on a Runtime. Nil wrappers and
+// sinks are ignored.
 type RuntimeOption func(*Runtime)
 
 // NewRuntime returns a Runtime with the supplied wrappers and sinks.
@@ -64,34 +65,42 @@ func NewRuntime(options ...RuntimeOption) Runtime {
 	return r
 }
 
+// WithRuntimeTestWrap appends a wrapper around test actions.
 func WithRuntimeTestWrap(w WrapTestAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitTestWrap(w) }
 }
 
+// WithRuntimeStepWrap appends a wrapper around named step actions.
 func WithRuntimeStepWrap(w WrapStepAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitStepWrap(w) }
 }
 
+// WithRuntimeSetupWrap appends a wrapper around named setup actions.
 func WithRuntimeSetupWrap(w WrapSetupAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitSetupWrap(w) }
 }
 
+// WithRuntimeTeardownWrap appends a wrapper around named teardown actions.
 func WithRuntimeTeardownWrap(w WrapTeardownAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitTeardownWrap(w) }
 }
 
+// WithRuntimeLogSink appends a receiver for structured logs.
 func WithRuntimeLogSink(s SinkLogAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitLogSink(s) }
 }
 
+// WithRuntimeEventSink appends a receiver for raw events.
 func WithRuntimeEventSink(s SinkEventAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitEventSink(s) }
 }
 
+// WithRuntimeAssertSink appends a receiver for assertion facts.
 func WithRuntimeAssertSink(s SinkAssertAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitAssertSink(s) }
 }
 
+// WithRuntimeArtefactSink appends a receiver for artefacts.
 func WithRuntimeArtefactSink(s SinkArtefactAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitArtefactSink(s) }
 }
