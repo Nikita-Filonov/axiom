@@ -1,20 +1,44 @@
 package axiom
 
+// TestAction is the body executed for one test attempt.
 type TestAction func(cfg *Config)
+
+// StepAction is the body of one named step.
 type StepAction func()
+
+// SetupAction is the body of one named setup operation.
 type SetupAction func()
+
+// TeardownAction is the body of one named teardown operation.
 type TeardownAction func()
 
+// WrapTestAction wraps a test action before it executes.
 type WrapTestAction func(next TestAction) TestAction
+
+// WrapStepAction wraps a named step action before it executes.
 type WrapStepAction func(name string, next StepAction) StepAction
+
+// WrapSetupAction wraps a named setup action before it executes.
 type WrapSetupAction func(name string, next SetupAction) SetupAction
+
+// WrapTeardownAction wraps a named teardown action before it executes.
 type WrapTeardownAction func(name string, next TeardownAction) TeardownAction
 
+// SinkLogAction receives a structured Log.
 type SinkLogAction func(l Log)
+
+// SinkEventAction receives a raw Event.
 type SinkEventAction func(e Event)
+
+// SinkAssertAction receives a structured Assert.
 type SinkAssertAction func(a Assert)
+
+// SinkArtefactAction receives an Artefact.
 type SinkArtefactAction func(a Artefact)
 
+// Runtime holds wrappers and sinks for test execution and emitted events.
+// Runner and Case runtime settings are combined into each attempt's Config.
+// Earlier wrappers are outermost; sinks receive values in registration order.
 type Runtime struct {
 	TestWraps     []WrapTestAction
 	StepWraps     []WrapStepAction
@@ -27,8 +51,10 @@ type Runtime struct {
 	ArtefactSinks []SinkArtefactAction
 }
 
+// RuntimeOption registers a wrapper or sink on a Runtime.
 type RuntimeOption func(*Runtime)
 
+// NewRuntime returns a Runtime with the supplied wrappers and sinks.
 func NewRuntime(options ...RuntimeOption) Runtime {
 	r := Runtime{}
 	for _, option := range options {
@@ -216,6 +242,7 @@ func (r *Runtime) Copy() Runtime {
 	return result
 }
 
+// Join returns a Runtime with other's wrappers and sinks appended after r's.
 func (r *Runtime) Join(other Runtime) Runtime {
 	result := r.Copy()
 
