@@ -1,5 +1,6 @@
 package axiom
 
+// Severity classifies a case for reporting and filtering.
 type Severity string
 
 const (
@@ -10,6 +11,9 @@ const (
 	SeverityTrivial  Severity = "trivial"
 )
 
+// Meta holds descriptive test metadata. During a Runner and Case merge,
+// nonempty scalar Case fields override Runner fields, list fields append, and
+// Case labels replace Runner labels with the same key.
 type Meta struct {
 	Epic        string
 	Tags        []string
@@ -26,8 +30,10 @@ type Meta struct {
 	ParentSuite string
 }
 
+// MetaOption configures Meta.
 type MetaOption func(*Meta)
 
+// NewMeta returns metadata with the supplied options.
 func NewMeta(options ...MetaOption) Meta {
 	m := Meta{}
 	for _, option := range options {
@@ -149,6 +155,8 @@ func (m *Meta) Copy() Meta {
 	return result
 }
 
+// Join merges other over m, appending lists and overriding nonempty scalar
+// fields and matching label keys.
 func (m *Meta) Join(other Meta) Meta {
 	result := m.Copy()
 
@@ -196,6 +204,7 @@ func (m *Meta) Join(other Meta) Meta {
 	return result
 }
 
+// Normalize initializes collection fields and defaults Severity to normal.
 func (m *Meta) Normalize() {
 	if m.Tags == nil {
 		m.Tags = []string{}
