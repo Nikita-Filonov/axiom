@@ -1,5 +1,6 @@
 package axiom
 
+// AssertType identifies the kind of structured assertion fact.
 type AssertType string
 
 const (
@@ -18,6 +19,8 @@ func (t AssertType) String() string {
 	return string(t)
 }
 
+// Assert describes an assertion for runtime sinks. Constructing or emitting
+// one does not evaluate a condition or fail a test by itself.
 type Assert struct {
 	Type AssertType
 
@@ -29,8 +32,10 @@ type Assert struct {
 	Error error
 }
 
+// AssertOption configures an Assert.
 type AssertOption func(*Assert)
 
+// NewAssert returns an Assert with the supplied options.
 func NewAssert(options ...AssertOption) Assert {
 	a := Assert{}
 	for _, option := range options {
