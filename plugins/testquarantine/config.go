@@ -6,6 +6,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Quarantine defaults and the environment variable accepted by ConfigFromEnv.
 const (
 	AxiomTestQuarantineRun = "AXIOM_TEST_QUARANTINE_RUN"
 
@@ -13,8 +14,10 @@ const (
 	DefaultReason = "flaky"
 )
 
+// Predicate decides whether a case is quarantined and supplies its reason.
 type Predicate func(cfg *axiom.Config) (reason string, quarantined bool)
 
+// Config controls quarantine selection and whether selected cases run.
 type Config struct {
 	Run       bool
 	Tag       string
@@ -25,6 +28,7 @@ type Config struct {
 // ConfigOption configures quarantine behavior.
 type ConfigOption func(*Config)
 
+// NewConfig returns a quarantine configuration with the default tag and reason.
 func NewConfig(opts ...ConfigOption) Config {
 	c := Config{Tag: DefaultTag, Reason: DefaultReason}
 	for _, opt := range opts {

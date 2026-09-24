@@ -4,6 +4,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Plugin applies quarantine settings to selected cases.
 func Plugin(options ...ConfigOption) axiom.Plugin {
 	cfg := NewConfig(options...)
 
