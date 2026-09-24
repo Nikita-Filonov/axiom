@@ -4,7 +4,8 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
-// Plugin records case results in stats.
+// Plugin appends a result to stats when an attempt's AfterTest hook runs,
+// preserving each retry outcome for later analysis.
 func Plugin(stats *Stats) axiom.Plugin {
 	return func(cfg *axiom.Config) {
 		result := NewCaseResult(cfg)

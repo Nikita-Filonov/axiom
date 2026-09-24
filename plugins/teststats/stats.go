@@ -4,7 +4,8 @@ import (
 	"sync"
 )
 
-// Stats aggregates case outcomes. Record is safe for concurrent use.
+// Stats collects attempt results so callers can inspect retry history or
+// aggregate results by case. Record is safe for concurrent use.
 type Stats struct {
 	mu sync.Mutex
 
@@ -22,7 +23,7 @@ func NewStats() *Stats {
 	return &Stats{}
 }
 
-// Record adds a case result and updates outcome counts.
+// Record adds a result and updates counts of recorded statuses.
 func (s *Stats) Record(cr *CaseResult) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

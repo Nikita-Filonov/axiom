@@ -6,7 +6,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
-// Status values classify the final outcome of a case.
+// Status values classify a CaseResult.
 const (
 	StatusPassed  = "passed"
 	StatusFailed  = "failed"
@@ -14,7 +14,9 @@ const (
 	StatusFlaky   = "flaky"
 )
 
-// CaseResult records a case's outcome, attempts, duration, and metadata.
+// CaseResult holds an observed result, timing, and metadata. The Plugin records
+// one result when an attempt reaches its AfterTest hook, preserving retry
+// outcomes.
 type CaseResult struct {
 	ID       string
 	Name     string
@@ -37,7 +39,7 @@ func NewCaseResult(cfg *axiom.Config) *CaseResult {
 	}
 }
 
-// Finalize fills the outcome and timing after the last attempt.
+// Finalize fills the status and timing from cfg and the supplied attempt count.
 func (r *CaseResult) Finalize(cfg *axiom.Config, attempts int) {
 	r.Attempts = attempts
 	r.End = time.Now()
