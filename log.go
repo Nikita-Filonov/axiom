@@ -1,5 +1,6 @@
 package axiom
 
+// LogLevel classifies a structured Log for runtime sinks.
 type LogLevel string
 
 const (
@@ -14,13 +15,17 @@ func (l LogLevel) String() string {
 	return string(l)
 }
 
+// Log is a structured message emitted through Config.Log. Its level does not
+// by itself change the Go test result; sinks choose how to handle it.
 type Log struct {
 	Text  string
 	Level LogLevel
 }
 
+// LogOption configures a Log.
 type LogOption func(*Log)
 
+// NewLog returns a Log with the supplied options.
 func NewLog(options ...LogOption) Log {
 	l := Log{}
 	for _, option := range options {
