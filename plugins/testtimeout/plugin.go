@@ -8,7 +8,9 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
-// Plugin reports test attempts that exceed the configured timeout.
+// Plugin reports test attempts that exceed the configured timeout and marks
+// their test as failed. On timeout the wrapper returns, but the test body keeps
+// running in its goroutine; Plugin does not cancel or stop it.
 func Plugin(options ...ConfigOption) axiom.Plugin {
 	cfg := NewConfig(options...)
 

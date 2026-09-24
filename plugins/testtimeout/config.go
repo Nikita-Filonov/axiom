@@ -28,8 +28,8 @@ func NewConfig(opts ...ConfigOption) Config {
 	return c
 }
 
-// WithTimeout sets the attempt limit. A non-positive duration disables the
-// timeout wrapper.
+// WithTimeout sets the wall-clock threshold for reporting a failed attempt.
+// It does not stop the test body. A non-positive duration disables the wrapper.
 func WithTimeout(timeout time.Duration) ConfigOption {
 	return func(c *Config) { c.Timeout = timeout }
 }
