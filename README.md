@@ -36,9 +36,9 @@ Axiom provides:
 
 - **Composable test configuration** — merge global & local config seamlessly (`Runner` ↔ `Case`).
 - **Powerful runtime engine** — deterministic lifecycle, step execution, subtests, and retries.
-- **Hooks system** — before/after test, step, and subtest execution.
+- **Hooks system** — before/after runner, test attempt, and step execution.
 - **Plugins API** — extend framework behavior without touching the core.
-- **Fixtures** — lazy-evaluated resources with automatic cleanup.
+- **Fixtures** — lazy dependencies scoped to one test attempt, with automatic cleanup.
 - **Metadata system** — tags, severity, labels, epics, features, stories.
 - **Parallelization control** — opt-in at both runner & case granularity.
 
@@ -48,6 +48,8 @@ and supercharges it.
 ---
 
 ## 📦 Installation
+
+Requires Go 1.25.5 or newer.
 
 ```bash
 go get github.com/Nikita-Filonov/axiom
@@ -123,7 +125,7 @@ Most teams end up reinventing these tools internally — often in incompatible w
 Instead of replacing Go’s testing ecosystem, Axiom extends it with a powerful execution engine:
 
 - **Fixtures** — lazy-evaluated, cached resources with automatic cleanup
-- **Hooks** — before/after test, step, and subtest
+- **Hooks** — before/after runner, test attempt, and step
 - **Retries** — isolated repeat attempts with configurable delay
 - **Metadata** — tags, severity, labels, epics, features, stories
 - **Step model** — structured execution with reporting support
@@ -168,7 +170,7 @@ following folders:
 
 - [./docs/usage](./docs/usage) — realistic end-to-end example of building a test framework with Axiom
 - [./docs/philosophy](./docs/philosophy) — design principles and how Axiom fits into the Go testing ecosystem
-- [./docs/runner](./docs/runner) — global execution environment, plugins, hooks, shared fixtures, retries
+- [./docs/runner](./docs/runner) — global execution environment, plugins, hooks, fixture definitions, retries
 - [./docs/suite](./docs/suite) — optional execution boundary for grouped tests, shared runners, resources, and lifecycle
 - [./docs/package](./docs/package) — `TestMain` lifecycle boundary for runners shared across many top-level `TestXxx` functions
 - [./docs/case](./docs/case) — declarative test definitions, metadata, parameters, per-test configuration
@@ -177,6 +179,7 @@ following folders:
 - [./docs/cache](./docs/cache) — standalone concurrent typed cache with coordinated creation and explicit ownership
 - [./docs/toolset](./docs/toolset) — typed helper bundles built into Local and consumed as cfg.Tools
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
+- [./docs/events](./docs/events) — raw execution events for lifecycle and emitted facts
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup, typed keys and definitions
 - [./docs/resource](./docs/resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown, typed keys
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers

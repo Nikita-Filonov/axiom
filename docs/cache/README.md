@@ -134,12 +134,12 @@ Use `GetOrCreate` instead of a separate `Get -> create -> Set` sequence when cre
 Cache has no automatic cleanup, expiration, eviction, persistence, or reporting. It stores values until they are
 replaced, deleted, or the cache itself becomes unreachable.
 
-| Owner | Effective scope |
-| --- | --- |
-| Resource | The runner holding the resource instance; joined runners can inherit the same pointer |
-| Context value | Every Config or joined runner inheriting the same pointer |
-| Local value | One execution attempt |
-| Application object | Every consumer receiving that pointer |
+| Owner              | Effective scope                                                                       |
+|--------------------|---------------------------------------------------------------------------------------|
+| Resource           | The runner holding the resource instance; joined runners can inherit the same pointer |
+| Context value      | Every Config or joined runner inheriting the same pointer                             |
+| Local value        | One execution attempt                                                                 |
+| Application object | Every consumer receiving that pointer                                                 |
 
 Cache synchronizes its entries, not the contents of returned values. Shared mutable values need their own
 synchronization. If a cached value needs cleanup, the component that owns the cache must also own that cleanup.

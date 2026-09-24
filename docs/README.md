@@ -9,7 +9,7 @@ framework. Each subfolder provides focused reference material and examples.
 
 - [./usage](./usage) — realistic end-to-end example of building a test framework with Axiom
 - [./philosophy](./philosophy) — design principles and how Axiom fits into the Go testing ecosystem
-- [./runner](./runner) — global execution environment, hooks, shared fixtures, retries
+- [./runner](./runner) — global execution environment, hooks, fixture definitions, retries
 - [./suite](./suite) — optional execution boundary for grouped tests, shared runners, resources, and lifecycle
 - [./package](./package) — `TestMain` lifecycle boundary for runners shared across many top-level `TestXxx` functions
 - [./case](./case) — declarative test definitions, metadata, parameters, per-test configuration
