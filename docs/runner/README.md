@@ -10,8 +10,19 @@ This layered model enables:
 
 - consistent global behavior across tests
 - predictable overrides at `Case` level
-- shared fixtures and context
+- shared fixture definitions and context
 - unified plugin and reporting pipelines
+
+---
+
+## Lifecycle
+
+- `Runner` starts and finishes once: `BeforeAll` runs at start, then `AfterAll` and resource cleanups run at finish.
+- By default, `RunCase` finishes the runner with its `*testing.T`. To share one runner across top-level tests, use
+  [RunPackage](../package).
+- Fixtures are created per test attempt; resources are shared across cases and retries within a runner.
+- `Join` creates a separate runner. Already initialized resources and their cleanup callbacks are copied into it;
+  see [resource join semantics](../resource#join-semantics).
 
 ---
 
@@ -84,7 +95,7 @@ var runner = axiom.NewRunner(
 	// Global retry policy (used unless Case overrides)
 	axiom.WithRunnerRetry(
 		axiom.WithRetryTimes(3),
-		axiom.WithRetryDelay(50),
+		axiom.WithRetryDelay(50*time.Millisecond),
 	),
 
 	// Global hooks
@@ -108,7 +119,7 @@ var runner = axiom.NewRunner(
 	// Enable parallel execution by default
 	axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 
-	// Global fixtures shared across all tests
+	// Fixture definitions shared across tests; values are per attempt
 	axiom.WithRunnerFixture("db", DBFixture),
 
 	// Global runtime behavior

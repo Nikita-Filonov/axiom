@@ -10,7 +10,7 @@ It is independent of Axiom's execution model: whoever holds the same `*Cache` sh
 - [API](#api)
 - [Example](#example)
 - [Using Cache with Axiom](#using-cache-with-axiom)
-- [Behavior](#behavior)
+- [Coordination guarantees](#coordination-guarantees)
 - [Ownership and lifecycle](#ownership-and-lifecycle)
 
 ---
@@ -112,17 +112,20 @@ var SchemaFixture = axiom.DefineFixture("schema", func(cfg *axiom.Config) (Schem
 Resolve creation-only dependencies inside `GetOrCreate`, so a cache hit does not initialize them.
 Register the resource and fixtures through the usual runner options.
 
-## Behavior
+## Coordination guarantees
 
 - `Get` returns only completed values. An absent or pending entry is a miss.
-- `GetOrCreate` runs one constructor at a time per key. Callers of other keys proceed independently.
-- Concurrent callers of the same key wait for and receive the same result.
-- Successful results are cached. Errors and partial values are not; a later call may retry.
-- `waitCtx` can cancel waiting, but it does not stop a constructor that is already running.
-- If a constructor panics or exits through `runtime.Goexit`, its caller keeps that control flow and waiters receive
-  a diagnostic error.
+- `GetOrCreate` coordinates construction for one key while operations on other keys proceed independently. Callers
+  waiting on the same construction share its result. Successful values are cached; an error leaves the key available
+  for a later attempt.
+- `waitCtx` is checked before lookup, so an already canceled caller returns promptly even when the key has a value.
+  Canceling a waiter affects only that caller: construction and other waiters continue. Canceling the constructor's
+  context after it starts does not interrupt its synchronous work or discard a successful result.
+- `Set` and `Delete` establish the state seen by subsequent lookups. Existing waiters still receive the result of the
+  construction they joined; that older work cannot overwrite a newer value or restore a deleted entry.
+- Inputs are validated before lookup, including on a hit: a nil context or constructor panics. If a constructor panics
+  or exits through `runtime.Goexit`, its caller keeps that control flow and waiters receive a diagnostic error.
 - Recursive loading of the same key and dependency cycles are unsupported.
-- `Set` and `Delete` affect subsequent lookups but do not cancel work already in progress.
 
 Use `GetOrCreate` instead of a separate `Get -> create -> Set` sequence when creation must be coordinated.
 
@@ -133,10 +136,12 @@ replaced, deleted, or the cache itself becomes unreachable.
 
 | Owner | Effective scope |
 | --- | --- |
-| Resource | The runner using that resource instance |
+| Resource | The runner holding the resource instance; joined runners can inherit the same pointer |
 | Context value | Every Config or joined runner inheriting the same pointer |
 | Local value | One execution attempt |
 | Application object | Every consumer receiving that pointer |
 
 Cache synchronizes its entries, not the contents of returned values. Shared mutable values need their own
 synchronization. If a cached value needs cleanup, the component that owns the cache must also own that cleanup.
+When a Cache is stored in a Resource, a warm join intentionally shares its pointer and copies its cleanup callback.
+Each runner executes its own cleanup stack; see [resource join semantics](../resource#join-semantics).

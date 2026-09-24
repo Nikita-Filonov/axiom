@@ -22,8 +22,7 @@
 ## Overview
 
 A `Resource` is a long-lived, lazily evaluated dependency bound to the **Runner lifecycle**, not to an individual test
-case. A resource is created on first access, cached for the lifetime of the runner, and cleaned up **exactly once**
-during runner teardown.
+case. A resource is created on first access, cached for the lifetime of the runner, and cleaned up during runner teardown.
 
 Resources are designed for **infrastructure-level dependencies** such as clients, connections, servers, or shared
 external systems.
@@ -50,7 +49,7 @@ A `Resource` has the following guarantees:
 - **Runner-level caching** — the cached resource is reused across:
     - multiple test cases
     - retries of the same test case
-- **Deterministic teardown** — cleanup is executed exactly once during runner teardown
+- **Deterministic teardown** — cleanup is executed once during a single runner lifecycle
 - **Safe concurrency** — concurrent access is coordinated so the constructor, cache write, and cleanup registration
   happen once
 
@@ -121,15 +120,20 @@ axiom.MustResource[T](runner, name)
 
 - `Registry` is merged by key
 - `Cache` is merged by key
+- cleanup callbacks are copied
 - if the same key exists in both, values from `other` override base values
 
-This means a joined runner may inherit already initialized resource instances from source runners.
+This intentionally lets a joined runner reuse resources initialized before the join. It has its own
+`BeforeAll`/`AfterAll` lifecycle, while inherited cache values still point to the original instances.
 
 ### Practical implications
 
-- Joining is no longer config-only for resources
-- warm cache entries can be reused immediately after join
-- this behavior is useful for pre-warmed infrastructure
+- A warm join copies both the resource pointer and registered cleanup callback. Each runner executes its own cleanup
+  stack at teardown. If both runners finish, the same callback may run once in each lifecycle.
+- The source and joined runners refer to the same resource value. Each runner's teardown follows its own lifecycle,
+  so callers can choose cleanup behavior that matches the intended sharing pattern.
+- A failed constructor's cached error is not copied into a new runner because failed values have no cache entry. The
+  joined runner can attempt construction again.
 
 ---
 
@@ -142,12 +146,12 @@ Under concurrent access:
 - the resource constructor is executed **at most once** for a cache miss
 - all successful callers observe the **same cached instance**
 - if initialization fails, all callers observe the **same cached error**
-- cleanup is registered **only once**
-- cleanup is executed **only once**
+- cleanup is registered **only once** for a resource constructed within that runner
+- cleanup is executed **only once** during that runner's teardown
 
 The cleanup contract is:
 
-> **Resource cleanup functions are registered once and run once during runner teardown.**
+> **Within one runner lifecycle, a constructed resource registers one cleanup that runs at teardown.**
 
 Resource values themselves must still be safe for the way tests use them. If parallel tests share a resource and mutate
 it, the resource must provide its own synchronization.
