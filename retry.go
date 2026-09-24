@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+// Retry controls the total number of attempts and the delay between them.
+// Times defaults to one, and Delay defaults to zero after normalization.
+// TimesSet and DelaySet distinguish explicit Case overrides from inherited
+// Runner settings. An earlier failure still counts in Go's final test result.
 type Retry struct {
 	Times int
 	Delay time.Duration
@@ -12,8 +16,10 @@ type Retry struct {
 	DelaySet bool
 }
 
+// RetryOption configures a Retry policy.
 type RetryOption func(*Retry)
 
+// NewRetry returns a Retry policy with the supplied options.
 func NewRetry(options ...RetryOption) Retry {
 	r := Retry{}
 	for _, option := range options {
@@ -23,6 +29,8 @@ func NewRetry(options ...RetryOption) Retry {
 	return r
 }
 
+// WithRetryTimes sets the total number of attempts, including the first run.
+// Values below one are normalized to one when the policy is used.
 func WithRetryTimes(times int) RetryOption {
 	return func(r *Retry) {
 		r.Times = times
@@ -30,6 +38,8 @@ func WithRetryTimes(times int) RetryOption {
 	}
 }
 
+// WithRetryDelay sets the wait between attempts. Negative values are
+// normalized to zero when the policy is used.
 func WithRetryDelay(delay time.Duration) RetryOption {
 	return func(r *Retry) {
 		r.Delay = delay
@@ -46,6 +56,7 @@ func (r *Retry) Copy() Retry {
 	}
 }
 
+// Join returns a policy where explicitly set fields in other override r.
 func (r *Retry) Join(other Retry) Retry {
 	result := r.Copy()
 
@@ -61,6 +72,7 @@ func (r *Retry) Join(other Retry) Retry {
 	return result
 }
 
+// Normalize sets default values and clamps Times to one and Delay to zero.
 func (r *Retry) Normalize() {
 	if r.TimesSet && r.Times < 1 {
 		r.Times = 1
