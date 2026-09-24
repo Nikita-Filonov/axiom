@@ -1,9 +1,17 @@
 package axiom
 
+// AllHook runs once at a runner lifecycle boundary.
 type AllHook func(r *Runner)
+
+// TestHook runs before or after an individual test attempt.
 type TestHook func(cfg *Config)
+
+// StepHook runs before or after a named step.
 type StepHook func(cfg *Config, name string)
 
+// Hooks holds ordered lifecycle callbacks. Case test and step hooks run after
+// the corresponding Runner hooks. BeforeAll and AfterAll are runner scoped;
+// placing them on a Case has no effect during case execution.
 type Hooks struct {
 	BeforeAll  []AllHook
 	AfterAll   []AllHook
@@ -13,8 +21,10 @@ type Hooks struct {
 	AfterStep  []StepHook
 }
 
+// HooksOption registers a callback in Hooks.
 type HooksOption func(h *Hooks)
 
+// NewHooks returns Hooks configured by options.
 func NewHooks(options ...HooksOption) Hooks {
 	h := Hooks{}
 	for _, option := range options {
@@ -120,6 +130,7 @@ func (h *Hooks) Copy() Hooks {
 	return result
 }
 
+// Join returns a copy with each callback list from other appended after h.
 func (h *Hooks) Join(other Hooks) Hooks {
 	result := h.Copy()
 
