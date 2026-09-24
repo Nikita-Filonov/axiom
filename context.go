@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+// Context groups execution contexts and lightweight named data for a test.
+// Raw is the default for unset DB, MQ, and RPC contexts after normalization.
+// Case values override Runner values by field or Data key. Copy and Join copy
+// the Data map but do not deep copy values stored in it.
 type Context struct {
 	Raw context.Context
 
@@ -15,8 +19,11 @@ type Context struct {
 	Data map[string]any
 }
 
+// ContextOption configures a Context.
 type ContextOption func(*Context)
 
+// NewContext returns a Context with the supplied options. Use Normalize to
+// fill unset context fields before consuming them.
 func NewContext(options ...ContextOption) Context {
 	c := Context{}
 	for _, option := range options {
@@ -52,6 +59,8 @@ func WithContextData(key string, value any) ContextOption {
 	}
 }
 
+// GetContextValue returns the value under key when it has type T. It returns
+// the zero value and false for a missing key or type mismatch.
 func GetContextValue[T any](c *Context, key string) (T, bool) {
 	v, ok := c.Data[key]
 	if !ok {
@@ -63,6 +72,8 @@ func GetContextValue[T any](c *Context, key string) (T, bool) {
 	return out, ok
 }
 
+// MustContextValue returns the typed value under key or panics if it is missing
+// or has a different type.
 func MustContextValue[T any](c *Context, key string) T {
 	v, ok := GetContextValue[T](c, key)
 	if !ok {
@@ -71,6 +82,7 @@ func MustContextValue[T any](c *Context, key string) T {
 	return v
 }
 
+// SetData stores value under key in Context.Data.
 func (c *Context) SetData(key string, value any) {
 	if c.Data == nil {
 		c.Data = map[string]any{}
@@ -96,6 +108,8 @@ func (c *Context) Copy() Context {
 	return result
 }
 
+// Join merges other over c, replacing non-nil context fields and matching
+// Data keys while preserving the remaining values from c.
 func (c *Context) Join(other Context) Context {
 	result := c.Copy()
 
@@ -124,6 +138,8 @@ func (c *Context) Join(other Context) Context {
 	return result
 }
 
+// Normalize fills unset context fields from Raw or context.Background and
+// initializes Data when needed.
 func (c *Context) Normalize() {
 	if c.Raw == nil {
 		c.Raw = context.Background()
