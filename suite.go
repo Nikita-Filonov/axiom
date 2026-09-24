@@ -5,12 +5,17 @@ import (
 	"testing"
 )
 
+// Suite is the embeddable implementation of [TestingSuite]. It gives registered
+// suite tests access to their current *testing.T and selected Runner.
 type Suite struct {
 	RootT  *testing.T
 	SubT   *testing.T
 	Runner *Runner
 }
 
+// TestingSuite is the contract for values executed by [SuiteRunner]. Embedding
+// Suite in a struct provides its methods. Suite values must be non-nil pointers
+// to structs.
 type TestingSuite interface {
 	SetRootT(*testing.T)
 	SetSubT(*testing.T)
@@ -18,6 +23,8 @@ type TestingSuite interface {
 	RunCase(Case, TestAction)
 }
 
+// SuiteRunner registers related tests under one parent *testing.T and manages
+// their runner lifecycle. Register tests with Test, then call Run once.
 type SuiteRunner[T TestingSuite] struct {
 	rootT   *testing.T
 	suite   T
@@ -33,6 +40,10 @@ type suiteRunnerTest[T TestingSuite] struct {
 	config SuiteTestConfig
 }
 
+// NewSuite creates a SuiteRunner that reuses suite for its registered tests.
+// Tests using this form run sequentially; use [NewSuiteFactory] for parallel
+// suite tests. It panics if t or suite is nil or suite is not a pointer to a
+// struct.
 func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOption) *SuiteRunner[T] {
 	if t == nil {
 		panic("suite: nil *testing.T")
@@ -56,6 +67,10 @@ func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOptio
 	}
 }
 
+// NewSuiteFactory creates a SuiteRunner that calls factory for a fresh suite
+// value for each registered test. This form supports parallel suite tests.
+// It panics if t or factory is nil; each factory result must be a non-nil
+// pointer to a struct implementing [TestingSuite].
 func NewSuiteFactory[T TestingSuite](t *testing.T, factory func() T, options ...SuiteConfigOption) *SuiteRunner[T] {
 	if t == nil {
 		panic("suite: nil *testing.T")
@@ -88,6 +103,8 @@ func validateSuiteInstance(suite any) {
 	}
 }
 
+// Test registers a named suite test. Names must be nonempty and unique within
+// the SuiteRunner. Call it before Run.
 func (s *SuiteRunner[T]) Test(name string, action func(T), options ...SuiteTestConfigOption) {
 	if s == nil {
 		panic("suite: nil SuiteRunner")
@@ -119,6 +136,8 @@ func (s *SuiteRunner[T]) Test(name string, action func(T), options ...SuiteTestC
 	})
 }
 
+// Run executes the registered suite tests and arranges runner cleanup after
+// they finish. It may be called only once.
 func (s *SuiteRunner[T]) Run() {
 	if s == nil {
 		panic("suite: nil SuiteRunner")
