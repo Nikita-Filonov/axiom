@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// ArtefactType identifies the format of an Artefact's data.
 type ArtefactType string
 
 const (
@@ -16,14 +17,18 @@ func (t ArtefactType) String() string {
 	return string(t)
 }
 
+// Artefact carries named output bytes to runtime artefact sinks. Axiom does
+// not persist the data; a configured sink decides how to store or report it.
 type Artefact struct {
 	Name string
 	Type ArtefactType
 	Data []byte
 }
 
+// ArtefactOption configures an Artefact.
 type ArtefactOption func(*Artefact)
 
+// NewArtefact returns an Artefact with the supplied options.
 func NewArtefact(options ...ArtefactOption) Artefact {
 	a := Artefact{}
 	for _, option := range options {
@@ -41,10 +46,13 @@ func WithArtefactType(t ArtefactType) ArtefactOption {
 	return func(a *Artefact) { a.Type = t }
 }
 
+// WithArtefactData assigns data without copying its bytes.
 func WithArtefactData(data []byte) ArtefactOption {
 	return func(a *Artefact) { a.Data = data }
 }
 
+// NewJSONArtefact marshals v as indented JSON. It returns a marshal error
+// without an Artefact when v cannot be encoded.
 func NewJSONArtefact(name string, v any) (Artefact, error) {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -58,6 +66,7 @@ func NewJSONArtefact(name string, v any) (Artefact, error) {
 	), nil
 }
 
+// NewTextArtefact returns an Artefact containing the bytes of text.
 func NewTextArtefact(name string, text string) Artefact {
 	return NewArtefact(
 		WithArtefactName(name),
@@ -66,6 +75,7 @@ func NewTextArtefact(name string, text string) Artefact {
 	)
 }
 
+// NewBytesArtefact returns an Artefact holding data without copying it.
 func NewBytesArtefact(name string, data []byte) Artefact {
 	return NewArtefact(
 		WithArtefactName(name),
