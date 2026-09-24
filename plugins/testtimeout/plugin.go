@@ -8,6 +8,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Plugin reports test attempts that exceed the configured timeout.
 func Plugin(options ...ConfigOption) axiom.Plugin {
 	cfg := NewConfig(options...)
 

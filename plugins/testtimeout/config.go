@@ -5,8 +5,10 @@ import (
 	"time"
 )
 
+// AxiomTestTimeout is the environment variable read by ConfigFromEnv.
 const AxiomTestTimeout = "AXIOM_TEST_TIMEOUT"
 
+// Config controls the attempt timeout, failure message, and goroutine dump.
 type Config struct {
 	Timeout        time.Duration
 	Message        string
@@ -16,6 +18,7 @@ type Config struct {
 // ConfigOption configures test timeout behavior.
 type ConfigOption func(*Config)
 
+// NewConfig returns timeout settings with goroutine dumps enabled by default.
 func NewConfig(opts ...ConfigOption) Config {
 	c := Config{DumpGoroutines: true}
 	for _, opt := range opts {
