@@ -8,6 +8,7 @@ import (
 	"github.com/allure-framework/allure-go/commons/model"
 )
 
+// BuildAllureOptions maps case and metadata fields to Allure test options.
 func BuildAllureOptions(cfg *axiom.Config) []allure.Option {
 	var options []allure.Option
 

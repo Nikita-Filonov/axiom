@@ -66,12 +66,15 @@ func WithStackAttachmentName(name string) TOption {
 	}
 }
 
+// TestingT adapts testing-style failures to the active Allure test context.
 type TestingT struct {
 	fail    failer
 	current func() allureReporter
 	opts    tOptions
 }
 
+// T returns a testing-style adapter for the active Axiom test. Plugin must
+// have been applied to cfg first.
 func T(cfg *axiom.Config, options ...TOption) *TestingT {
 	opts := defaultTOptions()
 	for _, option := range options {
@@ -93,6 +96,7 @@ func newTestingT(fail failer, current func() allureReporter, opts tOptions) *Tes
 	return &TestingT{fail: fail, current: current, opts: opts}
 }
 
+// Errorf records a non-fatal assertion failure and its optional stack trace.
 func (a *TestingT) Errorf(format string, args ...any) {
 	if a.fail != nil {
 		a.fail.Helper()
@@ -114,11 +118,13 @@ func (a *TestingT) Errorf(format string, args ...any) {
 	}
 }
 
+// Fatalf records a failure and stops the current test goroutine.
 func (a *TestingT) Fatalf(format string, args ...any) {
 	a.Errorf(format, args...)
 	a.FailNow()
 }
 
+// FailNow stops the current test goroutine.
 func (a *TestingT) FailNow() {
 	if a.fail == nil {
 		return
@@ -127,6 +133,7 @@ func (a *TestingT) FailNow() {
 	a.fail.FailNow()
 }
 
+// Helper marks the caller as a test helper.
 func (a *TestingT) Helper() {
 	if a.fail != nil {
 		a.fail.Helper()

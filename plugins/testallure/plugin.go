@@ -13,6 +13,7 @@ type allureContextState struct {
 	current atomic.Pointer[allure.Context]
 }
 
+// Plugin reports Axiom tests, steps, and artefacts to Allure.
 func Plugin(options ...allure.Option) axiom.Plugin {
 	baseOptions := append([]allure.Option(nil), options...)
 
