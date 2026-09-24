@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// CacheKey identifies a typed entry by name and value type. Keys with the same
+// name and type address the same entry in a Cache. Its zero value is invalid.
 type CacheKey[T any] struct {
 	name string
 }
@@ -16,6 +18,7 @@ type cacheEntry[T any] struct {
 	ready bool
 }
 
+// NewCacheKey creates a typed key and panics if name is empty.
 func NewCacheKey[T any](name string) CacheKey[T] {
 	if name == "" {
 		panic("cache: key name must not be empty")
@@ -25,6 +28,8 @@ func NewCacheKey[T any](name string) CacheKey[T] {
 
 func (k CacheKey[T]) Name() string { return k.name }
 
+// Get returns a completed cached value. An absent or in-progress entry is a
+// miss and returns the zero value with false.
 func (k CacheKey[T]) Get(cache *Cache) (T, bool) {
 	k.validate(cache)
 	cache.mu.Lock()
@@ -40,6 +45,9 @@ func (k CacheKey[T]) Get(cache *Cache) (T, bool) {
 	return zero, false
 }
 
+// Set replaces this key's entry without copying or closing value. A concurrent
+// constructor can finish for its existing waiters, while the new value remains
+// authoritative for subsequent lookups.
 func (k CacheKey[T]) Set(cache *Cache, value T) {
 	k.validate(cache)
 	cache.mu.Lock()
@@ -47,6 +55,8 @@ func (k CacheKey[T]) Set(cache *Cache, value T) {
 	cache.storeLocked(k, &cacheEntry[T]{value: value, ready: true})
 }
 
+// Delete removes this key's entry without closing its value. A concurrent
+// constructor can finish for its existing waiters without restoring the entry.
 func (k CacheKey[T]) Delete(cache *Cache) {
 	k.validate(cache)
 	cache.mu.Lock()
@@ -54,6 +64,16 @@ func (k CacheKey[T]) Delete(cache *Cache) {
 	delete(cache.entries, k)
 }
 
+// GetOrCreate returns a cached value or coordinates construction for the key.
+// Callers waiting on the same construction share its result; successful values
+// are cached, while errors allow a later attempt. Cancellation is checked
+// before lookup, so an already canceled waitCtx is honored even on a hit.
+// Canceling a waiter affects only that caller; the constructor and other
+// waiters continue. Set and Delete establish the value seen by subsequent
+// lookups without interrupting existing waiters or allowing an older result to
+// overwrite the new state. Inputs are validated before lookup, including on a
+// hit. A panic or Goexit in create propagates to its caller and gives waiters a
+// diagnostic error. Recursive creation of the same key is unsupported.
 func (k CacheKey[T]) GetOrCreate(waitCtx context.Context, cache *Cache, create func() (T, error)) (T, error) {
 	k.validate(cache)
 	if waitCtx == nil {
