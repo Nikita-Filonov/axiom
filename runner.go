@@ -6,6 +6,15 @@ import (
 	"testing"
 )
 
+// Runner holds configuration shared by the cases it executes. Meta, Skip,
+// Retry, Hooks, Context, Runtime, Plugins, Parallel, and Fixtures provide
+// settings merged with each Case; Resources belong to the runner itself.
+// Its BeforeAll and AfterAll hooks, and its resource cleanups, run once for the
+// runner. Use a [Suite] or [RunPackage] to give a runner an explicit group or
+// package boundary. Without one, cleanup is bound to the first test that calls
+// [Runner.RunCase].
+// Configure a Runner before executing cases. Its lifecycle is one-shot: do not
+// copy it after first use or run new cases after it has finished.
 type Runner struct {
 	beforeOnce sync.Once
 	afterOnce  sync.Once
@@ -24,8 +33,11 @@ type Runner struct {
 	Resources Resources
 }
 
+// RunnerOption configures a Runner during [NewRunner].
 type RunnerOption func(*Runner)
 
+// NewRunner creates a Runner with the supplied options and normalizes its
+// metadata, retry policy, context, fixtures, and resources.
 func NewRunner(options ...RunnerOption) *Runner {
 	r := &Runner{}
 	for _, option := range options {
@@ -153,6 +165,13 @@ func WithRunnerResources(defs ...ResourceRegistrar) RunnerOption {
 	}
 }
 
+// Join returns a new Runner with other merged over r and fresh lifecycle guards.
+// Explicit policy fields in other override r; hooks, plugins, and runtime
+// handlers append in that order. Fixture definitions are merged with fresh
+// attempt caches. Resource definitions, cached values, and cleanup callbacks
+// are copied from both inputs, including resources initialized before Join.
+// The returned Runner has its own finish lifecycle, so a copied cleanup runs
+// when it finishes even if a source Runner also runs that cleanup.
 func (r *Runner) Join(other *Runner) *Runner {
 	return &Runner{
 		Meta:      r.Meta.Join(other.Meta),
@@ -168,6 +187,10 @@ func (r *Runner) Join(other *Runner) *Runner {
 	}
 }
 
+// RunCase executes c as a subtest of t, passing a fresh [Config] to action for
+// each attempt. It starts the runner once and, unless an outer package boundary
+// owns the runner, registers runner cleanup on t. When the same Runner is used
+// with multiple top-level tests, [RunPackage] should own its lifecycle.
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 	r.ApplyStart()
 	if !r.managed.Load() {
@@ -182,6 +205,8 @@ func (r *Runner) runCase(t *testing.T, c Case, action TestAction) {
 	execution.run()
 }
 
+// BuildConfig merges runner and case settings into a Config. It does not run
+// plugins or the test action. It panics if t or c is nil.
 func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	if t == nil {
 		panic("config: nil *testing.T")
@@ -221,6 +246,7 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	return cfg
 }
 
+// ApplyStart invokes BeforeAll hooks at most once for this runner.
 func (r *Runner) ApplyStart() {
 	r.beforeOnce.Do(func() {
 		r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllStart))
@@ -237,6 +263,8 @@ func (r *Runner) ApplyStart() {
 	})
 }
 
+// ApplyFinish invokes AfterAll hooks and then resource cleanups at most once
+// for this runner. Resource cleanups run in reverse construction order.
 func (r *Runner) ApplyFinish() {
 	r.afterOnce.Do(func() {
 		r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllStart))
