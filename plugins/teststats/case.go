@@ -6,6 +6,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Status values classify the final outcome of a case.
 const (
 	StatusPassed  = "passed"
 	StatusFailed  = "failed"
@@ -13,6 +14,7 @@ const (
 	StatusFlaky   = "flaky"
 )
 
+// CaseResult records a case's outcome, attempts, duration, and metadata.
 type CaseResult struct {
 	ID       string
 	Name     string
@@ -25,6 +27,7 @@ type CaseResult struct {
 	Meta     axiom.Meta
 }
 
+// NewCaseResult starts a result record from the current case configuration.
 func NewCaseResult(cfg *axiom.Config) *CaseResult {
 	return &CaseResult{
 		ID:    cfg.Case.ID,
@@ -34,6 +37,7 @@ func NewCaseResult(cfg *axiom.Config) *CaseResult {
 	}
 }
 
+// Finalize fills the outcome and timing after the last attempt.
 func (r *CaseResult) Finalize(cfg *axiom.Config, attempts int) {
 	r.Attempts = attempts
 	r.End = time.Now()

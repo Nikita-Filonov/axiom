@@ -4,6 +4,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Plugin records case results in stats.
 func Plugin(stats *Stats) axiom.Plugin {
 	return func(cfg *axiom.Config) {
 		result := NewCaseResult(cfg)
