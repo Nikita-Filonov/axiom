@@ -2,6 +2,7 @@ package testexplain
 
 import "github.com/Nikita-Filonov/axiom"
 
+// ExplainRunner snapshots a runner's current configuration. It panics for nil r.
 func ExplainRunner(r *axiom.Runner) Explanation {
 	if r == nil {
 		panic("explain: nil *axiom.Runner")
@@ -47,6 +48,7 @@ func ExplainRunner(r *axiom.Runner) Explanation {
 	}
 }
 
+// ExplainConfig snapshots an attempt's merged configuration. It panics for nil c.
 func ExplainConfig(c *axiom.Config) Explanation {
 	if c == nil {
 		panic("explain: nil *axiom.Config")
