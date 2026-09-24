@@ -4,6 +4,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+// Plugin skips cases that fail the configured tag filter.
 func Plugin(options ...ConfigOption) axiom.Plugin {
 	cfg := NewConfig(options...)
 
