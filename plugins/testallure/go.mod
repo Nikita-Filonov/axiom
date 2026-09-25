@@ -3,7 +3,7 @@ module github.com/Nikita-Filonov/axiom/plugins/testallure
 go 1.26
 
 require (
-	github.com/Nikita-Filonov/axiom v1.16.0
+	github.com/Nikita-Filonov/axiom v1.17.0
 	github.com/allure-framework/allure-go/commons v1.2.1
 	github.com/stretchr/testify v1.11.1
 )
