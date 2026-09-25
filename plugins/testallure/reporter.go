@@ -167,9 +167,6 @@ func composeMessage(message, stack string, inline bool) string {
 
 func filterStack(stack []byte, dropPrefixes []string) string {
 	lines := strings.Split(strings.TrimRight(string(stack), "\n"), "\n")
-	if len(lines) == 0 {
-		return ""
-	}
 
 	result := make([]string, 0, len(lines))
 	start := 0
