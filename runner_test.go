@@ -128,6 +128,123 @@ func TestRunnerJoin(t *testing.T) {
 	assert.Equal(t, 7*time.Second, result.Retry.Delay)
 }
 
+func TestRunnerJoin_SnapshotsParentChainForConfig(t *testing.T) {
+	base := axiom.NewRunner(axiom.WithRunnerMeta(axiom.WithMetaEpic("base")))
+	overlayBase := axiom.NewRunner(axiom.WithRunnerMeta(axiom.WithMetaSuite("users")))
+	overlay := overlayBase.Join(axiom.NewRunner(axiom.WithRunnerMeta(axiom.WithMetaFeature("users"))))
+	users := base.Join(overlay)
+	admin := users.Join(axiom.NewRunner(axiom.WithRunnerMeta(axiom.WithMetaStory("admin"))))
+
+	assert.Nil(t, base.Parent)
+	assert.NotSame(t, overlayBase, overlay.Parent)
+	assert.NotSame(t, base, users.Parent)
+	assert.NotSame(t, overlay, users.Overlay)
+	assert.NotSame(t, overlayBase, users.Overlay.Parent)
+	assert.NotSame(t, users, admin.Parent)
+	assert.NotNil(t, admin.Overlay)
+	assert.NotSame(t, base, admin.Parent.Parent)
+	assert.Equal(t, "base", admin.Parent.Parent.Meta.Epic)
+	assert.Equal(t, "users", admin.Parent.Meta.Feature)
+	assert.Equal(t, "admin", admin.Meta.Story)
+
+	caseValue := axiom.NewCase()
+	cfg := admin.BuildConfig(&testing.T{}, &caseValue)
+	assert.Same(t, admin, cfg.Runner)
+	assert.Same(t, admin.Parent, cfg.Runner.Parent)
+	assert.Equal(t, "base", cfg.Runner.Parent.Parent.Meta.Epic)
+}
+
+func TestRunnerJoin_HistoryCopiesBothInputs(t *testing.T) {
+	plugin := func(*axiom.Config) {}
+	base := axiom.NewRunner(
+		axiom.WithRunnerMeta(axiom.WithMetaEpic("base")),
+		axiom.WithRunnerSkip(axiom.WithSkipReason("base skip")),
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(2)),
+		axiom.WithRunnerContext(axiom.WithContextData("owner", "base")),
+		axiom.WithRunnerHooks(axiom.WithBeforeAll(func(*axiom.Runner) {})),
+		axiom.WithRunnerRuntime(axiom.WithRuntimeEventSink(func(axiom.Event) {})),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerFixture("fixture", func(*axiom.Config) (any, func(), error) { return nil, nil, nil }),
+		axiom.WithRunnerResource("resource", func(*axiom.Runner) (any, func(), error) { return nil, nil, nil }),
+		axiom.WithRunnerPlugins(plugin),
+	)
+	overlay := axiom.NewRunner(
+		axiom.WithRunnerMeta(axiom.WithMetaFeature("overlay")),
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(3)),
+	)
+	joined := base.Join(overlay)
+
+	base.Meta.Epic = "changed"
+	base.Skip.Reason = "changed"
+	base.Retry.Times = 9
+	base.Context.Data["owner"] = "changed"
+	base.Hooks.BeforeAll[0] = nil
+	base.Runtime.EventSinks[0] = nil
+	base.Parallel.Enabled = false
+	delete(base.Fixtures.Registry, "fixture")
+	delete(base.Resources.Registry, "resource")
+	base.Plugins[0] = nil
+	overlay.Meta.Feature = "changed"
+	overlay.Retry.Times = 8
+
+	require.NotNil(t, joined.Parent)
+	require.NotNil(t, joined.Overlay)
+	assert.Equal(t, "base", joined.Parent.Meta.Epic)
+	assert.Equal(t, "base skip", joined.Parent.Skip.Reason)
+	assert.Equal(t, 2, joined.Parent.Retry.Times)
+	assert.Equal(t, "base", joined.Parent.Context.Data["owner"])
+	assert.NotNil(t, joined.Parent.Hooks.BeforeAll[0])
+	assert.NotNil(t, joined.Parent.Runtime.EventSinks[0])
+	assert.True(t, joined.Parent.Parallel.Enabled)
+	assert.NotNil(t, joined.Parent.Fixtures.Registry["fixture"])
+	assert.NotNil(t, joined.Parent.Resources.Registry["resource"])
+	assert.NotNil(t, joined.Parent.Plugins[0])
+	assert.NotNil(t, joined.Plugins[0])
+	assert.Equal(t, "overlay", joined.Overlay.Meta.Feature)
+	assert.Equal(t, 3, joined.Overlay.Retry.Times)
+	assert.Equal(t, 3, joined.Retry.Times)
+
+	branch := joined.Join(axiom.NewRunner())
+	joined.Parent.Retry.Times = 7
+	assert.Equal(t, 2, branch.Parent.Parent.Retry.Times)
+}
+
+func TestRunnerCopy_CopiesHistoryAndUsesFreshLifecycle(t *testing.T) {
+	var nilRunner *axiom.Runner
+	assert.Nil(t, nilRunner.Copy())
+	emptyPlugins := axiom.NewRunner()
+	emptyPlugins.Plugins = []axiom.Plugin{}
+	assert.NotNil(t, emptyPlugins.Copy().Plugins)
+
+	starts := 0
+	finishes := 0
+	base := axiom.NewRunner(
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeAll(func(*axiom.Runner) { starts++ }),
+			axiom.WithAfterAll(func(*axiom.Runner) { finishes++ }),
+		),
+		axiom.WithRunnerMeta(axiom.WithMetaEpic("base")),
+	)
+	joined := base.Join(axiom.NewRunner())
+	copied := joined.Copy()
+
+	joined.Parent.Meta.Epic = "changed"
+	assert.Equal(t, "base", copied.Parent.Meta.Epic)
+	assert.NotSame(t, joined.Parent, copied.Parent)
+	assert.NotSame(t, joined.Overlay, copied.Overlay)
+
+	joined.ApplyStart()
+	copied.ApplyStart()
+	joined.ApplyStart()
+	copied.ApplyStart()
+	assert.Equal(t, 2, starts)
+	joined.ApplyFinish()
+	copied.ApplyFinish()
+	joined.ApplyFinish()
+	copied.ApplyFinish()
+	assert.Equal(t, 2, finishes)
+}
+
 func TestRunnerBuildConfig(t *testing.T) {
 	r := axiom.NewRunner(
 		axiom.WithRunnerMeta(axiom.WithMetaEpic("RunnerEpic")),

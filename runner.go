@@ -1,6 +1,7 @@
 package axiom
 
 import (
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -14,7 +15,7 @@ import (
 // package boundary. Without one, cleanup is bound to the first test that calls
 // [Runner.RunCase].
 // Configure a Runner before executing cases. Its lifecycle is one-shot: do not
-// copy it after first use or run new cases after it has finished.
+// copy its struct value after first use or run new cases after it has finished.
 type Runner struct {
 	beforeOnce sync.Once
 	afterOnce  sync.Once
@@ -31,6 +32,14 @@ type Runner struct {
 	Parallel  Parallel
 	Fixtures  Fixtures
 	Resources Resources
+
+	// Parent is the receiver of the Join call that created this Runner.
+	// It is nil for a Runner created with NewRunner and does not own the
+	// child's lifecycle. It is a snapshot taken when Join was called.
+	Parent *Runner
+	// Overlay is a snapshot of the argument passed to Join. Like Parent,
+	// it has its own lifecycle guards.
+	Overlay *Runner
 }
 
 // RunnerOption configures a Runner during [NewRunner].
@@ -183,6 +192,32 @@ func WithRunnerResources(defs ...ResourceRegistrar) RunnerOption {
 	}
 }
 
+// Copy returns a Runner with copied configuration, provenance, and fresh
+// lifecycle guards. Plugins and callbacks remain shared function values;
+// context data and cached fixture or resource values follow their fields'
+// Copy semantics. Executing a copy can run copied resource cleanups again.
+func (r *Runner) Copy() *Runner {
+	if r == nil {
+		return nil
+	}
+
+	result := &Runner{
+		Meta:      r.Meta.Copy(),
+		Skip:      r.Skip.Copy(),
+		Retry:     r.Retry.Copy(),
+		Hooks:     r.Hooks.Copy(),
+		Context:   r.Context.Copy(),
+		Runtime:   r.Runtime.Copy(),
+		Plugins:   slices.Clone(r.Plugins),
+		Parallel:  r.Parallel.Copy(),
+		Fixtures:  r.Fixtures.Copy(),
+		Resources: r.Resources.Copy(),
+	}
+	result.Parent = r.Parent.Copy()
+	result.Overlay = r.Overlay.Copy()
+	return result
+}
+
 // Join returns a new Runner with other merged over r and fresh lifecycle guards.
 // Explicit policy fields in other override r; hooks, plugins, and runtime
 // handlers append in that order. Fixture definitions are merged with fresh
@@ -190,6 +225,8 @@ func WithRunnerResources(defs ...ResourceRegistrar) RunnerOption {
 // are copied from both inputs, including resources initialized before Join.
 // The returned Runner has its own finish lifecycle, so a copied cleanup runs
 // when it finishes even if a source Runner also runs that cleanup.
+// Parent and Overlay snapshot r and other respectively, preserving both
+// inputs as they were when Join was called.
 func (r *Runner) Join(other *Runner) *Runner {
 	return &Runner{
 		Meta:      r.Meta.Join(other.Meta),
@@ -198,10 +235,12 @@ func (r *Runner) Join(other *Runner) *Runner {
 		Hooks:     r.Hooks.Join(other.Hooks),
 		Context:   r.Context.Join(other.Context),
 		Runtime:   r.Runtime.Join(other.Runtime),
-		Plugins:   append(r.Plugins, other.Plugins...),
+		Plugins:   append(slices.Clone(r.Plugins), other.Plugins...),
 		Fixtures:  r.Fixtures.Join(other.Fixtures),
 		Parallel:  r.Parallel.Join(other.Parallel),
 		Resources: r.Resources.Join(other.Resources),
+		Parent:    r.Copy(),
+		Overlay:   other.Copy(),
 	}
 }
 

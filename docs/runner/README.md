@@ -23,6 +23,12 @@ This layered model enables:
 - Fixtures are created per test attempt; resources are shared across cases and retries within a runner.
 - `Join` creates a separate runner. Already initialized resources and their cleanup callbacks are copied into it;
   see [resource join semantics](../resource#join-semantics).
+- The joined runner's `Parent` and `Overlay` are copies of the receiver and argument of `Join` at the time of the
+  call. Together they reconstruct the composition tree without changing when an original runner is reconfigured.
+  `Runner.Copy` copies that tree. Individual settings do not retain Join history. Each Runner copy has fresh lifecycle guards.
+  Plugin and hook functions, context data values, and cached fixture or resource values retain the sharing behavior
+  documented by their fields' `Copy` methods. Executing a copy can run copied resource cleanups again. Treat
+  history fields as read-only; assigning them manually can create cycles.
 
 ---
 
