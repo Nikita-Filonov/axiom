@@ -33,6 +33,16 @@ type RunnerExplanation struct {
 	Fixtures  []string            `json:"fixtures"`
 	Resources []string            `json:"resources"`
 	Plugins   CallableExplanation `json:"plugins"`
+	Meta      axiom.Meta          `json:"meta"`
+	Skip      SkipExplanation     `json:"skip"`
+	Retry     RetryExplanation    `json:"retry"`
+	Parallel  ParallelExplanation `json:"parallel"`
+	Context   ContextExplanation  `json:"context"`
+	Hooks     HooksExplanation    `json:"hooks"`
+	Runtime   RuntimeExplanation  `json:"runtime"`
+	Parent    *Explanation        `json:"parent,omitempty"`
+	Overlay   *Explanation        `json:"overlay,omitempty"`
+	Cycle     bool                `json:"cycle,omitempty"`
 }
 
 // CaseExplanation summarizes the selected case.
@@ -43,6 +53,13 @@ type CaseExplanation struct {
 	ParamsType  string              `json:"paramsType,omitempty"`
 	Fixtures    []string            `json:"fixtures"`
 	Plugins     CallableExplanation `json:"plugins"`
+	Meta        axiom.Meta          `json:"meta"`
+	Skip        SkipExplanation     `json:"skip"`
+	Retry       RetryExplanation    `json:"retry"`
+	Parallel    ParallelExplanation `json:"parallel"`
+	Context     ContextExplanation  `json:"context"`
+	Hooks       HooksExplanation    `json:"hooks"`
+	Runtime     RuntimeExplanation  `json:"runtime"`
 }
 
 // SkipExplanation summarizes the effective skip policy.
@@ -101,7 +118,7 @@ type RuntimeExplanation struct {
 	EventSinks    CallableExplanation `json:"eventSinks"`
 }
 
-// CallableExplanation counts callbacks and lists their available names.
+// CallableExplanation counts callbacks and lists their names in registration order.
 type CallableExplanation struct {
 	Count int      `json:"count"`
 	Names []string `json:"names,omitempty"`

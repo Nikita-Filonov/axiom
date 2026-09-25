@@ -30,6 +30,26 @@ At runtime, the plugin:
 
 The package also provides `ExplainRunner(runner)` for inspecting runner-level configuration directly.
 
+`ExplainRunner` and `ExplainConfig` show both Runner inputs at each `Runner.Join`. The effective configuration is
+shown alongside the Runner and Case settings that produced it. For example:
+
+```go
+base := axiom.NewRunner(axiom.WithRunnerRetry(axiom.WithRetryTimes(2)))
+overlay := axiom.NewRunner(axiom.WithRunnerRetry(axiom.WithRetryTimes(3)))
+joined := base.Join(overlay)
+explanation := testexplain.ExplainRunner(joined)
+
+_ = explanation.Runner.Parent  // base runner
+_ = explanation.Runner.Overlay // overlay runner
+_ = explanation.Runner.Parent.Retry.Times  // 2
+_ = explanation.Runner.Overlay.Retry.Times // 3
+_ = explanation.Retry.Times                // 3
+```
+
+The Runner branches are copies captured at each `Join`, so later changes to the source runners do not change the
+history. In an `ExplainConfig` result, `Runner.Retry` shows the Runner setting, `Case.Retry` shows the Case setting,
+and `Retry` shows the effective value. Callback names remain in registration order.
+
 ---
 
 ## Installation

@@ -24,3 +24,10 @@ func TestPlugin_AssertSink_NoSubT_DoesNothing(t *testing.T) {
 		t.Fatalf("expected assert sink to be called")
 	}
 }
+
+func TestPlugin_AssertSink_EvaluatesWithSubT(t *testing.T) {
+	cfg := &axiom.Config{SubT: t, Runtime: axiom.NewRuntime()}
+	testassert.Plugin()(cfg)
+
+	cfg.Runtime.Assert(axiom.NewEqualAssert(3, 3, "values must match"))
+}

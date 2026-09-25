@@ -69,8 +69,6 @@ func explainCallables[T any](items []T) CallableExplanation {
 			names = append(names, name)
 		}
 	}
-	sort.Strings(names)
-
 	return CallableExplanation{
 		Count: len(items),
 		Names: names,
@@ -83,17 +81,7 @@ func callableName(fn any) string {
 		return ""
 	}
 
-	pc := v.Pointer()
-	if pc == 0 {
-		return ""
-	}
-
-	f := goruntime.FuncForPC(pc)
-	if f == nil {
-		return ""
-	}
-
-	return f.Name()
+	return goruntime.FuncForPC(v.Pointer()).Name()
 }
 
 func paramsType(params any) string {

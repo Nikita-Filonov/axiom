@@ -19,7 +19,7 @@ func (e *Explainer) Record(explanation Explanation) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	e.explanations = append(e.explanations, explanation)
+	e.explanations = append(e.explanations, copyExplanation(explanation))
 }
 
 // Snapshot returns a copy of the collected snapshot slice.
@@ -27,5 +27,9 @@ func (e *Explainer) Snapshot() []Explanation {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	return append([]Explanation{}, e.explanations...)
+	result := make([]Explanation, len(e.explanations))
+	for i, explanation := range e.explanations {
+		result[i] = copyExplanation(explanation)
+	}
+	return result
 }

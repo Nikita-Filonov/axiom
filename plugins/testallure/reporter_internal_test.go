@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Nikita-Filonov/axiom"
+	allure "github.com/allure-framework/allure-go/commons/gotest"
 )
 
 // gomegaTestingT mirrors gomega.types.GomegaTestingT, and requireTestingT mirrors
@@ -365,6 +366,19 @@ func TestT_AppliesOptionsAndWrapsConfigT(t *testing.T) {
 	}
 	if adapter.current() != nil {
 		t.Fatal("expected nil reporter while no Allure context is active")
+	}
+}
+
+func TestT_ResolvesActiveAllureContext(t *testing.T) {
+	active := new(allure.Context)
+	state := &allureContextState{}
+	state.current.Store(active)
+	cfg := &axiom.Config{SubT: t}
+	cfg.Context.SetData(contextStateKey, state)
+
+	adapter := T(cfg)
+	if got := adapter.current(); got != active {
+		t.Fatalf("expected active Allure context, got %p", got)
 	}
 }
 

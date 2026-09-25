@@ -7,7 +7,13 @@ func ExplainRunner(r *axiom.Runner) Explanation {
 	if r == nil {
 		panic("explain: nil *axiom.Runner")
 	}
+	return explainRunner(r, map[*axiom.Runner]bool{})
+}
 
+func explainRunner(r *axiom.Runner, path map[*axiom.Runner]bool) Explanation {
+	if path[r] {
+		return Explanation{Kind: ExplanationKindRunner, Runner: &RunnerExplanation{Cycle: true}}
+	}
 	meta := r.Meta.Copy()
 	meta.Normalize()
 
@@ -25,26 +31,49 @@ func ExplainRunner(r *axiom.Runner) Explanation {
 
 	plugins := explainCallables(r.Plugins)
 
-	return Explanation{
-		Kind: ExplanationKindRunner,
-		Runner: &RunnerExplanation{
-			Fixtures:  sortedMapKeys(fixtures.Registry),
-			Resources: sortedMapKeys(resources.Registry),
-			Plugins:   plugins,
-		},
-		Meta:      meta,
+	shape := &RunnerExplanation{
+		Fixtures:  sortedMapKeys(fixtures.Registry),
+		Resources: sortedMapKeys(resources.Registry),
+		Plugins:   plugins,
+		Meta:      meta.Copy(),
 		Skip:      explainSkip(r.Skip),
 		Retry:     explainRetry(retry),
 		Parallel:  explainParallel(r.Parallel),
 		Context:   explainContext(context),
+		Hooks:     explainHooks(r.Hooks),
+		Runtime:   explainRuntime(r.Runtime),
+	}
+	explainRunnerSources(r, shape, path)
+
+	return Explanation{
+		Kind:      ExplanationKindRunner,
+		Runner:    shape,
+		Meta:      meta,
+		Skip:      shape.Skip,
+		Retry:     shape.Retry,
+		Parallel:  shape.Parallel,
+		Context:   shape.Context,
 		Fixtures:  sortedMapKeys(fixtures.Registry),
 		Resources: sortedMapKeys(resources.Registry),
-		Hooks:     explainHooks(r.Hooks),
+		Hooks:     shape.Hooks,
 		Plugins: PluginsExplanation{
 			Runner: plugins,
 			Total:  plugins.Count,
 		},
-		Runtime: explainRuntime(r.Runtime),
+		Runtime: shape.Runtime,
+	}
+}
+
+func explainRunnerSources(r *axiom.Runner, shape *RunnerExplanation, path map[*axiom.Runner]bool) {
+	path[r] = true
+	defer delete(path, r)
+	if r.Parent != nil {
+		parent := explainRunner(r.Parent, path)
+		shape.Parent = &parent
+	}
+	if r.Overlay != nil {
+		overlay := explainRunner(r.Overlay, path)
+		shape.Overlay = &overlay
 	}
 }
 
@@ -73,18 +102,17 @@ func ExplainConfig(c *axiom.Config) Explanation {
 	}
 
 	runnerPlugins := CallableExplanation{}
-	var runnerFixtures []string
-	var runnerResources []string
+	runnerShape := &RunnerExplanation{}
 	if c.Runner != nil {
-		runnerPlugins = explainCallables(c.Runner.Plugins)
-		runnerFixtures = sortedMapKeys(c.Runner.Fixtures.Registry)
-		runnerResources = sortedMapKeys(c.Runner.Resources.Registry)
+		runnerShape = ExplainRunner(c.Runner).Runner
+		runnerPlugins = runnerShape.Plugins
 	}
 
 	casePlugins := CallableExplanation{}
 	var caseExplanation *CaseExplanation
 	if c.Case != nil {
 		casePlugins = explainCallables(c.Case.Plugins)
+		caseMeta := c.Case.Meta.Copy()
 		caseExplanation = &CaseExplanation{
 			ID:          c.Case.ID,
 			Name:        c.Case.Name,
@@ -92,16 +120,19 @@ func ExplainConfig(c *axiom.Config) Explanation {
 			ParamsType:  paramsType(c.Case.Params),
 			Fixtures:    sortedMapKeys(c.Case.Fixtures.Registry),
 			Plugins:     casePlugins,
+			Meta:        caseMeta,
+			Skip:        explainSkip(c.Case.Skip),
+			Retry:       explainRetry(c.Case.Retry),
+			Parallel:    explainParallel(c.Case.Parallel),
+			Context:     explainContext(c.Case.Context),
+			Hooks:       explainHooks(c.Case.Hooks),
+			Runtime:     explainRuntime(c.Case.Runtime),
 		}
 	}
 
 	return Explanation{
-		Kind: ExplanationKindConfig,
-		Runner: &RunnerExplanation{
-			Fixtures:  runnerFixtures,
-			Resources: runnerResources,
-			Plugins:   runnerPlugins,
-		},
+		Kind:      ExplanationKindConfig,
+		Runner:    runnerShape,
 		Case:      caseExplanation,
 		Meta:      meta,
 		Skip:      explainSkip(c.Skip),
