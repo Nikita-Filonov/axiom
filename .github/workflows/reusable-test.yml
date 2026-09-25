@@ -5,7 +5,7 @@ on:
     inputs:
       go-version:
         type: string
-        default: "1.25"
+        default: "1.26"
         required: false
 
 jobs:

@@ -49,7 +49,7 @@ and supercharges it.
 
 ## 📦 Installation
 
-Requires Go 1.25.5 or newer.
+Requires Go 1.26 or newer.
 
 ```bash
 go get github.com/Nikita-Filonov/axiom

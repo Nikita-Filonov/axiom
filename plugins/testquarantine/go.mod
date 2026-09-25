@@ -1,6 +1,6 @@
 module github.com/Nikita-Filonov/axiom/plugins/testquarantine
 
-go 1.25.5
+go 1.26
 
 require (
 	github.com/Nikita-Filonov/axiom v1.15.0
