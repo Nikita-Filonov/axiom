@@ -1,8 +1,8 @@
 package axiom
 
 // ParamFixture defines a fixture constructor that accepts parameters P and
-// produces a per-attempt value T. For binds parameters to a Case; Default
-// supplies Runner defaults that a Case can override.
+// produces a per-attempt value T. Register For with WithCaseFixtures and
+// Default with WithRunnerFixtures; Case registrations override Runner defaults.
 type ParamFixture[P, T any] struct {
 	key   FixtureKey[T]
 	build func(*Config, P) (T, func(), error)
@@ -33,10 +33,11 @@ func (f ParamFixture[P, T]) For(params P) CaseFixtureRegistrar {
 	return FixtureDef[T]{key: f.key, build: f.typed(params)}
 }
 
-// Default returns a Runner option that registers params as the default.
-func (f ParamFixture[P, T]) Default(params P) RunnerOption {
+// Default binds params to a Runner fixture registration for WithRunnerFixtures.
+// A Case can override this default through WithCaseFixtures and For.
+func (f ParamFixture[P, T]) Default(params P) RunnerFixtureRegistrar {
 	f.validate()
-	return WithRunnerFixtureKey(f.key, f.typed(params))
+	return FixtureDef[T]{key: f.key, build: f.typed(params)}
 }
 
 // Get resolves the parameterized fixture for the current attempt.

@@ -423,22 +423,28 @@ type ParamFixture[P, T any]
 func DefineParamFixture[P, T any](name string, build func(*Config, P) (T, func(), error)) ParamFixture[P, T]
 
 func (f ParamFixture[P, T]) Name() string
-func (f ParamFixture[P, T]) Key() FixtureKey[T]                // shared key, for the plain key API
-func (f ParamFixture[P, T]) For(params P) CaseFixtureRegistrar // select a variant for one case
-func (f ParamFixture[P, T]) Default(params P) RunnerOption     // runner-level fallback, overridden by For
-func (f ParamFixture[P, T]) Get(cfg *Config) T                 // typed GetFixture[T]
+func (f ParamFixture[P, T]) Key() FixtureKey[T]
+func (f ParamFixture[P, T]) For(params P) CaseFixtureRegistrar
+func (f ParamFixture[P, T]) Default(params P) RunnerFixtureRegistrar
+func (f ParamFixture[P, T]) Get(cfg *Config) T
 ```
 
-A selected variant is attached to a case through `WithCaseFixtures`, the case-level counterpart of
-`WithRunnerFixtures`:
+A selected variant is registered through the fixture options:
 
 ```go
+func WithRunnerFixtures(fixtures ...RunnerFixtureRegistrar) RunnerOption
 func WithCaseFixtures(fixtures ...CaseFixtureRegistrar) CaseOption
 ```
 
-`WithCaseFixtures` accepts both a self-describing `FixtureDef` (a fixed variant) and `pf.For(params)` (a
-parameterised variant). Because case fixtures are merged over runner fixtures, `pf.Default(params)` provides a
-fallback that any individual case can override with its own `For`.
+`WithRunnerFixtures` accepts both ordinary `FixtureDef` values and `pf.Default(params)` registrations in the same
+call. `WithCaseFixtures` accepts ordinary definitions and `pf.For(params)`. A case's `For` overrides the runner's
+default, including when the chosen parameter is its zero value. The next case without an override still uses the
+runner default.
+
+Binding parameters does not construct the fixture. Each attempt constructs its selected variant on first `Get`,
+reuses it for subsequent reads, and runs its cleanup after the test. Defaults bound from the same `ParamFixture`
+can be registered on different runners independently. As with ordinary fixtures, the last registration under a
+given name wins within a runner.
 
 ### Example
 
@@ -450,6 +456,14 @@ var ByStatus = axiom.DefineParamFixture(
 		prepared, err := GRPCFactoryFixture.Get(cfg).CreateWithStatus(status)
 		return prepared, nil, err
 	},
+)
+
+// Register a fallback alongside the fixture's ordinary dependencies.
+runner := axiom.NewRunner(
+	axiom.WithRunnerFixtures(
+		GRPCFactoryFixture,
+		ByStatus.Default(atmdata.StatusEnabled),
+	),
 )
 
 // Each case selects its own variant, declaratively, next to the other options.
@@ -473,11 +487,11 @@ blocked := axiom.NewCase(
 
 Both parameterise a fixture; they differ in how many registry entries exist and when the variant is chosen.
 
-| | `ParamFixture` | Factory returning `FixtureDef` |
-|---|---|---|
-| Registry entries | one shared name | one distinct name per variant |
-| Variant chosen | per case, via `For` | at declaration |
-| Best when | each case uses exactly one variant | variants are known up front and may be used together |
+|                  | `ParamFixture`                     | Factory returning `FixtureDef`                       |
+|------------------|------------------------------------|------------------------------------------------------|
+| Registry entries | one shared name                    | one distinct name per variant                        |
+| Variant chosen   | per case, via `For`                | at declaration                                       |
+| Best when        | each case uses exactly one variant | variants are known up front and may be used together |
 
 Use a param fixture to replace a `switch` on a case parameter; use a [factory](#configuring-a-fixture) when you need
 several named variants live at once (`PrimaryDB`, `ReplicaDB`).
