@@ -1,12 +1,15 @@
 # Changelog
 
-User-facing changes to Axiom since 2026-03-26, reconstructed from the repository's commits and release tags. Core versions and plugin versions are independent. The first core release in this period was `v0.15.0` on 2026-04-16.
-
-## Unreleased
-
-- `ParamFixture.Default(params)` now returns a `RunnerFixtureRegistrar`. Register it with `axiom.WithRunnerFixtures(fixture.Default(params))`. A case can still override that default with `axiom.WithCaseFixtures(fixture.For(params))`. This changes the `Default` call site used with `v1.16.0`.
+User-facing changes to Axiom since 2026-03-26, reconstructed from the repository's commits and release tags. Core
+versions and plugin versions are independent. The first core release in this period was `v0.15.0` on 2026-04-16.
 
 ## Core releases
+
+### v1.17.0 — 2026-09-26
+
+- `ParamFixture.Default(params)` returns a `RunnerFixtureRegistrar` for registration with
+  `axiom.WithRunnerFixtures(fixture.Default(params))`. Cases can select their own parameters with
+  `axiom.WithCaseFixtures(fixture.For(params))`.
 
 ### v1.16.0 — 2026-09-25
 
@@ -18,7 +21,8 @@ User-facing changes to Axiom since 2026-03-26, reconstructed from the repository
 
 ### v1.14.0 — 2026-09-21
 
-- Added `Cache` and typed `CacheKey[T]` with `Get`, `Set`, `Delete`, and coordinated `GetOrCreate`. The caller controls cache lifetime and cleanup.
+- Added `Cache` and typed `CacheKey[T]` with `Get`, `Set`, `Delete`, and coordinated `GetOrCreate`. The caller controls
+  cache lifetime and cleanup.
 
 ### v1.13.0 — 2026-09-17
 
@@ -26,7 +30,8 @@ User-facing changes to Axiom since 2026-03-26, reconstructed from the repository
 
 ### v1.12.0 — 2026-09-15
 
-- Added `ParamFixture[P, T]`: a case selects a fixture variant with `For(params)`, and a runner can supply a default with `Default(params)`.
+- Added `ParamFixture[P, T]`: a case selects a fixture variant with `For(params)`, and a runner can supply a default
+  with `Default(params)`.
 - Added `WithCaseFixtures` for registering typed fixture definitions on a case.
 
 ### v1.11.0 — 2026-09-11
@@ -35,7 +40,8 @@ User-facing changes to Axiom since 2026-03-26, reconstructed from the repository
 
 ### v1.10.0 — 2026-09-11
 
-- Added typed fixture and resource keys and definitions: `FixtureKey[T]`, `ResourceKey[T]`, `DefineFixture`, and `DefineResource`.
+- Added typed fixture and resource keys and definitions: `FixtureKey[T]`, `ResourceKey[T]`, `DefineFixture`, and
+  `DefineResource`.
 
 ### v1.9.0 — 2026-08-22
 
@@ -43,12 +49,14 @@ User-facing changes to Axiom since 2026-03-26, reconstructed from the repository
 
 ### v1.8.0 — 2026-08-21
 
-- Kept after-test hooks and fixture cleanup inside the test runtime wrapper, so reporting plugins can observe them before the attempt closes.
+- Kept after-test hooks and fixture cleanup inside the test runtime wrapper, so reporting plugins can observe them
+  before the attempt closes.
 - Added lifecycle coverage for fixture cleanup, including failures and panics.
 
 ### v1.7.0 — 2026-07-24
 
-- Moved case execution into a dedicated attempt flow. Each retry gets a fresh `Config`; skip and parallel policies are applied at the appropriate subtest boundary.
+- Moved case execution into a dedicated attempt flow. Each retry gets a fresh `Config`; skip and parallel policies are
+  applied at the appropriate subtest boundary.
 
 ### v1.6.0 — 2026-06-29
 
@@ -98,24 +106,27 @@ User-facing changes to Axiom since 2026-03-26, reconstructed from the repository
 
 ## Independently versioned plugins
 
-The table shows the first and last plugin tags within this changelog's date range. It is a release index, not a claim that every intermediate tag changed plugin behavior; many tags update the required Axiom version.
+The table shows the first plugin tag since 2026-03-26 and the latest published tag as of 2026-09-26. It is a release
+index, not a claim that every intermediate tag changed plugin behavior; many tags update the required Axiom version.
 
-| Plugin | First tag in period | Latest tag in period |
-| --- | --- | --- |
-| `testallure` | `v0.13.0` | `v0.32.0` |
-| `testassert` | `v0.10.0` | `v0.24.0` |
-| `testexplain` | `v0.1.0` | `v0.12.0` |
-| `testlogger` | `v0.12.0` | `v0.26.0` |
-| `testquarantine` | `v0.1.0` | `v0.6.0` |
-| `teststats` | `v0.13.0` | `v0.27.0` |
-| `testtags` | `v0.13.0` | `v0.27.0` |
-| `testtimeout` | `v0.1.0` | `v0.6.0` |
-| `testtracing` | `v0.1.0` | `v0.12.0` |
+| Plugin           | First tag in period | Latest published tag |
+|------------------|---------------------|----------------------|
+| `testallure`     | `v0.13.0`           | `v0.33.0`            |
+| `testassert`     | `v0.10.0`           | `v0.25.0`            |
+| `testexplain`    | `v0.1.0`            | `v0.13.0`            |
+| `testlogger`     | `v0.12.0`           | `v0.27.0`            |
+| `testquarantine` | `v0.1.0`            | `v0.7.0`             |
+| `teststats`      | `v0.13.0`           | `v0.28.0`            |
+| `testtags`       | `v0.13.0`           | `v0.28.0`            |
+| `testtimeout`    | `v0.1.0`            | `v0.7.0`             |
+| `testtracing`    | `v0.1.0`            | `v0.13.0`            |
 
 Notable plugin changes in this period:
 
-- `testexplain` and `testtracing` first shipped on 2026-06-21. `testexplain` gained more detailed explanations of merged runners and case execution in `v0.12.0` (2026-09-25).
-- `testallure` switched to the official `allure-framework/allure-go` integration in `v0.20.0` (2026-07-28). Later releases added lifecycle coverage and assertion failure reporting through `testallure.T(cfg)`.
+- `testexplain` and `testtracing` first shipped on 2026-06-21. `testexplain` gained more detailed explanations of merged
+  runners and case execution in `v0.12.0` (2026-09-25).
+- `testallure` switched to the official `allure-framework/allure-go` integration in `v0.20.0` (2026-07-28). Later
+  releases added lifecycle coverage and assertion failure reporting through `testallure.T(cfg)`.
 - `testquarantine` and `testtimeout` first shipped in `v0.1.0` on 2026-09-11.
 
 For plugin-specific configuration and limitations, see each plugin's `README.md` under `plugins/`.
