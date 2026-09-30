@@ -23,6 +23,7 @@ func TestPlugin_AddsAllExpectedRuntimeHooks(t *testing.T) {
 	assert.Len(t, cfg.Runtime.SetupWraps, 1)
 	assert.Len(t, cfg.Runtime.TeardownWraps, 1)
 	assert.Len(t, cfg.Runtime.ArtefactSinks, 1)
+	assert.Len(t, cfg.Runtime.EventSinks, 1)
 }
 
 func TestPlugin_StepOutsideAllureTestStillRuns(t *testing.T) {

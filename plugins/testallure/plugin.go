@@ -54,6 +54,15 @@ func Plugin(options ...allure.Option) axiom.Plugin {
 		cfg.Runtime.EmitArtefactSink(func(a axiom.Artefact) {
 			handleArtefact(state.current.Load(), cfg, a)
 		})
+
+		cfg.Runtime.EmitEventSink(func(event axiom.Event) {
+			if event.Type != axiom.EventTypeFixtureSetupFailed {
+				return
+			}
+			if ctx := state.current.Load(); ctx != nil {
+				ctx.Errorf("fixture %q failed: %s", event.Name, event.Message)
+			}
+		})
 	}
 }
 

@@ -81,6 +81,14 @@ func TestPlugin_FailedCaseWritesFailedResult(t *testing.T) {
 	assertResultAttachment(t, result, "failed-case-cleanup.txt")
 }
 
+func TestPlugin_FixtureSetupFailureRecordsMessage(t *testing.T) {
+	results := runLifecycleProbe(t, "fixture-setup-fail", true)
+	require.Len(t, results, 1)
+	assert.Equal(t, model.StatusFailed, results[0].Status)
+	require.NotNil(t, results[0].StatusDetails)
+	assert.Contains(t, results[0].StatusDetails.Message, `fixture "pyme-client" failed: cache is empty`)
+}
+
 func TestPlugin_AssertionFailureRecordsMessageAndStack(t *testing.T) {
 	results := runLifecycleProbe(t, "assert-fail", true)
 	require.Len(t, results, 1)
@@ -179,6 +187,8 @@ func TestPlugin_LifecycleProbe(t *testing.T) {
 		runParallelRetryProbe(t)
 	case "failed":
 		runFailedProbe(t)
+	case "fixture-setup-fail":
+		runFixtureSetupFailProbe(t)
 	case "assert-fail":
 		runAssertFailProbe(t)
 	case "step-panic":
@@ -300,6 +310,19 @@ func runFailedProbe(t *testing.T) {
 			}))
 			cfg.SubT.Error("inventory mismatch: expected 7, got 8")
 		})
+	})
+}
+
+func runFixtureSetupFailProbe(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerFixture("pyme-client", func(*axiom.Config) (any, func(), error) {
+			return nil, nil, fmt.Errorf("cache is empty")
+		}),
+		axiom.WithRunnerPlugins(testallure.Plugin()),
+	)
+	testCase := axiom.NewCase(axiom.WithCaseName("fixture setup failure"))
+	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
+		axiom.GetFixture[struct{}](cfg, "pyme-client")
 	})
 }
 
