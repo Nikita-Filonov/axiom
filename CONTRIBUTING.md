@@ -4,6 +4,13 @@ Axiom extends Go's `testing` package. Keep it small, explicit, predictable, and
 compatible with ordinary `go test`. These rules apply to the core module, every
 plugin module, tests, examples, and documentation.
 
+## Table of Contents
+
+- [Before any pull request](#before-any-pull-request)
+- [Project principles](#project-principles)
+- [Change checklist](#change-checklist)
+- [Local verification](#local-verification)
+
 ## Before any pull request
 
 Every change, including a bug fix, refactor, plugin, dependency, test, or
@@ -53,81 +60,87 @@ project author or a designated maintainer.
 ### Design and compatibility
 
 - [ ] The change has one clear purpose and contains no unrelated refactor or
-      speculative API.
+  speculative API.
 - [ ] The basic `Runner`/`Case`/`Config` flow still works without configuring
-      optional features or importing plugins. New features remain opt-in.
+  optional features or importing plugins. New features remain opt-in.
 - [ ] Existing import paths, exported names and signatures, struct fields,
-      defaults, zero values, minimum Go version, and error or panic behavior
-      remain compatible.
+  defaults, zero values, minimum Go version, and error or panic behavior
+  remain compatible.
 - [ ] Existing event names and payloads, hook and wrapper order, retry and skip
-      behavior, parallel scheduling, and fixture or resource lifetimes remain
-      compatible unless a breaking change was explicitly approved.
+  behavior, parallel scheduling, and fixture or resource lifetimes remain
+  compatible unless a breaking change was explicitly approved.
 - [ ] Ownership, cleanup, cancellation, and concurrency behavior are explicit.
-      Failure, panic, skip, retry, and partial setup do not leak resources.
+  Failure, panic, skip, retry, and partial setup do not leak resources.
 - [ ] A change to the core has been checked against every plugin module; a
-      plugin change does not introduce a dependency from the core to that plugin.
+  plugin change does not introduce a dependency from the core to that plugin.
 - [ ] The core has no new third-party production imports. Core test dependencies
-      are used only from `_test.go` files. Integration dependencies are confined
-      to the plugin module that needs them, with tidy `go.mod` and `go.sum` files.
+  are used only from `_test.go` files. Integration dependencies are confined
+  to the plugin module that needs them, with tidy `go.mod` and `go.sum` files.
 
 ### Tests
 
+- [ ] Use `testify/assert` and `testify/require` for assertions, including
+  panic and error checks. Keep custom helpers focused on domain setup and
+  reusable scenarios; do not reimplement assertion primitives. Use `assert`
+  in worker goroutines; `require` calls `FailNow` and must run on the test goroutine.
 - [ ] Every production package in every module has **100.0% statement coverage**
-      from unit and/or integration tests. Coverage is measured per package, not
-      averaged across the repository. Existing gaps are not an exemption.
+  from unit and/or integration tests. Coverage is measured per package, not
+  averaged across the repository. Existing gaps are not an exemption.
 - [ ] Tests verify observable behavior, not just that code executes. Cover
-      relevant success, failure, boundary, nil or zero-value, type mismatch,
-      panic or Goexit, skip, retry, and cancellation cases. Statement coverage
-      alone is insufficient.
+  relevant success, failure, boundary, nil or zero-value, type mismatch,
+  panic or Goexit, skip, retry, and cancellation cases. Statement coverage
+  alone is insufficient.
 - [ ] Lifecycle tests verify hook and wrapper order, fixture isolation per
-      attempt, resource reuse per runner, and cleanup exactly once in reverse
-      setup order, including on failures and partial setup.
+  attempt, resource reuse per runner, and cleanup exactly once in reverse
+  setup order, including on failures and partial setup.
 - [ ] A bug fix has a regression test that fails before the fix. A public API
-      change has tests showing how a caller uses it.
+  change has tests showing how a caller uses it.
 - [ ] Shared state, parallel execution, and cancellation paths have tests for
-      concurrent use; run the affected modules with `go test -race ./...`.
+  concurrent use; run the affected modules with `go test -race ./...`.
 - [ ] Tests run reliably in CI without private secrets or manually managed
-      services. Provision and clean up required dependencies; avoid sleeps as
-      synchronization and reliance on test order.
+  services. Provision and clean up required dependencies; avoid sleeps as
+  synchronization and reliance on test order.
 - [ ] Tests pass in the core and all plugin modules affected by the change.
-      A passing root-module test run does not cover the nested plugin modules.
+  A passing root-module test run does not cover the nested plugin modules.
 
 ### Plugins
 
 - [ ] Installation only configures a `Config`; it does not run test actions or
-      perform irreversible external work.
+  perform irreversible external work.
 - [ ] The plugin is deterministic and safe when applied to a planning Config
-      and again to each attempt Config. Retries do not accidentally accumulate
-      state, callbacks, or side effects.
+  and again to each attempt Config. Retries do not accidentally accumulate
+  state, callbacks, or side effects.
 - [ ] Runner and Case plugin precedence, wrapper nesting, hook timing, and
-      cleanup behavior are tested where relevant.
+  cleanup behavior are tested where relevant.
 - [ ] Mutable state shared across attempts or cases is synchronized. A plugin
-      documents what it observes, changes, owns, and leaves to the caller.
+  documents what it observes, changes, owns, and leaves to the caller.
 - [ ] The plugin's own module, tests, versioning, and README remain independent
-      of unrelated plugins.
+  of unrelated plugins.
 
 ### Documentation
 
+- [ ] Keep guides concise and include a table of contents when a page has
+  multiple sections.
 - [ ] Every new or changed exported declaration has accurate GoDoc. Document
-      defaults, zero values, errors, panics, ownership, concurrency, ordering,
-      and lifecycle rules wherever a caller needs them.
+  defaults, zero values, errors, panics, ownership, concurrency, ordering,
+  and lifecycle rules wherever a caller needs them.
 - [ ] User-facing behavior changes are reflected in the relevant `docs/` page,
-      plugin README, and example. Remove or correct descriptions that no longer
-      match the implementation.
+  plugin README, and example. Remove or correct descriptions that no longer
+  match the implementation.
 - [ ] Examples compile and demonstrate the actual behavior. Comments explain
-      non-obvious decisions and invariants instead of restating the code.
+  non-obvious decisions and invariants instead of restating the code.
 
 ### Submission and review
 
 - [ ] The PR links the prior discussion and the maintainer's agreement on the
-      problem and proposed direction.
+  problem and proposed direction.
 - [ ] The PR explains the problem, chosen approach, compatibility impact,
-      affected modules, tests run, and documentation changed.
+  affected modules, tests run, and documentation changed.
 - [ ] Formatting, vet, lint, tests, and coverage checks pass for the affected
-      modules before requesting review.
+  modules before requesting review.
 - [ ] Blocking review comments identify a violated rule or concrete risk and
-      the change needed to resolve it. Style preferences outside these rules
-      are marked as suggestions.
+  the change needed to resolve it. Style preferences outside these rules
+  are marked as suggestions.
 
 If a rule cannot be met, discuss a change to the rule before submitting the
 implementation. Do not rely on an undocumented exception.
