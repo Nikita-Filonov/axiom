@@ -1,5 +1,12 @@
 # 📘 Skip
 
+## 📑 Table of Contents
+
+- [Merge semantics](#merge-semantics)
+- [Example](#example)
+
+---
+
 `Skip` allows marking a test as skipped, either statically or dynamically. A skip definition may include an optional
 reason, and may be applied at both `Runner` and `Case` level. Case-level skip overrides Runner-level skip.
 
