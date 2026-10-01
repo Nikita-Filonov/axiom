@@ -3,7 +3,7 @@ module github.com/Nikita-Filonov/axiom/plugins/testtimeout
 go 1.26
 
 require (
-	github.com/Nikita-Filonov/axiom v1.18.0
+	github.com/Nikita-Filonov/axiom v1.19.0
 	github.com/stretchr/testify v1.11.1
 )
 
