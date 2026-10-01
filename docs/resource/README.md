@@ -4,6 +4,7 @@
 
 ## 📑 Table of Contents
 
+- [Overview](#overview)
 - [Key characteristics](#key-characteristics)
 - [Resource lifecycle](#resource-lifecycle)
 - [Resource API](#resource-api)
