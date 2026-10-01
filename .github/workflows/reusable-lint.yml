@@ -25,7 +25,11 @@ jobs:
         run: go mod download
 
       - name: Run go vet
-        run: go vet ./...
+        run: |
+          for module in . plugins/*; do
+            test -f "$module/go.mod" || continue
+            (cd "$module" && go vet ./...)
+          done
 
       - name: Run go fmt (verify)
         run: |
@@ -42,4 +46,8 @@ jobs:
           version: latest
 
       - name: Run golangci-lint
-        run: golangci-lint run ./...
+        run: |
+          for module in . plugins/*; do
+            test -f "$module/go.mod" || continue
+            (cd "$module" && golangci-lint run ./...)
+          done
