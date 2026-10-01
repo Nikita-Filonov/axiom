@@ -29,6 +29,9 @@ type Config struct {
 	Runtime  Runtime
 	Parallel Parallel
 	Fixtures Fixtures
+	// Execution identifies the RunCase invocation and attempt. It is the zero
+	// value on a Config constructed outside RunCase.
+	Execution Execution
 }
 
 type testLifecyclePanic struct {
@@ -46,8 +49,8 @@ func (c *Config) T() *testing.T {
 
 // Log emits l as an Event and dispatches it to runtime log sinks.
 func (c *Config) Log(l Log) {
-	c.Event(NewLogEvent(l))
-	c.Runtime.Log(l)
+	c.Event(newLogEvent(l))
+	c.Runtime.log(l)
 }
 
 // Step executes fn as a named step through hooks and runtime wrappers, emitting
@@ -63,17 +66,17 @@ func (c *Config) Step(name string, fn func()) {
 			}
 		}
 
-		c.Hooks.ApplyAfterStep(c, name)
+		c.Hooks.applyAfterStep(c, name)
 		c.Event(NewEvent(EventTypeStepFinish, WithEventName(name)))
 	}()
 
-	c.Hooks.ApplyBeforeStep(c, name)
-	c.Runtime.Step(name, fn)
+	c.Hooks.applyBeforeStep(c, name)
+	c.Runtime.step(name, fn)
 }
 
-// Test runs one attempt through runtime test wraps, hooks, and fixture cleanup.
+// test runs one attempt through runtime test wraps, hooks, and fixture cleanup.
 // AfterTest hooks run before fixture cleanups, which run in reverse setup order.
-func (c *Config) Test(action TestAction) {
+func (c *Config) test(action TestAction) {
 	c.Event(NewEvent(EventTypeCaseStart))
 	defer func() {
 		if r := recover(); r != nil {
@@ -91,24 +94,24 @@ func (c *Config) Test(action TestAction) {
 		c.Event(NewEvent(EventTypeCaseFinish))
 	}()
 
-	c.Runtime.Test(c, func(current *Config) {
+	c.Runtime.test(c, func(current *Config) {
 		defer func() {
 			defer func() {
 				if r := recover(); r != nil {
 					panic(testLifecyclePanic{value: r})
 				}
 			}()
-			defer current.Fixtures.Teardown(current)
-			current.Hooks.ApplyAfterTest(current)
+			defer current.Fixtures.teardown(current)
+			current.Hooks.applyAfterTest(current)
 		}()
 
-		current.Hooks.ApplyBeforeTest(current)
+		current.Hooks.applyBeforeTest(current)
 		action(current)
 	})
 }
 
 // Event dispatches e to runtime event sinks.
-func (c *Config) Event(e Event) { c.Runtime.Event(e) }
+func (c *Config) Event(e Event) { c.Runtime.event(e) }
 
 // Setup executes fn immediately as a named setup operation through runtime
 // wrappers. It does not schedule fn for later execution.
@@ -126,7 +129,7 @@ func (c *Config) Setup(name string, fn func()) {
 		c.Event(NewEvent(EventTypeSetupFinish, WithEventName(name)))
 	}()
 
-	c.Runtime.Setup(name, fn)
+	c.Runtime.setup(name, fn)
 }
 
 // Teardown executes fn immediately as a named teardown operation through
@@ -145,24 +148,24 @@ func (c *Config) Teardown(name string, fn func()) {
 		c.Event(NewEvent(EventTypeTeardownFinish, WithEventName(name)))
 	}()
 
-	c.Runtime.Teardown(name, fn)
+	c.Runtime.teardown(name, fn)
 }
 
 // Assert emits a as an Event and dispatches it to runtime assert sinks. Axiom
 // does not evaluate the assertion or fail the test on its own.
 func (c *Config) Assert(a Assert) {
-	c.Event(NewAssertEvent(a))
-	c.Runtime.Assert(a)
+	c.Event(newAssertEvent(a))
+	c.Runtime.assert(a)
 }
 
 // Artefact emits a as an Event and dispatches it to runtime artefact sinks.
 func (c *Config) Artefact(a Artefact) {
-	c.Event(NewArtefactEvent(a))
-	c.Runtime.Artefact(a)
+	c.Event(newArtefactEvent(a))
+	c.Runtime.artefact(a)
 }
 
-// ApplyPlugins runs Runner plugins followed by Case plugins on c.
-func (c *Config) ApplyPlugins() {
+// applyPlugins runs Runner plugins followed by Case plugins on c.
+func (c *Config) applyPlugins() {
 	for _, p := range c.Runner.Plugins {
 		p(c)
 	}
@@ -173,6 +176,7 @@ func (c *Config) ApplyPlugins() {
 
 func (c *Config) applySkipPolicy() {
 	if c.Skip.Enabled {
+		c.Event(NewEvent(EventTypeCaseSkip, WithEventMessage(c.Skip.Reason)))
 		c.T().Skip(c.Skip.Reason)
 	}
 }
