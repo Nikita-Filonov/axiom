@@ -6,6 +6,7 @@
 
 - [Overview](#overview)
 - [Installation](#installation)
+- [Features](#features)
 - [Example](#example)
 
 ---
