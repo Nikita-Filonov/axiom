@@ -1,5 +1,13 @@
 # 📘 Parallel
 
+## 📑 Table of Contents
+
+- [Example](#example)
+- [Parallel With Retry](#parallel-with-retry)
+- [Suite-Level Parallelism](#suite-level-parallelism)
+
+---
+
 `Parallel` controls whether a test runs in Go’s parallel mode. `Parallel` settings may be defined at `Runner`, `Case`,
 and registered `Suite` test level. Case-level settings override Runner-level settings for case execution.
 
