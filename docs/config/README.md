@@ -48,7 +48,13 @@ Everything that happens **during** a test run flows through `Config`.
 
 ## Attempt lifecycle
 
-`Config.Test` executes one complete attempt inside runtime test middleware:
+`RunCase` builds every Config with an `Execution`: an `ID` shared by all Configs
+of that invocation and a one-based `Attempt` number. The planning Config, which
+decides skip, retry, and parallel policy, has attempt zero. Plugins use
+`cfg.Execution` to correlate retries without relying on optional Case IDs or
+subtest names. A Config constructed outside `RunCase` has the zero `Execution`.
+
+Each attempt runs inside runtime test middleware:
 
 ```text
 case.start
@@ -59,7 +65,10 @@ TestWrap enter
   fixture cleanup (LIFO)
 TestWrap exit
 case.finish
+child subtests and testing.T.Cleanup callbacks
 ```
+
+A policy skip replaces this sequence with a single `case.skip` event.
 
 Fixture cleanup is therefore able to use `cfg.Log`, `cfg.Step`, `cfg.Teardown`, `cfg.Assert`, and `cfg.Artefact` while
 attempt-scoped plugins are still active. `cfg.Setup` and `cfg.Teardown` execute their functions immediately; automatic
@@ -130,11 +139,6 @@ func TestConfigExample(t *testing.T) {
 		// Step execution
 		cfg.Step("perform operation", func() {
 			fmt.Println("→ doing work")
-		})
-
-		// Test execution (middleware-aware)
-		cfg.Test(func(c *axiom.Config) {
-			fmt.Println("→ inside subtest")
 		})
 	})
 }
