@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testtracing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPlugin_CollectsConfigEvents(t *testing.T) {
@@ -19,18 +20,12 @@ func TestPlugin_CollectsConfigEvents(t *testing.T) {
 	cfg.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
 
 	records := trace.Snapshot()
-	if len(records) != 1 {
-		t.Fatalf("expected one record, got %d", len(records))
-	}
-	if records[0].Case.ID != "id" || records[0].Case.Name != "case" {
-		t.Fatalf("unexpected record case: %#v", records[0])
-	}
-	if records[0].Meta.Epic != "epic" {
-		t.Fatalf("unexpected record meta: %#v", records[0].Meta)
-	}
-	if len(records[0].Events) != 1 || records[0].Events[0].Type != axiom.EventTypeCaseStart {
-		t.Fatalf("unexpected record events: %#v", records[0].Events)
-	}
+	require.Len(t, records, 1)
+	require.Equal(t, "id", records[0].Case.ID)
+	require.Equal(t, "case", records[0].Case.Name)
+	require.Equal(t, "epic", records[0].Meta.Epic)
+	require.Len(t, records[0].Events, 1)
+	require.Equal(t, axiom.EventTypeCaseStart, records[0].Events[0].Type)
 }
 
 func TestPlugin_PreservesConfigEventsAsIs(t *testing.T) {
@@ -42,15 +37,9 @@ func TestPlugin_PreservesConfigEventsAsIs(t *testing.T) {
 	cfg.Event(axiom.Event{Type: axiom.EventTypeLog, Message: "raw"})
 
 	records := trace.Snapshot()
-	if len(records) != 1 {
-		t.Fatalf("expected one record, got %d", len(records))
-	}
-	if len(records[0].Events) != 1 {
-		t.Fatalf("expected one event, got %d", len(records[0].Events))
-	}
-	if records[0].Events[0] != (axiom.Event{Type: axiom.EventTypeLog, Message: "raw"}) {
-		t.Fatalf("unexpected event: %#v", records[0].Events[0])
-	}
+	require.Len(t, records, 1)
+	require.Len(t, records[0].Events, 1)
+	require.Equal(t, axiom.Event{Type: axiom.EventTypeLog, Message: "raw"}, records[0].Events[0])
 }
 
 func TestPlugin_GroupsEventsByConfig(t *testing.T) {
@@ -72,18 +61,15 @@ func TestPlugin_GroupsEventsByConfig(t *testing.T) {
 	cfgB.Event(axiom.NewEvent(axiom.EventTypeCaseFinish))
 
 	records := trace.Snapshot()
-	if len(records) != 2 {
-		t.Fatalf("expected two records, got %d", len(records))
-	}
-	if records[0].Case.Name != "A" || records[1].Case.Name != "B" {
-		t.Fatalf("unexpected record order: %#v", records)
-	}
-	if len(records[0].Events) != 2 || records[0].Events[0].Type != axiom.EventTypeCaseStart || records[0].Events[1].Type != axiom.EventTypeCaseFinish {
-		t.Fatalf("unexpected A events: %#v", records[0].Events)
-	}
-	if len(records[1].Events) != 2 || records[1].Events[0].Type != axiom.EventTypeCaseStart || records[1].Events[1].Type != axiom.EventTypeCaseFinish {
-		t.Fatalf("unexpected B events: %#v", records[1].Events)
-	}
+	require.Len(t, records, 2)
+	require.Equal(t, "A", records[0].Case.Name)
+	require.Equal(t, "B", records[1].Case.Name)
+	require.Len(t, records[0].Events, 2)
+	require.Equal(t, axiom.EventTypeCaseStart, records[0].Events[0].Type)
+	require.Equal(t, axiom.EventTypeCaseFinish, records[0].Events[1].Type)
+	require.Len(t, records[1].Events, 2)
+	require.Equal(t, axiom.EventTypeCaseStart, records[1].Events[0].Type)
+	require.Equal(t, axiom.EventTypeCaseFinish, records[1].Events[1].Type)
 }
 
 func TestPlugin_DoesNotCollectRunnerRuntimeEvents(t *testing.T) {
@@ -99,14 +85,10 @@ func TestPlugin_DoesNotCollectRunnerRuntimeEvents(t *testing.T) {
 	testtracing.Plugin(trace)(cfg)
 
 	value := axiom.MustResource[string](runner, "resource")
-	if value != "ok" {
-		t.Fatalf("unexpected resource value: %s", value)
-	}
+	require.Equal(t, "ok", value)
 
 	records := trace.Snapshot()
-	if len(records) != 0 {
-		t.Fatalf("expected no records for runner runtime events, got %#v", records)
-	}
+	require.Empty(t, records)
 }
 
 func TestPlugin_DuplicateApplicationsCreateIndependentRecords(t *testing.T) {
@@ -121,16 +103,11 @@ func TestPlugin_DuplicateApplicationsCreateIndependentRecords(t *testing.T) {
 	cfg.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
 
 	records := trace.Snapshot()
-	if len(records) != 2 {
-		t.Fatalf("expected two records from duplicate plugin application, got %d: %#v", len(records), records)
-	}
+	require.Len(t, records, 2)
 	for _, record := range records {
-		if record.Case.Name != "case" {
-			t.Fatalf("unexpected record case: %#v", record.Case)
-		}
-		if len(record.Events) != 1 || record.Events[0].Type != axiom.EventTypeCaseStart {
-			t.Fatalf("unexpected record events: %#v", record.Events)
-		}
+		require.Equal(t, "case", record.Case.Name)
+		require.Len(t, record.Events, 1)
+		require.Equal(t, axiom.EventTypeCaseStart, record.Events[0].Type)
 	}
 }
 
@@ -152,12 +129,9 @@ func TestPlugin_ClosesSinkOnTestingCleanup(t *testing.T) {
 	cfg.Event(axiom.NewEvent(axiom.EventTypeAssert))
 
 	records := trace.Snapshot()
-	if len(records) != 1 {
-		t.Fatalf("expected one record before cleanup, got %d", len(records))
-	}
-	if len(records[0].Events) != 1 || records[0].Events[0].Type != axiom.EventTypeLog {
-		t.Fatalf("unexpected record events: %#v", records[0].Events)
-	}
+	require.Len(t, records, 1)
+	require.Len(t, records[0].Events, 1)
+	require.Equal(t, axiom.EventTypeLog, records[0].Events[0].Type)
 }
 
 func TestPlugin_KeepsSinkActiveWhenTestingTUnavailable(t *testing.T) {
@@ -169,12 +143,9 @@ func TestPlugin_KeepsSinkActiveWhenTestingTUnavailable(t *testing.T) {
 	cfg.Event(axiom.NewEvent(axiom.EventTypeLog))
 
 	records := trace.Snapshot()
-	if len(records) != 1 {
-		t.Fatalf("expected one record, got %d", len(records))
-	}
-	if len(records[0].Events) != 1 || records[0].Events[0].Type != axiom.EventTypeLog {
-		t.Fatalf("unexpected record events: %#v", records[0].Events)
-	}
+	require.Len(t, records, 1)
+	require.Len(t, records[0].Events, 1)
+	require.Equal(t, axiom.EventTypeLog, records[0].Events[0].Type)
 }
 
 func TestTraceSnapshot_IsIndependent(t *testing.T) {
@@ -187,9 +158,7 @@ func TestTraceSnapshot_IsIndependent(t *testing.T) {
 	snapshot[0].Events[0].Type = axiom.EventTypeAssert
 
 	again := trace.Snapshot()
-	if again[0].Events[0].Type != axiom.EventTypeLog {
-		t.Fatalf("snapshot mutation changed trace: %s", again[0].Events[0].Type)
-	}
+	require.Equal(t, axiom.EventTypeLog, again[0].Events[0].Type)
 }
 
 func TestTraceSnapshot_CopiesRecords(t *testing.T) {
@@ -217,16 +186,9 @@ func TestTraceSnapshot_CopiesRecords(t *testing.T) {
 	snapshot[0].Events[0].Type = axiom.EventTypeAssert
 
 	again := trace.Snapshot()
-	if again[0].Case.Name != "case" {
-		t.Fatalf("snapshot mutation changed case name: %s", again[0].Case.Name)
-	}
-	if again[0].Case.Meta.Labels["case"] != "value" {
-		t.Fatalf("snapshot mutation changed case meta: %#v", again[0].Case.Meta)
-	}
-	if again[0].Meta.Epic != "epic" || again[0].Meta.Labels["k"] != "v" {
-		t.Fatalf("snapshot mutation changed meta: %#v", again[0].Meta)
-	}
-	if again[0].Events[0].Type != axiom.EventTypeLog {
-		t.Fatalf("snapshot mutation changed events: %#v", again[0].Events)
-	}
+	require.Equal(t, "case", again[0].Case.Name)
+	require.Equal(t, "value", again[0].Case.Meta.Labels["case"])
+	require.Equal(t, "epic", again[0].Meta.Epic)
+	require.Equal(t, "v", again[0].Meta.Labels["k"])
+	require.Equal(t, axiom.EventTypeLog, again[0].Events[0].Type)
 }
