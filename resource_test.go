@@ -14,7 +14,7 @@ func TestNewResources_Defaults(t *testing.T) {
 	r := axiom.NewResources()
 
 	assert.Nil(t, r.Registry)
-	assert.Nil(t, r.Cache)
+	assert.Nil(t, r.Cache())
 }
 
 func TestWithResource(t *testing.T) {
@@ -60,7 +60,7 @@ func TestResourcesJoin(t *testing.T) {
 	)
 
 	result := r1.Join(r2)
-	assert.Empty(t, result.Cache, "cache must be empty right after Join")
+	assert.Empty(t, result.Cache(), "cache must be empty right after Join")
 
 	runner := axiom.NewRunner()
 	runner.Resources = result
@@ -73,7 +73,7 @@ func TestResourcesJoin(t *testing.T) {
 	assert.Equal(t, "B2", b)
 	assert.Equal(t, "C", c)
 
-	assert.Len(t, runner.Resources.Cache, 3)
+	assert.Len(t, runner.Resources.Cache(), 3)
 }
 
 func TestGetResource_HappyPath(t *testing.T) {
@@ -102,7 +102,7 @@ func TestGetResource_HappyPath(t *testing.T) {
 	assert.Equal(t, 1, calls, "resource must be created only once")
 
 	assert.Empty(t, runner.Hooks.AfterAll, "cleanups must not pollute user AfterAll hooks")
-	assert.Len(t, runner.Resources.Cleanups, 1)
+	assert.Len(t, runner.Resources.Cleanups(), 1)
 	requireEventTypes(t, events,
 		axiom.EventTypeResourceSetupStart,
 		axiom.EventTypeResourceSetupFinish,
@@ -110,7 +110,7 @@ func TestGetResource_HappyPath(t *testing.T) {
 
 	runner.Resources.Teardown(runner)
 	assert.True(t, cleanupCalled)
-	assert.Empty(t, runner.Resources.Cleanups, "cleanups must be drained")
+	assert.Empty(t, runner.Resources.Cleanups(), "cleanups must be drained")
 	requireEventTypes(t, events,
 		axiom.EventTypeResourceSetupStart,
 		axiom.EventTypeResourceSetupFinish,
@@ -159,7 +159,7 @@ func TestGetResource_ConcurrentAccess(t *testing.T) {
 		<-done
 	}
 
-	assert.Len(t, runner.Resources.Cache, 1)
+	assert.Len(t, runner.Resources.Cache(), 1)
 
 	runner.Resources.Teardown(runner)
 	assert.Equal(t, 1, cleanups)
@@ -195,7 +195,7 @@ func TestGetResource_ConstructorRunsExactlyOnceAcrossConcurrentRacers(t *testing
 	}
 
 	assert.Equal(t, int32(1), atomic.LoadInt32(&calls))
-	assert.Len(t, runner.Resources.Cache, 1)
+	assert.Len(t, runner.Resources.Cache(), 1)
 }
 
 func TestGetResource_ConstructorErrorIsCachedAndReturnedToAllCallers(t *testing.T) {
@@ -237,8 +237,8 @@ func TestUseResources(t *testing.T) {
 
 	assert.Equal(t, 1, calls["a"])
 	assert.Equal(t, 1, calls["b"])
-	assert.Contains(t, runner.Resources.Cache, "a")
-	assert.Contains(t, runner.Resources.Cache, "b")
+	assert.Contains(t, runner.Resources.Cache(), "a")
+	assert.Contains(t, runner.Resources.Cache(), "b")
 }
 
 func TestGetResource_NotFound(t *testing.T) {
@@ -302,7 +302,7 @@ func TestGetResource_WrongType_RegistersCleanupAndCachesValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "string", value)
 
-	assert.Len(t, runner.Resources.Cleanups, 1)
+	assert.Len(t, runner.Resources.Cleanups(), 1)
 	runner.Resources.Teardown(runner)
 	assert.True(t, cleanupCalled)
 }
@@ -370,7 +370,7 @@ func TestGetResource_CleanupRegisteredOnce(t *testing.T) {
 	_ = axiom.MustResource[string](runner, "x")
 	_ = axiom.MustResource[string](runner, "x")
 
-	assert.Len(t, runner.Resources.Cleanups, 1)
+	assert.Len(t, runner.Resources.Cleanups(), 1)
 
 	runner.Resources.Teardown(runner)
 
@@ -444,7 +444,7 @@ func TestResourcesTeardown_RunsWhenAfterAllPanics(t *testing.T) {
 	assert.PanicsWithValue(t, "after boom", runner.ApplyFinish)
 	assert.Equal(t, []string{"after", "resource-cleanup"}, order,
 		"resource cleanup must still run after a panicking AfterAll hook")
-	assert.Empty(t, runner.Resources.Cleanups,
+	assert.Empty(t, runner.Resources.Cleanups(),
 		"resource cleanups must be drained even when AfterAll panics")
 }
 
@@ -475,27 +475,22 @@ func TestResourcesCopy_DeepCopyMaps(t *testing.T) {
 		Registry: map[string]axiom.Resource{
 			"x": func(rr *axiom.Runner) (any, func(), error) { return 1, nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"x": {Value: 1},
-		},
 	}
+	r.SetCache(map[string]any{"x": 1})
 
 	cp := r.Copy()
 
-	v, ok := cp.Cache["x"]
+	v, ok := cp.Cache()["x"]
 	assert.True(t, ok)
-	assert.Equal(t, 1, v.Value)
+	assert.Equal(t, 1, v)
 
 	cp.Registry["y"] = func(rr *axiom.Runner) (any, func(), error) { return 2, nil, nil }
-	cp.Cache["y"] = axiom.ResourceResult{Value: 2}
-
-	x := cp.Cache["x"]
-	x.Value = 100
-	cp.Cache["x"] = x
+	cp.Cache()["y"] = 2
+	cp.Cache()["x"] = 100
 
 	assert.NotContains(t, r.Registry, "y")
-	assert.NotContains(t, r.Cache, "y")
-	assert.Equal(t, 1, r.Cache["x"].Value)
+	assert.NotContains(t, r.Cache(), "y")
+	assert.Equal(t, 1, r.Cache()["x"])
 }
 
 func TestResourcesCopy_DeepCopyRegistryAndCache(t *testing.T) {
@@ -503,37 +498,32 @@ func TestResourcesCopy_DeepCopyRegistryAndCache(t *testing.T) {
 		Registry: map[string]axiom.Resource{
 			"a": func(rr *axiom.Runner) (any, func(), error) { return "A", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"cached": {Value: "C"},
-		},
 	}
+	r.SetCache(map[string]any{"cached": "C"})
 
 	cp := r.Copy()
 
 	assert.Contains(t, cp.Registry, "a")
-	assert.Contains(t, cp.Cache, "cached")
-	assert.Equal(t, "C", cp.Cache["cached"].Value)
+	assert.Contains(t, cp.Cache(), "cached")
+	assert.Equal(t, "C", cp.Cache()["cached"])
 
 	cp.Registry["b"] = func(rr *axiom.Runner) (any, func(), error) { return "B", nil, nil }
-	cp.Cache["cached2"] = axiom.ResourceResult{Value: "X"}
+	cp.Cache()["cached2"] = "X"
 
 	assert.NotContains(t, r.Registry, "b")
-	assert.NotContains(t, r.Cache, "cached2")
+	assert.NotContains(t, r.Cache(), "cached2")
 }
 
 func TestResourcesCopy_DeepCopiesCleanups(t *testing.T) {
 	var calls []string
-	r := axiom.Resources{
-		Cleanups: []axiom.ResourceCleanup{
-			func(*axiom.Runner) { calls = append(calls, "original") },
-		},
-	}
+	var r axiom.Resources
+	r.SetCleanups(func(*axiom.Runner) { calls = append(calls, "original") })
 
 	cp := r.Copy()
-	cp.Cleanups[0] = func(*axiom.Runner) { calls = append(calls, "copy") }
+	cp.Cleanups()[0] = func(*axiom.Runner) { calls = append(calls, "copy") }
 
-	r.Cleanups[0](nil)
-	cp.Cleanups[0](nil)
+	r.Cleanups()[0](nil)
+	cp.Cleanups()[0](nil)
 
 	assert.Equal(t, []string{"original", "copy"}, calls)
 }
@@ -544,22 +534,16 @@ func TestResourcesJoin_MergesRegistryAndCache(t *testing.T) {
 			"a": func(rr *axiom.Runner) (any, func(), error) { return "A1", nil, nil },
 			"b": func(rr *axiom.Runner) (any, func(), error) { return "B1", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"x": {Value: "X1"},
-			"y": {Value: "Y1"},
-		},
 	}
+	r1.SetCache(map[string]any{"x": "X1", "y": "Y1"})
 
 	r2 := axiom.Resources{
 		Registry: map[string]axiom.Resource{
 			"b": func(rr *axiom.Runner) (any, func(), error) { return "B2", nil, nil }, // override
 			"c": func(rr *axiom.Runner) (any, func(), error) { return "C2", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"y": {Value: "Y2"}, // override
-			"z": {Value: "Z2"},
-		},
 	}
+	r2.SetCache(map[string]any{"y": "Y2", "z": "Z2"}) // y overrides
 
 	joined := r1.Join(r2)
 
@@ -567,9 +551,9 @@ func TestResourcesJoin_MergesRegistryAndCache(t *testing.T) {
 	assert.Contains(t, joined.Registry, "b")
 	assert.Contains(t, joined.Registry, "c")
 
-	assert.Equal(t, "X1", joined.Cache["x"].Value)
-	assert.Equal(t, "Y2", joined.Cache["y"].Value)
-	assert.Equal(t, "Z2", joined.Cache["z"].Value)
+	assert.Equal(t, "X1", joined.Cache()["x"])
+	assert.Equal(t, "Y2", joined.Cache()["y"])
+	assert.Equal(t, "Z2", joined.Cache()["z"])
 }
 
 func TestResourcesJoin_DoesNotMutateSources(t *testing.T) {
@@ -577,27 +561,23 @@ func TestResourcesJoin_DoesNotMutateSources(t *testing.T) {
 		Registry: map[string]axiom.Resource{
 			"a": func(rr *axiom.Runner) (any, func(), error) { return "A1", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"x": {Value: "X1"},
-		},
 	}
+	r1.SetCache(map[string]any{"x": "X1"})
 	r2 := axiom.Resources{
 		Registry: map[string]axiom.Resource{
 			"b": func(rr *axiom.Runner) (any, func(), error) { return "B2", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"y": {Value: "Y2"},
-		},
 	}
+	r2.SetCache(map[string]any{"y": "Y2"})
 
 	joined := r1.Join(r2)
 	joined.Registry["c"] = func(rr *axiom.Runner) (any, func(), error) { return "C3", nil, nil }
-	joined.Cache["z"] = axiom.ResourceResult{Value: "Z3"}
+	joined.Cache()["z"] = "Z3"
 
 	assert.NotContains(t, r1.Registry, "c")
 	assert.NotContains(t, r2.Registry, "c")
-	assert.NotContains(t, r1.Cache, "z")
-	assert.NotContains(t, r2.Cache, "z")
+	assert.NotContains(t, r1.Cache(), "z")
+	assert.NotContains(t, r2.Cache(), "z")
 }
 
 func TestResourcesJoin_InitializesEmptyReceiverAndMergesCleanups(t *testing.T) {
@@ -607,22 +587,18 @@ func TestResourcesJoin_InitializesEmptyReceiverAndMergesCleanups(t *testing.T) {
 		Registry: map[string]axiom.Resource{
 			"user": func(*axiom.Runner) (any, func(), error) { return "user", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"token": {Value: "token"},
-		},
-		Cleanups: []axiom.ResourceCleanup{
-			func(*axiom.Runner) { cleanupCalls++ },
-		},
 	}
+	other.SetCache(map[string]any{"token": "token"})
+	other.SetCleanups(func(*axiom.Runner) { cleanupCalls++ })
 
 	joined := base.Join(other)
 
 	assert.NotNil(t, joined.Registry)
 	assert.Contains(t, joined.Registry, "user")
-	assert.NotNil(t, joined.Cache)
-	assert.Equal(t, "token", joined.Cache["token"].Value)
-	assert.Len(t, joined.Cleanups, 1)
-	joined.Cleanups[0](nil)
+	assert.NotNil(t, joined.Cache())
+	assert.Equal(t, "token", joined.Cache()["token"])
+	assert.Len(t, joined.Cleanups(), 1)
+	joined.Cleanups()[0](nil)
 	assert.Equal(t, 1, cleanupCalls)
 }
 
@@ -643,7 +619,7 @@ func TestGetResource_UsesPrewarmedCacheWithoutFactoryCall(t *testing.T) {
 			return "from-factory", nil, nil
 		}),
 	)
-	r.Resources.Cache["x"] = axiom.ResourceResult{Value: "from-cache"}
+	r.Resources.SetCache(map[string]any{"x": "from-cache"})
 
 	v, err := axiom.GetResource[string](r, "x")
 	assert.NoError(t, err)
@@ -661,9 +637,9 @@ func TestGetResource_FactoryError_DoesNotRegisterCleanup(t *testing.T) {
 	_, err := axiom.GetResource[int](runner, "x")
 	assert.Error(t, err)
 
-	assert.Empty(t, runner.Resources.Cleanups,
+	assert.Empty(t, runner.Resources.Cleanups(),
 		"cleanup must not be registered when constructor returned an error")
-	assert.NotContains(t, runner.Resources.Cache, "x",
+	assert.NotContains(t, runner.Resources.Cache(), "x",
 		"value must not be cached when constructor returned an error")
 
 	runner.Resources.Teardown(runner)
@@ -679,9 +655,9 @@ func TestGetResource_NilCleanup_DoesNotRegisterAnything(t *testing.T) {
 	v := axiom.MustResource[string](runner, "x")
 	assert.Equal(t, "X", v)
 
-	assert.Empty(t, runner.Resources.Cleanups,
+	assert.Empty(t, runner.Resources.Cleanups(),
 		"nil cleanup must not be appended to the cleanup stack")
-	assert.Contains(t, runner.Resources.Cache, "x",
+	assert.Contains(t, runner.Resources.Cache(), "x",
 		"value must still be cached even with nil cleanup")
 }
 
@@ -746,18 +722,14 @@ func TestGetResource_JoinedCacheOverrideVisibleViaAPI(t *testing.T) {
 		Registry: map[string]axiom.Resource{
 			"x": func(rr *axiom.Runner) (any, func(), error) { return "A", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"x": {Value: "A-cached"},
-		},
 	}
+	r1.SetCache(map[string]any{"x": "A-cached"})
 	r2 := axiom.Resources{
 		Registry: map[string]axiom.Resource{
 			"x": func(rr *axiom.Runner) (any, func(), error) { return "B", nil, nil },
 		},
-		Cache: map[string]axiom.ResourceResult{
-			"x": {Value: "B-cached"},
-		},
 	}
+	r2.SetCache(map[string]any{"x": "B-cached"})
 
 	joined := r1.Join(r2)
 	runner := axiom.NewRunner()
