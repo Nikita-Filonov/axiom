@@ -120,7 +120,7 @@ axiom.MustResource[T](runner, name)
 `Resources.Join(other)` merges both resource definition and resource state:
 
 - `Registry` is merged by key
-- `Cache` is merged by key
+- resource values already built by `GetResource` are merged by key
 - cleanup callbacks are copied
 - if the same key exists in both, values from `other` override base values
 
