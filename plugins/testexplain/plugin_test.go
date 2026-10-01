@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testexplain"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExplainConfig_IncludesRuntimeEventSinks(t *testing.T) {
@@ -17,9 +18,7 @@ func TestExplainConfig_IncludesRuntimeEventSinks(t *testing.T) {
 
 	explanation := testexplain.ExplainConfig(cfg)
 
-	if explanation.Runtime.EventSinks.Count != 1 {
-		t.Fatalf("expected one event sink, got %d", explanation.Runtime.EventSinks.Count)
-	}
+	require.Equal(t, 1, explanation.Runtime.EventSinks.Count)
 }
 
 func TestExplainRunner_IncludesRunnerShape(t *testing.T) {
@@ -46,33 +45,19 @@ func TestExplainRunner_IncludesRunnerShape(t *testing.T) {
 
 	explanation := testexplain.ExplainRunner(r)
 
-	if explanation.Kind != testexplain.ExplanationKindRunner {
-		t.Fatalf("unexpected explanation kind: %s", explanation.Kind)
-	}
-	if len(explanation.Runner.Fixtures) != 1 || explanation.Runner.Fixtures[0] != "fixture" {
-		t.Fatalf("unexpected runner fixtures: %#v", explanation.Runner.Fixtures)
-	}
-	if len(explanation.Runner.Resources) != 1 || explanation.Runner.Resources[0] != "resource" {
-		t.Fatalf("unexpected runner resources: %#v", explanation.Runner.Resources)
-	}
-	if explanation.Plugins.Total != 1 {
-		t.Fatalf("expected one plugin, got %d", explanation.Plugins.Total)
-	}
-	if explanation.Hooks.BeforeAll.Count != 1 || explanation.Hooks.AfterAll.Count != 1 {
-		t.Fatalf("unexpected hook explanation: %#v", explanation.Hooks)
-	}
-	if explanation.Runtime.EventSinks.Count != 1 {
-		t.Fatalf("expected one event sink, got %d", explanation.Runtime.EventSinks.Count)
-	}
-	if explanation.Retry.Times != 2 {
-		t.Fatalf("unexpected retry times: %d", explanation.Retry.Times)
-	}
-	if !explanation.Parallel.Enabled {
-		t.Fatal("expected parallel to be enabled")
-	}
-	if len(explanation.Context.DataKeys) != 1 || explanation.Context.DataKeys[0] != "key" {
-		t.Fatalf("unexpected context data keys: %#v", explanation.Context.DataKeys)
-	}
+	require.Equal(t, testexplain.ExplanationKindRunner, explanation.Kind)
+	require.Len(t, explanation.Runner.Fixtures, 1)
+	require.Equal(t, "fixture", explanation.Runner.Fixtures[0])
+	require.Len(t, explanation.Runner.Resources, 1)
+	require.Equal(t, "resource", explanation.Runner.Resources[0])
+	require.Equal(t, 1, explanation.Plugins.Total)
+	require.Equal(t, 1, explanation.Hooks.BeforeAll.Count)
+	require.Equal(t, 1, explanation.Hooks.AfterAll.Count)
+	require.Equal(t, 1, explanation.Runtime.EventSinks.Count)
+	require.Equal(t, 2, explanation.Retry.Times)
+	require.True(t, explanation.Parallel.Enabled)
+	require.Len(t, explanation.Context.DataKeys, 1)
+	require.Equal(t, "key", explanation.Context.DataKeys[0])
 }
 
 func TestExplainConfig_IncludesJoinHistory(t *testing.T) {
@@ -93,47 +78,33 @@ func TestExplainConfig_IncludesJoinHistory(t *testing.T) {
 	cfg := joined.BuildConfig(t, &c)
 	explanation := testexplain.ExplainConfig(cfg)
 
-	if explanation.Runner.Parent == nil || explanation.Runner.Overlay == nil {
-		t.Fatal("runner Join inputs missing from explanation")
-	}
-	if explanation.Runner.Overlay.Runner.Parent == nil || explanation.Runner.Overlay.Runner.Overlay == nil {
-		t.Fatal("nested overlay Join missing from explanation")
-	}
-	if explanation.Runner.Parent.Meta.Epic != "base" {
-		t.Fatal("runner parent missing from explanation")
-	}
-	if explanation.Runner.Parent.Retry.Times != 2 || explanation.Runner.Overlay.Retry.Times != 3 {
-		t.Fatal("runner explanation changed after its Join inputs were modified")
-	}
-	if explanation.Runner.Retry.Times != 3 || explanation.Case.Retry.Times != 4 || explanation.Retry.Times != 4 {
-		t.Fatalf("runner, case, or effective retry missing from explanation: %#v", explanation)
-	}
-	if explanation.Case.Meta.Story != "case" || explanation.Meta.Story != "case" || explanation.Runner.Meta.Epic != "base" {
-		t.Fatal("runner, case, or effective metadata missing from explanation")
-	}
-	if _, err := json.Marshal(explanation); err != nil {
-		t.Fatalf("explanation is not JSON serializable: %v", err)
-	}
+	require.NotNil(t, explanation.Runner.Parent)
+	require.NotNil(t, explanation.Runner.Overlay)
+	require.NotNil(t, explanation.Runner.Overlay.Runner.Parent)
+	require.NotNil(t, explanation.Runner.Overlay.Runner.Overlay)
+	require.Equal(t, "base", explanation.Runner.Parent.Meta.Epic)
+	require.Equal(t, 2, explanation.Runner.Parent.Retry.Times)
+	require.Equal(t, 3, explanation.Runner.Overlay.Retry.Times)
+	require.Equal(t, 3, explanation.Runner.Retry.Times)
+	require.Equal(t, 4, explanation.Case.Retry.Times)
+	require.Equal(t, 4, explanation.Retry.Times)
+	require.Equal(t, "case", explanation.Case.Meta.Story)
+	require.Equal(t, "case", explanation.Meta.Story)
+	require.Equal(t, "base", explanation.Runner.Meta.Epic)
+	_, err := json.Marshal(explanation)
+	require.NoError(t, err)
 }
 
 func TestExplainRunner_PanicsOnNilRunner(t *testing.T) {
-	defer func() {
-		if v := recover(); v != "explain: nil *axiom.Runner" {
-			t.Fatalf("unexpected panic: %#v", v)
-		}
-	}()
-
-	testexplain.ExplainRunner(nil)
+	require.PanicsWithValue(t, "explain: nil *axiom.Runner", func() {
+		testexplain.ExplainRunner(nil)
+	})
 }
 
 func TestExplainConfig_PanicsOnNilConfig(t *testing.T) {
-	defer func() {
-		if v := recover(); v != "explain: nil *axiom.Config" {
-			t.Fatalf("unexpected panic: %#v", v)
-		}
-	}()
-
-	testexplain.ExplainConfig(nil)
+	require.PanicsWithValue(t, "explain: nil *axiom.Config", func() {
+		testexplain.ExplainConfig(nil)
+	})
 }
 
 func TestExplainRunner_MarksCyclicSource(t *testing.T) {
@@ -141,9 +112,8 @@ func TestExplainRunner_MarksCyclicSource(t *testing.T) {
 	runner.Parent = runner
 
 	explanation := testexplain.ExplainRunner(runner)
-	if explanation.Runner.Parent == nil || !explanation.Runner.Parent.Runner.Cycle {
-		t.Fatal("expected cyclic runner ancestry to be marked")
-	}
+	require.NotNil(t, explanation.Runner.Parent)
+	require.True(t, explanation.Runner.Parent.Runner.Cycle)
 }
 
 func TestExplainConfig_ReportsParamTypeAndNilPlugin(t *testing.T) {
@@ -151,12 +121,9 @@ func TestExplainConfig_ReportsParamTypeAndNilPlugin(t *testing.T) {
 	c := axiom.NewCase(axiom.WithCaseParams(42))
 	explanation := testexplain.ExplainConfig(&axiom.Config{Runner: runner, Case: &c})
 
-	if explanation.Case.ParamsType != "int" {
-		t.Fatalf("unexpected parameter type: %q", explanation.Case.ParamsType)
-	}
-	if explanation.Plugins.Runner.Count != 1 || len(explanation.Plugins.Runner.Names) != 0 {
-		t.Fatalf("unexpected nil-plugin summary: %#v", explanation.Plugins.Runner)
-	}
+	require.Equal(t, "int", explanation.Case.ParamsType)
+	require.Equal(t, 1, explanation.Plugins.Runner.Count)
+	require.Empty(t, explanation.Plugins.Runner.Names)
 }
 
 func TestPlugin_RecordsExplanationBeforeTest(t *testing.T) {
@@ -176,20 +143,12 @@ func TestPlugin_RecordsExplanationBeforeTest(t *testing.T) {
 		current.Meta.Epic = "after"
 	})
 
-	if !called {
-		t.Fatal("expected wrapped test action to be called")
-	}
+	require.True(t, called)
 
 	snapshot := explainer.Snapshot()
-	if len(snapshot) != 1 {
-		t.Fatalf("expected one explanation, got %d", len(snapshot))
-	}
-	if snapshot[0].Kind != testexplain.ExplanationKindConfig {
-		t.Fatalf("unexpected explanation kind: %s", snapshot[0].Kind)
-	}
-	if snapshot[0].Meta.Epic != "before" {
-		t.Fatalf("expected pre-action metadata, got %q", snapshot[0].Meta.Epic)
-	}
+	require.Len(t, snapshot, 1)
+	require.Equal(t, testexplain.ExplanationKindConfig, snapshot[0].Kind)
+	require.Equal(t, "before", snapshot[0].Meta.Epic)
 }
 
 func TestExplainerSnapshot_IsIndependent(t *testing.T) {
@@ -207,10 +166,8 @@ func TestExplainerSnapshot_IsIndependent(t *testing.T) {
 	snapshot[0].Runner.Parent.Meta.Epic = "changed"
 
 	again := explainer.Snapshot()
-	if again[0].Kind != testexplain.ExplanationKindRunner {
-		t.Fatalf("snapshot mutation changed explainer: %s", again[0].Kind)
-	}
-	if again[0].Meta.Epic != "base" || again[0].Runner.Meta.Epic != "base" || again[0].Runner.Parent.Meta.Epic != "base" {
-		t.Fatal("snapshot mutation changed stored Join history")
-	}
+	require.Equal(t, testexplain.ExplanationKindRunner, again[0].Kind)
+	require.Equal(t, "base", again[0].Meta.Epic)
+	require.Equal(t, "base", again[0].Runner.Meta.Epic)
+	require.Equal(t, "base", again[0].Runner.Parent.Meta.Epic)
 }
