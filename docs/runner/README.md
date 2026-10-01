@@ -1,5 +1,12 @@
 # 📘 Runner
 
+## 📑 Table of Contents
+
+- [Lifecycle](#lifecycle)
+- [Example](#example)
+
+---
+
 A `Runner` defines the global execution environment for tests. It provides metadata, retry policy, fixtures, context,
 hooks, plugins, and parallelization settings that apply to all cases executed through it.
 
