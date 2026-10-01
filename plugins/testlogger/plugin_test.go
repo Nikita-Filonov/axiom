@@ -1,62 +1,38 @@
 package testlogger_test
 
 import (
-	"bytes"
 	"context"
-	"log/slog"
+	"io"
 	"os"
 	"testing"
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testlogger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type record struct {
-	level slog.Level
-	msg   string
-}
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "stdout")
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, file.Close()) }()
 
-type testHandler struct {
-	records []record
-}
-
-func (h *testHandler) Enabled(_ context.Context, _ slog.Level) bool {
-	return true
-}
-
-func (h *testHandler) Handle(_ context.Context, r slog.Record) error {
-	h.records = append(h.records, record{
-		level: r.Level,
-		msg:   r.Message,
-	})
-	return nil
-}
-
-func (h *testHandler) WithAttrs(_ []slog.Attr) slog.Handler {
-	return h
-}
-
-func (h *testHandler) WithGroup(_ string) slog.Handler {
-	return h
-}
-
-func withStdout(buf *bytes.Buffer, fn func()) {
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	previous := os.Stdout
+	os.Stdout = file
+	defer func() { os.Stdout = previous }()
 
 	fn()
 
-	_ = w.Close()
-	os.Stdout = old
-	buf.ReadFrom(r)
+	_, err = file.Seek(0, io.SeekStart)
+	require.NoError(t, err)
+	output, err := io.ReadAll(file)
+	require.NoError(t, err)
+	return string(output)
 }
 
 func TestPlugin_EmitsLog(t *testing.T) {
-	var output bytes.Buffer
-
-	withStdout(&output, func() {
+	text := captureStdout(t, func() {
 		cfg := &axiom.Config{
 			Context: axiom.Context{
 				Raw: context.Background(),
@@ -69,8 +45,6 @@ func TestPlugin_EmitsLog(t *testing.T) {
 
 		cfg.Log(axiom.NewWarningLog("hello world"))
 	})
-
-	text := output.String()
 
 	assert.Contains(t, text, "hello world")
 	assert.Contains(t, text, "WARN")
@@ -88,9 +62,7 @@ func TestPlugin_LogLevels(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		var out bytes.Buffer
-
-		withStdout(&out, func() {
+		text := captureStdout(t, func() {
 			cfg := &axiom.Config{
 				Context: axiom.Context{Raw: context.Background()},
 				Runtime: axiom.NewRuntime(),
@@ -102,7 +74,7 @@ func TestPlugin_LogLevels(t *testing.T) {
 			cfg.Log(tt.log)
 		})
 
-		assert.Contains(t, out.String(), tt.expect)
-		assert.Contains(t, out.String(), tt.log.Text)
+		assert.Contains(t, text, tt.expect)
+		assert.Contains(t, text, tt.log.Text)
 	}
 }
