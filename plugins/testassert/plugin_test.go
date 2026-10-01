@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testassert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPlugin_AssertSink_NoSubT_DoesNothing(t *testing.T) {
@@ -20,9 +21,7 @@ func TestPlugin_AssertSink_NoSubT_DoesNothing(t *testing.T) {
 
 	cfg.Runtime.Assert(axiom.NewEqualAssert(1, 1, "msg"))
 
-	if !called {
-		t.Fatalf("expected assert sink to be called")
-	}
+	require.True(t, called)
 }
 
 func TestPlugin_AssertSink_EvaluatesWithSubT(t *testing.T) {

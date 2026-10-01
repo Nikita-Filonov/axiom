@@ -6,6 +6,7 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testassert"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandleAssert_Equal_Pass(t *testing.T) {
@@ -16,9 +17,7 @@ func TestHandleAssert_Equal_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
 
 func TestHandleAssert_True_Pass(t *testing.T) {
@@ -29,9 +28,7 @@ func TestHandleAssert_True_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
 
 func TestHandleAssert_False_Pass(t *testing.T) {
@@ -42,9 +39,7 @@ func TestHandleAssert_False_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
 
 func TestHandleAssert_Error_Pass(t *testing.T) {
@@ -55,9 +50,7 @@ func TestHandleAssert_Error_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
 
 func TestHandleAssert_NoError_Pass(t *testing.T) {
@@ -68,9 +61,7 @@ func TestHandleAssert_NoError_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
 
 func TestHandleAssert_Nil_Pass(t *testing.T) {
@@ -81,9 +72,7 @@ func TestHandleAssert_Nil_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
 
 func TestHandleAssert_NotNil_Pass(t *testing.T) {
@@ -94,7 +83,5 @@ func TestHandleAssert_NotNil_Pass(t *testing.T) {
 		)
 	})
 
-	if !ok {
-		t.Fatalf("expected assert to pass")
-	}
+	require.True(t, ok)
 }
