@@ -1,7 +1,7 @@
 package axiom
 
 // SuiteConfig selects the Runner and parallel policy for registered suite
-// tests. A missing Runner is replaced with a new one by NewSuiteConfig.
+// tests. A SuiteRunner created without a Runner uses a new one.
 type SuiteConfig struct {
 	Runner   *Runner
 	Parallel bool
@@ -10,8 +10,8 @@ type SuiteConfig struct {
 // SuiteConfigOption configures a SuiteRunner at construction.
 type SuiteConfigOption func(*SuiteConfig)
 
-// NewSuiteConfig returns a SuiteConfig, creating a Runner if none was supplied.
-func NewSuiteConfig(options ...SuiteConfigOption) SuiteConfig {
+// newSuiteConfig returns a SuiteConfig, creating a Runner if none was supplied.
+func newSuiteConfig(options ...SuiteConfigOption) SuiteConfig {
 	cfg := SuiteConfig{}
 	for _, option := range options {
 		option(&cfg)

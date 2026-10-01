@@ -10,8 +10,8 @@ type SuiteTestConfig struct {
 // SuiteTestConfigOption configures one registered suite test.
 type SuiteTestConfigOption func(*SuiteTestConfig)
 
-// NewSuiteTestConfig returns a SuiteTestConfig with the supplied options.
-func NewSuiteTestConfig(options ...SuiteTestConfigOption) SuiteTestConfig {
+// newSuiteTestConfig returns a SuiteTestConfig with the supplied options.
+func newSuiteTestConfig(options ...SuiteTestConfigOption) SuiteTestConfig {
 	cfg := SuiteTestConfig{}
 	for _, option := range options {
 		option(&cfg)

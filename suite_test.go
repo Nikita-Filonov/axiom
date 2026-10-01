@@ -504,8 +504,8 @@ func TestSuiteFactory_BuildSuitePanicsWhenFactoryReturnsNil(t *testing.T) {
 }
 
 func TestSuiteFactory_BuildSuitePanicsWhenFactoryReturnsNonStructPointer(t *testing.T) {
-	boundSuite := axiom.NewSuiteFactory(t, func() *scalarTestingSuite {
-		suite := scalarTestingSuite(1)
+	boundSuite := axiom.NewSuiteFactory(t, func() *axiom.ScalarTestingSuite {
+		suite := axiom.ScalarTestingSuite(1)
 		return &suite
 	})
 
@@ -934,34 +934,16 @@ func TestSuite_NewSuitePanicsWhenSuiteInterfaceIsNil(t *testing.T) {
 	})
 }
 
-type valueTestingSuite struct{}
-
-func (s valueTestingSuite) SetRootT(_ *testing.T) {}
-
-func (s valueTestingSuite) SetSubT(_ *testing.T) {}
-
-func (s valueTestingSuite) SetRunner(_ *axiom.Runner) {}
-
-func (s valueTestingSuite) RunCase(_ axiom.Case, _ axiom.TestAction) {}
+type valueTestingSuite struct{ *axiom.Suite }
 
 func TestSuite_NewSuitePanicsWhenSuiteIsNotPointer(t *testing.T) {
 	assert.PanicsWithValue(t, "suite: suite must be a non-nil pointer implementing axiom.TestingSuite", func() {
-		axiom.NewSuite(t, valueTestingSuite{})
+		axiom.NewSuite(t, valueTestingSuite{Suite: &axiom.Suite{}})
 	})
 }
 
-type scalarTestingSuite int
-
-func (s *scalarTestingSuite) SetRootT(_ *testing.T) {}
-
-func (s *scalarTestingSuite) SetSubT(_ *testing.T) {}
-
-func (s *scalarTestingSuite) SetRunner(_ *axiom.Runner) {}
-
-func (s *scalarTestingSuite) RunCase(_ axiom.Case, _ axiom.TestAction) {}
-
 func TestSuite_NewSuitePanicsWhenSuitePointerDoesNotPointToStruct(t *testing.T) {
-	var suite scalarTestingSuite
+	var suite axiom.ScalarTestingSuite
 
 	assert.PanicsWithValue(t, "suite: suite must be a pointer to a struct implementing axiom.TestingSuite", func() {
 		axiom.NewSuite(t, &suite)

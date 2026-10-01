@@ -13,13 +13,13 @@ type Suite struct {
 	Runner *Runner
 }
 
-// TestingSuite is the contract for values executed by [SuiteRunner]. Embedding
-// Suite in a struct provides its methods. Suite values must be non-nil pointers
+// TestingSuite is the contract for values executed by [SuiteRunner]. A type
+// satisfies it only by embedding Suite. Suite values must be non-nil pointers
 // to structs.
 type TestingSuite interface {
-	SetRootT(*testing.T)
-	SetSubT(*testing.T)
-	SetRunner(*Runner)
+	setRootT(*testing.T)
+	setSubT(*testing.T)
+	setRunner(*Runner)
 	RunCase(Case, TestAction)
 }
 
@@ -50,14 +50,14 @@ func NewSuite[T TestingSuite](t *testing.T, suite T, options ...SuiteConfigOptio
 	}
 	validateSuiteInstance(suite)
 
-	cfg := NewSuiteConfig(options...)
+	cfg := newSuiteConfig(options...)
 	if cfg.Parallel {
 		panic("suite: parallel suite tests require NewSuiteFactory")
 	}
 
-	suite.SetRootT(t)
-	suite.SetSubT(nil)
-	suite.SetRunner(cfg.Runner)
+	suite.setRootT(t)
+	suite.setSubT(nil)
+	suite.setRunner(cfg.Runner)
 
 	return &SuiteRunner[T]{
 		rootT:  t,
@@ -82,7 +82,7 @@ func NewSuiteFactory[T TestingSuite](t *testing.T, factory func() T, options ...
 	return &SuiteRunner[T]{
 		rootT:   t,
 		factory: factory,
-		config:  NewSuiteConfig(options...),
+		config:  newSuiteConfig(options...),
 		tests:   make([]suiteRunnerTest[T], 0),
 	}
 }
@@ -124,7 +124,7 @@ func (s *SuiteRunner[T]) Test(name string, action func(T), options ...SuiteTestC
 		}
 	}
 
-	cfg := NewSuiteTestConfig(options...)
+	cfg := newSuiteTestConfig(options...)
 	if cfg.Parallel && s.factory == nil {
 		panic("suite: parallel suite tests require NewSuiteFactory")
 	}
@@ -147,8 +147,8 @@ func (s *SuiteRunner[T]) Run() {
 	}
 	s.ran = true
 
-	s.config.Runner.ApplyStart()
-	s.rootT.Cleanup(s.config.Runner.ApplyFinish)
+	s.config.Runner.applyStart()
+	s.rootT.Cleanup(s.config.Runner.applyFinish)
 
 	for _, test := range s.tests {
 		s.rootT.Run(test.name, func(st *testing.T) {
@@ -158,28 +158,28 @@ func (s *SuiteRunner[T]) Run() {
 			}
 			parallel := s.config.Parallel || test.config.Parallel
 
-			runner.ApplyStart()
-			s.rootT.Cleanup(runner.ApplyFinish)
+			runner.applyStart()
+			s.rootT.Cleanup(runner.applyFinish)
 
 			if parallel {
 				st.Parallel()
 			}
 
-			suite := s.BuildSuite()
-			suite.SetSubT(st)
-			suite.SetRunner(runner)
+			suite := s.buildSuite()
+			suite.setSubT(st)
+			suite.setRunner(runner)
 
-			defer suite.SetSubT(nil)
-			defer suite.SetRunner(s.config.Runner)
+			defer suite.setSubT(nil)
+			defer suite.setRunner(s.config.Runner)
 
 			test.action(suite)
 		})
 	}
 }
 
-// BuildSuite returns the configured suite instance or creates one with the
+// buildSuite returns the configured suite instance or creates one with the
 // factory. It panics if the SuiteRunner is nil.
-func (s *SuiteRunner[T]) BuildSuite() T {
+func (s *SuiteRunner[T]) buildSuite() T {
 	if s == nil {
 		panic("suite: nil SuiteRunner")
 	}
@@ -190,9 +190,9 @@ func (s *SuiteRunner[T]) BuildSuite() T {
 	suite := s.factory()
 	validateSuiteInstance(suite)
 
-	suite.SetRootT(s.rootT)
-	suite.SetSubT(nil)
-	suite.SetRunner(s.config.Runner)
+	suite.setRootT(s.rootT)
+	suite.setSubT(nil)
+	suite.setRunner(s.config.Runner)
 
 	return suite
 }
@@ -206,8 +206,8 @@ func (s *Suite) T() *testing.T {
 	return s.RootT
 }
 
-// SetRootT sets the test that owns the suite lifecycle.
-func (s *Suite) SetRootT(t *testing.T) {
+// setRootT sets the test that owns the suite lifecycle.
+func (s *Suite) setRootT(t *testing.T) {
 	if s == nil {
 		panic("suite: nil Suite")
 	}
@@ -215,8 +215,8 @@ func (s *Suite) SetRootT(t *testing.T) {
 	s.RootT = t
 }
 
-// SetSubT sets the currently active suite subtest.
-func (s *Suite) SetSubT(t *testing.T) {
+// setSubT sets the currently active suite subtest.
+func (s *Suite) setSubT(t *testing.T) {
 	if s == nil {
 		panic("suite: nil Suite")
 	}
@@ -224,8 +224,8 @@ func (s *Suite) SetSubT(t *testing.T) {
 	s.SubT = t
 }
 
-// SetRunner sets the runner used by subsequent suite cases.
-func (s *Suite) SetRunner(runner *Runner) {
+// setRunner sets the runner used by subsequent suite cases.
+func (s *Suite) setRunner(runner *Runner) {
 	if s == nil {
 		panic("suite: nil Suite")
 	}
