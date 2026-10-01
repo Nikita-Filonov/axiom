@@ -58,7 +58,7 @@ from any phase.
 
 Lifecycle events follow the `subject.phase.outcome` shape:
 
-- `case.start`, `case.finish`, `case.panic`
+- `case.start`, `case.finish`, `case.panic`, `case.skip`
 - `step.start`, `step.finish`, `step.panic`
 - `setup.start`, `setup.finish`, `setup.panic`
 - `teardown.start`, `teardown.finish`, `teardown.panic`
@@ -68,6 +68,20 @@ Lifecycle events follow the `subject.phase.outcome` shape:
 - `resource.cleanup.start`, `resource.cleanup.finish`, `resource.cleanup.panic`
 - `runner.before-all.start`, `runner.before-all.finish`, `runner.before-all.panic`
 - `runner.after-all.start`, `runner.after-all.finish`, `runner.after-all.panic`
+
+`case.skip` reports a policy skip before the test body runs.
+`Message` contains the skip reason; no `case.start` or `case.finish`
+events are emitted. Calling `t.Skip` inside the body follows the normal
+test lifecycle and does not emit `case.skip` or expose its reason
+through events.
+
+`case.finish` does not guarantee that child subtests and
+`testing.T.Cleanup` callbacks have completed. The event stream does
+not provide a final test status.
+
+Within a Config event sink, use `Config.Execution.ID` to group
+attempts from one `RunCase` invocation and `Config.Execution.Attempt`
+to identify the attempt.
 
 ### Fact events
 
