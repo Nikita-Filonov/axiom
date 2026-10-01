@@ -21,7 +21,7 @@ func TestPlugin_UnsupportedArtefactDoesNothing(t *testing.T) {
 	}
 	testallure.Plugin()(cfg)
 
-	cfg.Runtime.Artefact(axiom.Artefact{
+	cfg.Artefact(axiom.Artefact{
 		Name: "unsupported",
 		Type: axiom.ArtefactType("unsupported"),
 		Data: []byte("123"),
@@ -42,7 +42,7 @@ func TestPlugin_SupportedArtefactOutsideTestLogsWarning(t *testing.T) {
 	}
 	testallure.Plugin()(cfg)
 
-	cfg.Runtime.Artefact(axiom.Artefact{
+	cfg.Artefact(axiom.Artefact{
 		Name: "orphan.json",
 		Type: axiom.ArtefactTypeJSON,
 		Data: []byte(`{"ok":true}`),

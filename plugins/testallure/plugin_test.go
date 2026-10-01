@@ -31,7 +31,7 @@ func TestPlugin_StepOutsideAllureTestStillRuns(t *testing.T) {
 	testallure.Plugin()(cfg)
 
 	called := false
-	cfg.Runtime.Step("outside test", func() {
+	cfg.Step("outside test", func() {
 		called = true
 	})
 
@@ -40,24 +40,20 @@ func TestPlugin_StepOutsideAllureTestStillRuns(t *testing.T) {
 
 func TestPlugin_ReportsTestStepsAndArtefacts(t *testing.T) {
 	memoryWriter := writer.NewInMemoryWriter()
-	cfg := &axiom.Config{
-		SubT: t,
-		Case: &axiom.Case{
-			ID:          "AUTH-1",
-			Name:        "user can login",
-			Description: "Valid credentials create a session.",
-		},
-		Meta: axiom.Meta{
-			Feature:  "login",
-			Severity: axiom.SeverityCritical,
-		},
-	}
-	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+	c := axiom.NewCase(
+		axiom.WithCaseID("AUTH-1"),
+		axiom.WithCaseName("user can login"),
+		axiom.WithCaseDescription("Valid credentials create a session."),
+		axiom.WithCaseMeta(
+			axiom.WithMetaFeature("login"),
+			axiom.WithMetaSeverity(axiom.SeverityCritical),
+		),
+	)
 
-	cfg.Runtime.Test(cfg, func(cfg *axiom.Config) {
+	newAllureRunner(memoryWriter).RunCase(t, c, func(cfg *axiom.Config) {
 		cfg.Setup("prepare user", func() {})
 		cfg.Step("send request", func() {
-			cfg.Runtime.Artefact(axiom.Artefact{
+			cfg.Artefact(axiom.Artefact{
 				Name: "request.json",
 				Type: axiom.ArtefactTypeJSON,
 				Data: []byte(`{"user":"alice"}`),
@@ -94,26 +90,16 @@ func TestPlugin_ReportsTestStepsAndArtefacts(t *testing.T) {
 
 func TestPlugin_ReportsFixtureCleanupArtefacts(t *testing.T) {
 	memoryWriter := writer.NewInMemoryWriter()
-	cfg := &axiom.Config{
-		SubT: t,
-		Case: &axiom.Case{
-			Name: "fixture cleanup is reported",
-		},
-		Fixtures: axiom.Fixtures{
-			Registry: map[string]axiom.Fixture{
-				"report": func(cfg *axiom.Config) (any, func(), error) {
-					return struct{}{}, func() {
-						cfg.Artefact(axiom.NewTextArtefact("final-report.txt", "finished"))
-					}, nil
-				},
-			},
-			Cache: map[string]axiom.FixtureResult{},
-		},
-	}
-	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+	runner := newAllureRunner(memoryWriter,
+		axiom.WithRunnerFixture("report", func(cfg *axiom.Config) (any, func(), error) {
+			return struct{}{}, func() {
+				cfg.Artefact(axiom.NewTextArtefact("final-report.txt", "finished"))
+			}, nil
+		}),
+	)
 
-	cfg.Test(func(current *axiom.Config) {
-		axiom.GetFixture[struct{}](current, "report")
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("fixture cleanup is reported")), func(cfg *axiom.Config) {
+		axiom.GetFixture[struct{}](cfg, "report")
 	})
 
 	snapshot := memoryWriter.Snapshot()
@@ -128,28 +114,18 @@ func TestPlugin_ReportsFixtureCleanupArtefacts(t *testing.T) {
 
 func TestPlugin_ReportsFixtureCleanupAsTeardownStep(t *testing.T) {
 	memoryWriter := writer.NewInMemoryWriter()
-	cfg := &axiom.Config{
-		SubT: t,
-		Case: &axiom.Case{
-			Name: "fixture cleanup teardown is reported",
-		},
-		Fixtures: axiom.Fixtures{
-			Registry: map[string]axiom.Fixture{
-				"report": func(cfg *axiom.Config) (any, func(), error) {
-					return struct{}{}, func() {
-						cfg.Teardown("finalize flow report", func() {
-							cfg.Artefact(axiom.NewTextArtefact("flow-result.txt", "finished"))
-						})
-					}, nil
-				},
-			},
-			Cache: map[string]axiom.FixtureResult{},
-		},
-	}
-	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+	runner := newAllureRunner(memoryWriter,
+		axiom.WithRunnerFixture("report", func(cfg *axiom.Config) (any, func(), error) {
+			return struct{}{}, func() {
+				cfg.Teardown("finalize flow report", func() {
+					cfg.Artefact(axiom.NewTextArtefact("flow-result.txt", "finished"))
+				})
+			}, nil
+		}),
+	)
 
-	cfg.Test(func(current *axiom.Config) {
-		axiom.GetFixture[struct{}](current, "report")
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("fixture cleanup teardown is reported")), func(cfg *axiom.Config) {
+		axiom.GetFixture[struct{}](cfg, "report")
 	})
 
 	snapshot := memoryWriter.Snapshot()
@@ -169,28 +145,19 @@ func TestPlugin_ReportsFixtureCleanupAsTeardownStep(t *testing.T) {
 
 func TestPlugin_ReportsSetupAndTeardownCalledFromTestHooks(t *testing.T) {
 	memoryWriter := writer.NewInMemoryWriter()
-	cfg := &axiom.Config{
-		SubT: t,
-		Case: &axiom.Case{
-			Name: "hook lifecycle is reported",
-		},
-		Hooks: axiom.Hooks{
-			BeforeTest: []axiom.TestHook{
-				func(cfg *axiom.Config) {
-					cfg.Setup("prepare hook state", func() {})
-				},
-			},
-			AfterTest: []axiom.TestHook{
-				func(cfg *axiom.Config) {
-					cfg.Teardown("release hook state", func() {})
-				},
-			},
-		},
-	}
-	testallure.Plugin(allure.WithWriter(memoryWriter))(cfg)
+	runner := newAllureRunner(memoryWriter,
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) {
+				cfg.Setup("prepare hook state", func() {})
+			}),
+			axiom.WithAfterTest(func(cfg *axiom.Config) {
+				cfg.Teardown("release hook state", func() {})
+			}),
+		),
+	)
 
-	cfg.Test(func(current *axiom.Config) {
-		current.Step("test body", func() {})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("hook lifecycle is reported")), func(cfg *axiom.Config) {
+		cfg.Step("test body", func() {})
 	})
 
 	snapshot := memoryWriter.Snapshot()
@@ -229,7 +196,7 @@ func TestPlugin_ParallelCasesKeepContextsIsolated(t *testing.T) {
 				started.Wait()
 
 				cfg.Step(name+" step", func() {
-					cfg.Runtime.Artefact(axiom.Artefact{
+					cfg.Artefact(axiom.Artefact{
 						Name: name + ".txt",
 						Type: axiom.ArtefactTypeText,
 						Data: []byte(name),
@@ -263,4 +230,9 @@ func TestPlugin_ParallelCasesKeepContextsIsolated(t *testing.T) {
 		assert.Equal(t, name+" cleanup.txt", cleanupAttachment.Name)
 		assert.Equal(t, name, string(snapshot.Attachments[cleanupAttachment.Source]))
 	}
+}
+
+func newAllureRunner(memoryWriter *writer.InMemoryWriter, options ...axiom.RunnerOption) *axiom.Runner {
+	plugin := axiom.WithRunnerPlugins(testallure.Plugin(allure.WithWriter(memoryWriter)))
+	return axiom.NewRunner(append(options, plugin)...)
 }
