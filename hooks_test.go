@@ -192,7 +192,6 @@ func TestHooks_BeforeTest_UseFixtures_RegistersCleanup(t *testing.T) {
 					return struct{}{}, func() { cleanupCalled = true }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Hooks: axiom.Hooks{},
 	}
@@ -204,9 +203,9 @@ func TestHooks_BeforeTest_UseFixtures_RegistersCleanup(t *testing.T) {
 	h.ApplyBeforeTest(cfg)
 
 	assert.Equal(t, 1, fixtureCalled)
-	assert.Contains(t, cfg.Fixtures.Cache, "fx")
+	assert.Contains(t, cfg.Fixtures.Cache(), "fx")
 	assert.Empty(t, cfg.Hooks.AfterTest)
-	assert.Len(t, cfg.Fixtures.Cleanups, 1)
+	assert.Len(t, cfg.Fixtures.Cleanups(), 1)
 
 	cfg.Fixtures.Teardown(cfg)
 	assert.True(t, cleanupCalled)

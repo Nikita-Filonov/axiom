@@ -77,43 +77,43 @@ func WithAfterStep(hook StepHook) HooksOption {
 	}
 }
 
-// ApplyBeforeAll calls runner start hooks in registration order.
-func (h *Hooks) ApplyBeforeAll(r *Runner) {
+// applyBeforeAll calls runner start hooks in registration order.
+func (h *Hooks) applyBeforeAll(r *Runner) {
 	for _, hook := range h.BeforeAll {
 		hook(r)
 	}
 }
 
-// ApplyAfterAll calls runner finish hooks in registration order.
-func (h *Hooks) ApplyAfterAll(r *Runner) {
+// applyAfterAll calls runner finish hooks in registration order.
+func (h *Hooks) applyAfterAll(r *Runner) {
 	for _, hook := range h.AfterAll {
 		hook(r)
 	}
 }
 
-// ApplyBeforeStep calls step start hooks in registration order.
-func (h *Hooks) ApplyBeforeStep(cfg *Config, name string) {
+// applyBeforeStep calls step start hooks in registration order.
+func (h *Hooks) applyBeforeStep(cfg *Config, name string) {
 	for _, hook := range h.BeforeStep {
 		hook(cfg, name)
 	}
 }
 
-// ApplyAfterStep calls step finish hooks in registration order.
-func (h *Hooks) ApplyAfterStep(cfg *Config, name string) {
+// applyAfterStep calls step finish hooks in registration order.
+func (h *Hooks) applyAfterStep(cfg *Config, name string) {
 	for _, hook := range h.AfterStep {
 		hook(cfg, name)
 	}
 }
 
-// ApplyBeforeTest calls test start hooks in registration order.
-func (h *Hooks) ApplyBeforeTest(cfg *Config) {
+// applyBeforeTest calls test start hooks in registration order.
+func (h *Hooks) applyBeforeTest(cfg *Config) {
 	for _, hook := range h.BeforeTest {
 		hook(cfg)
 	}
 }
 
-// ApplyAfterTest calls test finish hooks in registration order.
-func (h *Hooks) ApplyAfterTest(cfg *Config) {
+// applyAfterTest calls test finish hooks in registration order.
+func (h *Hooks) applyAfterTest(cfg *Config) {
 	for _, hook := range h.AfterTest {
 		hook(cfg)
 	}
