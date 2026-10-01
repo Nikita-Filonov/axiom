@@ -5,6 +5,30 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Core versions
 
+### v1.19.0 — 2026-10-01
+
+- **Breaking:** `Runner.BuildConfig`, `Runner.ApplyStart`, and `Runner.ApplyFinish` are no longer exported. `RunCase`,
+  `Suite`, and `RunPackage` own the runner lifecycle and build every `Config`; a plugin receives its `Config` from
+  them.
+- **Breaking:** other execution internals are no longer exported: `Config.Test`, `Config.ApplyPlugins`, the
+  `Hooks.ApplyBefore*` and `Hooks.ApplyAfter*` methods, `Fixtures.Teardown`, `Resources.Teardown`, the `Runtime`
+  dispatch methods (`Test`, `Step`, `Setup`, `Teardown`, `Log`, `Event`, `Assert`, `Artefact`), `Event.Normalize`,
+  `NewLogEvent`, `NewAssertEvent`, `NewArtefactEvent`, `SuiteRunner.BuildSuite`, `NewSuiteConfig`, and
+  `NewSuiteTestConfig`. Use the `Config` methods to emit logs, steps, events, assertions, and artefacts. Calling
+  `cfg.Test` inside a test body re-ran `BeforeTest` and `AfterTest` hooks and fixture cleanup; write that code in the
+  body directly.
+- **Breaking:** `TestingSuite` can be satisfied only by embedding `Suite`. `Suite.SetRootT`, `Suite.SetSubT`, and
+  `Suite.SetRunner` are no longer exported; the `RootT`, `SubT`, and `Runner` fields and `Suite.T` are unchanged.
+- **Breaking:** removed the unused `Copy`, `Join`, and `Normalize` interfaces. The `Copy`, `Join`, and `Normalize`
+  methods on configuration types are unchanged.
+- **Breaking:** the `Cache` and `Cleanups` fields of `Fixtures` and `Resources` are no longer exported, and the
+  `FixtureResult`, `ResourceResult`, `FixtureCleanup`, and `ResourceCleanup` types are removed. Values are built and
+  cached only by `GetFixture` and `GetResource`, so writing the resource cache can no longer bypass its lock.
+  `Registry` and the `New*`/`With*` constructors are unchanged. `GetFixture` now works on a zero `Fixtures` value.
+- Added `Config.Execution` (`ID` and `Attempt`) for correlating the retries of one
+  `RunCase` invocation, and a `case.skip` event for policy skips.
+- CI checks plugins against the checked-out core through a Go workspace.
+
 ### v1.18.0 — 2026-10-01
 
 - Added `Meta.Owner` and `WithMetaOwner` for a test's responsible person or team. Case metadata can override a Runner
@@ -111,6 +135,15 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### teststats v0.31.0 — 2026-10-01
+
+- Replaced the old `CaseResult` and public counter fields with `Attempt`, `Run`,
+  and `Summary`. The plugin now records policy skips, lifecycle failures, and
+  timing through cleanup; groups retries by run ID and derives flaky status.
+  `Stats.Record` and `Stats.Cases` are removed; use `Stats.Attempts()`,
+  `Stats.Runs()`, and `Stats.Summary()` to read results. The collector is safe
+  for concurrent use.
+
 ### testflags v0.1.0 — 2026-10-01
 
 - Added typed CLI flag declarations with functional options and `FlagKey[T]` access.
@@ -119,21 +152,21 @@ versions and plugin versions are independent. The first core release in this per
 
 ### Published release index
 
-The table shows the first plugin tag since 2026-03-26 and the latest published tag as of 2026-10-01. It is a release
-index, not a claim that every intermediate tag changed plugin behavior; many tags update the required Axiom version.
+The table shows the first plugin tag since 2026-03-26 and the versions in the 2026-10-01 plugin release. Many tags
+only update the required Axiom version.
 
-| Plugin           | First tag in period | Latest published tag |
-|------------------|---------------------|----------------------|
-| `testallure`     | `v0.13.0`           | `v0.36.0`            |
-| `testassert`     | `v0.10.0`           | `v0.27.0`            |
-| `testexplain`    | `v0.1.0`            | `v0.15.0`            |
-| `testflags`      | `v0.1.0`            | `v0.1.0`             |
-| `testlogger`     | `v0.12.0`           | `v0.29.0`            |
-| `testquarantine` | `v0.1.0`            | `v0.9.0`             |
-| `teststats`      | `v0.13.0`           | `v0.30.0`            |
-| `testtags`       | `v0.13.0`           | `v0.30.0`            |
-| `testtimeout`    | `v0.1.0`            | `v0.9.0`             |
-| `testtracing`    | `v0.1.0`            | `v0.15.0`            |
+| Plugin           | First tag in period | 2026-10-01 release |
+|------------------|---------------------|--------------------|
+| `testallure`     | `v0.13.0`           | `v0.37.0`          |
+| `testassert`     | `v0.10.0`           | `v0.28.0`          |
+| `testexplain`    | `v0.1.0`            | `v0.16.0`          |
+| `testflags`      | `v0.1.0`            | `v0.2.0`           |
+| `testlogger`     | `v0.12.0`           | `v0.30.0`          |
+| `testquarantine` | `v0.1.0`            | `v0.10.0`          |
+| `teststats`      | `v0.13.0`           | `v0.31.0`          |
+| `testtags`       | `v0.13.0`           | `v0.31.0`          |
+| `testtimeout`    | `v0.1.0`            | `v0.10.0`          |
+| `testtracing`    | `v0.1.0`            | `v0.16.0`          |
 
 Notable plugin changes in this period:
 
