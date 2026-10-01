@@ -31,7 +31,7 @@ func TestNewRunner_Defaults(t *testing.T) {
 
 	// Fixtures
 	assert.NotNil(t, r.Fixtures.Registry)
-	assert.NotNil(t, r.Fixtures.Cache)
+	assert.NotNil(t, r.Fixtures.Cache())
 }
 
 func TestWithRunnerMeta(t *testing.T) {
@@ -886,8 +886,8 @@ func TestRunner_Join_ResourcesRegistryAndCacheMerged(t *testing.T) {
 
 	joined := r1.Join(r2)
 
-	_, okA := joined.Resources.Cache["a"]
-	_, okB := joined.Resources.Cache["b"]
+	_, okA := joined.Resources.Cache()["a"]
+	_, okB := joined.Resources.Cache()["b"]
 	assert.True(t, okA)
 	assert.True(t, okB)
 

@@ -249,9 +249,9 @@ func (r *Runner) Join(other *Runner) *Runner {
 // owns the runner, registers runner cleanup on t. When the same Runner is used
 // with multiple top-level tests, [RunPackage] should own its lifecycle.
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
-	r.ApplyStart()
+	r.applyStart()
 	if !r.managed.Load() {
-		t.Cleanup(r.ApplyFinish)
+		t.Cleanup(r.applyFinish)
 	}
 
 	r.runCase(t, c, action)
@@ -262,9 +262,9 @@ func (r *Runner) runCase(t *testing.T, c Case, action TestAction) {
 	execution.run()
 }
 
-// BuildConfig merges runner and case settings into a Config. It does not run
-// plugins or the test action. It panics if t or c is nil.
-func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
+// buildConfig merges runner and case settings into a Config for execution e.
+// It does not run plugins or the test action. It panics if t or c is nil.
+func (r *Runner) buildConfig(t *testing.T, c *Case, e Execution) *Config {
 	if t == nil {
 		panic("config: nil *testing.T")
 	}
@@ -282,17 +282,18 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	fixtures := r.Fixtures.Join(c.Fixtures)
 
 	cfg := &Config{
-		Case:     c,
-		Skip:     skip,
-		Meta:     meta,
-		Retry:    retry,
-		Hooks:    hooks,
-		RootT:    t,
-		Runner:   r,
-		Context:  context,
-		Runtime:  runtime,
-		Parallel: parallel,
-		Fixtures: fixtures,
+		Case:      c,
+		Skip:      skip,
+		Meta:      meta,
+		Retry:     retry,
+		Hooks:     hooks,
+		RootT:     t,
+		Runner:    r,
+		Context:   context,
+		Runtime:   runtime,
+		Parallel:  parallel,
+		Fixtures:  fixtures,
+		Execution: e,
 	}
 
 	cfg.Meta.Normalize()
@@ -303,38 +304,38 @@ func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config {
 	return cfg
 }
 
-// ApplyStart invokes BeforeAll hooks at most once for this runner.
-func (r *Runner) ApplyStart() {
+// applyStart invokes BeforeAll hooks at most once for this runner.
+func (r *Runner) applyStart() {
 	r.beforeOnce.Do(func() {
-		r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllStart))
+		r.Runtime.event(NewEvent(EventTypeRunnerBeforeAllStart))
 		defer func() {
 			if v := recover(); v != nil {
-				r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllPanic, WithEventMessage(v)))
+				r.Runtime.event(NewEvent(EventTypeRunnerBeforeAllPanic, WithEventMessage(v)))
 				panic(v)
 			}
 
-			r.Runtime.Event(NewEvent(EventTypeRunnerBeforeAllFinish))
+			r.Runtime.event(NewEvent(EventTypeRunnerBeforeAllFinish))
 		}()
 
-		r.Hooks.ApplyBeforeAll(r)
+		r.Hooks.applyBeforeAll(r)
 	})
 }
 
-// ApplyFinish invokes AfterAll hooks and then resource cleanups at most once
+// applyFinish invokes AfterAll hooks and then resource cleanups at most once
 // for this runner. Resource cleanups run in reverse construction order.
-func (r *Runner) ApplyFinish() {
+func (r *Runner) applyFinish() {
 	r.afterOnce.Do(func() {
-		r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllStart))
+		r.Runtime.event(NewEvent(EventTypeRunnerAfterAllStart))
 		defer func() {
 			if v := recover(); v != nil {
-				r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllPanic, WithEventMessage(v)))
+				r.Runtime.event(NewEvent(EventTypeRunnerAfterAllPanic, WithEventMessage(v)))
 				panic(v)
 			}
 
-			r.Runtime.Event(NewEvent(EventTypeRunnerAfterAllFinish))
+			r.Runtime.event(NewEvent(EventTypeRunnerAfterAllFinish))
 		}()
 
-		defer r.Resources.Teardown(r)
-		r.Hooks.ApplyAfterAll(r)
+		defer r.Resources.teardown(r)
+		r.Hooks.applyAfterAll(r)
 	})
 }
