@@ -85,7 +85,7 @@ export AXIOM_TEST_QUARANTINE_RUN=1
 The plugin is distributed as a regular Go module and installed using standard Go tooling.
 
 ```shell
-go get github.com/Nikita-Filonov/axiom@v1.18.0 github.com/Nikita-Filonov/axiom/plugins/testquarantine@v0.7.0
+go get github.com/Nikita-Filonov/axiom@v1.18.0 github.com/Nikita-Filonov/axiom/plugins/testquarantine@v0.9.0
 ```
 
 This will add the plugin to your `go.mod` file:
@@ -93,7 +93,7 @@ This will add the plugin to your `go.mod` file:
 ```text
 require (
 	github.com/Nikita-Filonov/axiom v1.18.0
-	github.com/Nikita-Filonov/axiom/plugins/testquarantine v0.7.0
+	github.com/Nikita-Filonov/axiom/plugins/testquarantine v0.9.0
 )
 ```
 

@@ -111,20 +111,29 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
-The table shows the first plugin tag since 2026-03-26 and the latest published tag as of 2026-09-26. It is a release
+### testflags v0.1.0 — 2026-10-01
+
+- Added typed CLI flag declarations with functional options and `FlagKey[T]` access.
+- `axiom.WithRunnerResources(testflags.Resource())` registers a lazy shared snapshot for resource constructors,
+  hooks, fixtures, and cases. Snapshots expose defaults and explicitly set values.
+
+### Published release index
+
+The table shows the first plugin tag since 2026-03-26 and the latest published tag as of 2026-10-01. It is a release
 index, not a claim that every intermediate tag changed plugin behavior; many tags update the required Axiom version.
 
 | Plugin           | First tag in period | Latest published tag |
 |------------------|---------------------|----------------------|
-| `testallure`     | `v0.13.0`           | `v0.33.0`            |
-| `testassert`     | `v0.10.0`           | `v0.25.0`            |
-| `testexplain`    | `v0.1.0`            | `v0.13.0`            |
-| `testlogger`     | `v0.12.0`           | `v0.27.0`            |
-| `testquarantine` | `v0.1.0`            | `v0.7.0`             |
-| `teststats`      | `v0.13.0`           | `v0.28.0`            |
-| `testtags`       | `v0.13.0`           | `v0.28.0`            |
-| `testtimeout`    | `v0.1.0`            | `v0.7.0`             |
-| `testtracing`    | `v0.1.0`            | `v0.13.0`            |
+| `testallure`     | `v0.13.0`           | `v0.36.0`            |
+| `testassert`     | `v0.10.0`           | `v0.27.0`            |
+| `testexplain`    | `v0.1.0`            | `v0.15.0`            |
+| `testflags`      | `v0.1.0`            | `v0.1.0`             |
+| `testlogger`     | `v0.12.0`           | `v0.29.0`            |
+| `testquarantine` | `v0.1.0`            | `v0.9.0`             |
+| `teststats`      | `v0.13.0`           | `v0.30.0`            |
+| `testtags`       | `v0.13.0`           | `v0.30.0`            |
+| `testtimeout`    | `v0.1.0`            | `v0.9.0`             |
+| `testtracing`    | `v0.1.0`            | `v0.15.0`            |
 
 Notable plugin changes in this period:
 

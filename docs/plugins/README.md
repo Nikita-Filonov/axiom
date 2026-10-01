@@ -176,3 +176,5 @@ These plugins are intended both for direct use and as reference implementations 
 - **🧟 Quarantine Plugin:** [testquarantine](../../plugins/testquarantine). Quarantines known-flaky cases by skipping
   them before execution with a recorded reason, so they stay visible without gating the suite. Can be configured to run
   them anyway in non-gating jobs.
+- **🚩 Flags Plugin:** [testflags](../../plugins/testflags). Shares typed CLI flags with runner resources, hooks,
+  fixtures, and tests.
