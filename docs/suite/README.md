@@ -89,8 +89,8 @@ Suite methods do not need a `Test` prefix. They become executable suite tests on
 suite.Test("user can log in", (*UsersSuite).UserCanLogin)
 ```
 
-`NewSuite` accepts any non-nil pointer implementing `axiom.TestingSuite`. Embedding `axiom.Suite` is the standard way to
-provide that contract:
+`NewSuite` accepts any non-nil pointer to a struct implementing `axiom.TestingSuite`. Embedding `axiom.Suite`, directly
+or through another embedded struct, is the only way to provide that contract:
 
 ```go
 type BaseSuite struct {
@@ -547,14 +547,14 @@ The execution model is:
 
 ```text
 NewSuite
-  Runner ApplyStart
+  Runner BeforeAll
     bound suite test
       s.RunCase
         Case execution
     bound suite test
       s.RunCase
         Case execution
-  Runner ApplyFinish
+  Runner AfterAll and resource cleanups
 ```
 
 `Suite` is not a second runner and not a separate framework layer.
