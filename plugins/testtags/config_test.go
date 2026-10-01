@@ -1,7 +1,6 @@
 package testtags_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/Nikita-Filonov/axiom/plugins/testtags"
@@ -52,16 +51,8 @@ func TestWithConfigExclude_MultipleCalls(t *testing.T) {
 }
 
 func TestConfigFromEnv_ParsesIncludeExclude(t *testing.T) {
-	// Backup original env
-	oldInclude := os.Getenv(testtags.AxiomTestTagsInclude)
-	oldExclude := os.Getenv(testtags.AxiomTestTagsExclude)
-	defer func() {
-		os.Setenv(testtags.AxiomTestTagsInclude, oldInclude)
-		os.Setenv(testtags.AxiomTestTagsExclude, oldExclude)
-	}()
-
-	os.Setenv(testtags.AxiomTestTagsInclude, "fast, api , DB ")
-	os.Setenv(testtags.AxiomTestTagsExclude, "slow,  ui")
+	t.Setenv(testtags.AxiomTestTagsInclude, "fast, api , DB ")
+	t.Setenv(testtags.AxiomTestTagsExclude, "slow,  ui")
 
 	cfg := testtags.NewConfig(
 		testtags.ConfigFromEnv(),
@@ -72,16 +63,8 @@ func TestConfigFromEnv_ParsesIncludeExclude(t *testing.T) {
 }
 
 func TestConfigFromEnv_EmptyValues(t *testing.T) {
-	// Backup original env
-	oldInclude := os.Getenv(testtags.AxiomTestTagsInclude)
-	oldExclude := os.Getenv(testtags.AxiomTestTagsExclude)
-	defer func() {
-		os.Setenv(testtags.AxiomTestTagsInclude, oldInclude)
-		os.Setenv(testtags.AxiomTestTagsExclude, oldExclude)
-	}()
-
-	os.Setenv(testtags.AxiomTestTagsInclude, "")
-	os.Setenv(testtags.AxiomTestTagsExclude, "")
+	t.Setenv(testtags.AxiomTestTagsInclude, "")
+	t.Setenv(testtags.AxiomTestTagsExclude, "")
 
 	cfg := testtags.NewConfig(
 		testtags.ConfigFromEnv(),
@@ -92,8 +75,7 @@ func TestConfigFromEnv_EmptyValues(t *testing.T) {
 }
 
 func TestConfig_CombinedOptions(t *testing.T) {
-	os.Setenv(testtags.AxiomTestTagsInclude, "net")
-	defer os.Unsetenv(testtags.AxiomTestTagsInclude)
+	t.Setenv(testtags.AxiomTestTagsInclude, "net")
 
 	cfg := testtags.NewConfig(
 		testtags.WithConfigInclude("api"),
