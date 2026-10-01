@@ -27,15 +27,10 @@ jobs:
       - name: Run tests with coverage
         run: |
           go test ./... -coverprofile=coverage.out -covermode=atomic
-          (cd ./plugins/testtags && go test ./... -cover)
-          (cd ./plugins/teststats && go test ./... -cover)
-          (cd ./plugins/testlogger && go test ./... -cover)
-          (cd ./plugins/testassert && go test ./... -cover)
-          (cd ./plugins/testallure && go test ./... -cover)
-          (cd ./plugins/testexplain && go test ./... -cover)
-          (cd ./plugins/testtracing && go test ./... -cover)
-          (cd ./plugins/testtimeout && go test ./... -cover)
-          (cd ./plugins/testquarantine && go test ./... -cover)
+          for module in plugins/*; do
+            test -f "$module/go.mod" || continue
+            (cd "$module" && go test ./... -race -cover)
+          done
 
       - name: Convert coverage to XML
         run: go tool cover -func=coverage.out
