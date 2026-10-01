@@ -79,7 +79,8 @@ func TestExplainerSnapshot_ClonesRunnerAndCaseDetails(t *testing.T) {
 		axiom.WithCaseHooks(axiom.WithBeforeTest(explainBeforeTest)),
 		axiom.WithCaseRuntime(axiom.WithRuntimeEventSink(explainEventSink)),
 	)
-	explanation := testexplain.ExplainConfig(joined.BuildConfig(t, &c))
+	var explanation testexplain.Explanation
+	joined.RunCase(t, c, func(cfg *axiom.Config) { explanation = testexplain.ExplainConfig(cfg) })
 	require.Equal(t, []string{"case", "runner"}, explanation.Fixtures)
 	require.Equal(t, []string{"a", "z"}, explanation.Runner.Context.DataKeys)
 	joined.Meta.Labels["owner"] = "changed runner"

@@ -75,8 +75,8 @@ func TestExplainConfig_IncludesJoinHistory(t *testing.T) {
 		axiom.WithCaseMeta(axiom.WithMetaStory("case")),
 		axiom.WithCaseRetry(axiom.WithRetryTimes(4)),
 	)
-	cfg := joined.BuildConfig(t, &c)
-	explanation := testexplain.ExplainConfig(cfg)
+	var explanation testexplain.Explanation
+	joined.RunCase(t, c, func(cfg *axiom.Config) { explanation = testexplain.ExplainConfig(cfg) })
 
 	require.NotNil(t, explanation.Runner.Parent)
 	require.NotNil(t, explanation.Runner.Overlay)
@@ -128,17 +128,13 @@ func TestExplainConfig_ReportsParamTypeAndNilPlugin(t *testing.T) {
 
 func TestPlugin_RecordsExplanationBeforeTest(t *testing.T) {
 	explainer := testexplain.NewExplainer()
-	cfg := &axiom.Config{
-		Case:    &axiom.Case{Name: "case"},
-		Runner:  axiom.NewRunner(),
-		Meta:    axiom.NewMeta(axiom.WithMetaEpic("before")),
-		Runtime: axiom.NewRuntime(),
-	}
-
-	testexplain.Plugin(explainer)(cfg)
+	runner := axiom.NewRunner(
+		axiom.WithRunnerMeta(axiom.WithMetaEpic("before")),
+		axiom.WithRunnerPlugins(testexplain.Plugin(explainer)),
+	)
 
 	called := false
-	cfg.Runtime.Test(cfg, func(current *axiom.Config) {
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("case")), func(current *axiom.Config) {
 		called = true
 		current.Meta.Epic = "after"
 	})
