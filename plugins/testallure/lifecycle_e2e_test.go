@@ -206,7 +206,7 @@ func TestPlugin_LifecycleProbe(t *testing.T) {
 	case "fixture-cleanup-panic":
 		runFixtureCleanupPanicProbe(t)
 	default:
-		t.Fatalf("unknown lifecycle probe %q", os.Getenv(lifecycleProbeEnv))
+		require.FailNow(t, "unknown lifecycle probe", "%q", os.Getenv(lifecycleProbeEnv))
 	}
 }
 
@@ -424,7 +424,7 @@ func runBeforeTestPanicProbe(t *testing.T) {
 	)
 
 	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
-		cfg.T().Fatal("test action must not run after BeforeTest panic")
+		require.FailNow(cfg.T(), "test action must not run after BeforeTest panic")
 	})
 }
 
@@ -483,7 +483,7 @@ func runCaseSkipProbe(t *testing.T) {
 	)
 
 	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
-		cfg.SubT.Fatal("pre-skipped action must not run")
+		require.FailNow(cfg.SubT, "pre-skipped action must not run")
 	})
 }
 
@@ -570,13 +570,11 @@ func assertResultStep(
 func assertResultAttachment(t *testing.T, result model.TestResult, name string) {
 	t.Helper()
 
+	names := make([]string, 0, len(result.Attachments))
 	for _, attachment := range result.Attachments {
-		if attachment.Name == name {
-			return
-		}
+		names = append(names, attachment.Name)
 	}
-
-	require.FailNow(t, "attachment not found", "attachment %q", name)
+	require.Contains(t, names, name)
 }
 
 func resultWithStep(

@@ -7,24 +7,18 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	allure "github.com/allure-framework/allure-go/commons/gotest"
+	"github.com/stretchr/testify/require"
 )
 
-// gomegaTestingT mirrors gomega.types.GomegaTestingT, and requireTestingT mirrors
-// testify's require.TestingT. They assert, at compile time, that *TestingT can be
-// passed to both gomega.NewWithT and require.New without importing either library.
+// gomegaTestingT checks compatibility with Gomega without adding a dependency.
 type gomegaTestingT interface {
 	Helper()
 	Fatalf(format string, args ...any)
 }
 
-type requireTestingT interface {
-	Errorf(format string, args ...any)
-	FailNow()
-}
-
 var (
-	_ gomegaTestingT  = (*TestingT)(nil)
-	_ requireTestingT = (*TestingT)(nil)
+	_ gomegaTestingT   = (*TestingT)(nil)
+	_ require.TestingT = (*TestingT)(nil)
 )
 
 type fakeReporter struct {
@@ -88,34 +82,26 @@ func TestFilterStack_DropsNoiseFramesKeepsHeaderAndUserCode(t *testing.T) {
 
 	filtered := filterStack([]byte(raw), stackDropPrefixes)
 
-	if !strings.HasPrefix(filtered, "goroutine 12 [running]:") {
-		t.Fatalf("expected goroutine header to be kept, got:\n%s", filtered)
-	}
+	require.True(t, strings.HasPrefix(filtered, "goroutine 12 [running]:"))
 	for _, dropped := range []string{
 		"runtime/debug.Stack()",
 		"(*TestingT).Errorf",
 		"github.com/stretchr/testify/assert.Fail",
 		"github.com/onsi/gomega/internal.(*AsyncAssertion).match",
 	} {
-		if strings.Contains(filtered, dropped) {
-			t.Fatalf("expected %q to be dropped, got:\n%s", dropped, filtered)
-		}
+		require.NotContains(t, filtered, dropped)
 	}
 	for _, kept := range []string{
 		"backend-integration-tests/tests.TestCreateAtm(...)",
 		"/repo/tests/atm_test.go:42 +0x33",
 		"testing.tRunner(...)",
 	} {
-		if !strings.Contains(filtered, kept) {
-			t.Fatalf("expected %q to be kept, got:\n%s", kept, filtered)
-		}
+		require.Contains(t, filtered, kept)
 	}
 }
 
 func TestFilterStack_EmptyInput(t *testing.T) {
-	if got := filterStack(nil, stackDropPrefixes); got != "" {
-		t.Fatalf("expected empty result, got %q", got)
-	}
+	require.Empty(t, filterStack(nil, stackDropPrefixes))
 }
 
 func TestComposeMessage(t *testing.T) {
@@ -123,21 +109,15 @@ func TestComposeMessage(t *testing.T) {
 		got := composeMessage("Not equal", "goroutine 1\nframe", true)
 
 		want := "Not equal\n\n" + stackSectionHeader + "\ngoroutine 1\nframe"
-		if got != want {
-			t.Fatalf("unexpected message:\ngot:  %q\nwant: %q", got, want)
-		}
+		require.Equal(t, want, got)
 	})
 
 	t.Run("inline disabled returns message only", func(t *testing.T) {
-		if got := composeMessage("Not equal", "stack", false); got != "Not equal" {
-			t.Fatalf("expected plain message, got %q", got)
-		}
+		require.Equal(t, "Not equal", composeMessage("Not equal", "stack", false))
 	})
 
 	t.Run("empty stack returns message only", func(t *testing.T) {
-		if got := composeMessage("Not equal", "", true); got != "Not equal" {
-			t.Fatalf("expected plain message, got %q", got)
-		}
+		require.Equal(t, "Not equal", composeMessage("Not equal", "", true))
 	})
 }
 
@@ -148,39 +128,21 @@ func TestTestingT_Errorf_WithReporterRecordsMessageAndAttachment(t *testing.T) {
 
 	adapter.Errorf("values must match: %s", "boom")
 
-	if len(reporter.messages) != 1 {
-		t.Fatalf("expected one reported message, got %d", len(reporter.messages))
-	}
+	require.Len(t, reporter.messages, 1)
 	message := reporter.messages[0]
-	if !strings.Contains(message, "values must match: boom") {
-		t.Fatalf("expected assertion message, got:\n%s", message)
-	}
-	if !strings.Contains(message, stackSectionHeader) {
-		t.Fatalf("expected inlined stack header, got:\n%s", message)
-	}
+	require.Contains(t, message, "values must match: boom")
+	require.Contains(t, message, stackSectionHeader)
 
-	if len(reporter.attachments) != 1 {
-		t.Fatalf("expected one attachment, got %d", len(reporter.attachments))
-	}
+	require.Len(t, reporter.attachments, 1)
 	attachment := reporter.attachments[0]
-	if attachment.name != defaultStackAttachmentName {
-		t.Fatalf("unexpected attachment name %q", attachment.name)
-	}
-	if attachment.contentType != contentTypeText {
-		t.Fatalf("unexpected attachment content type %q", attachment.contentType)
-	}
-	if len(attachment.content) == 0 {
-		t.Fatal("expected non-empty stack attachment")
-	}
+	require.Equal(t, defaultStackAttachmentName, attachment.name)
+	require.Equal(t, contentTypeText, attachment.contentType)
+	require.NotEmpty(t, attachment.content)
 
 	// The reporter forwards to the underlying *testing.T itself, so the adapter
 	// must not double-report to the failer.
-	if len(fail.messages) != 0 {
-		t.Fatalf("expected no direct failer reports, got %v", fail.messages)
-	}
-	if fail.helperHits == 0 {
-		t.Fatal("expected Helper to be called on the failer")
-	}
+	require.Empty(t, fail.messages)
+	require.NotEqual(t, 0, fail.helperHits)
 }
 
 func TestTestingT_Errorf_OptionsCanDisableInlineAndAttachment(t *testing.T) {
@@ -193,12 +155,9 @@ func TestTestingT_Errorf_OptionsCanDisableInlineAndAttachment(t *testing.T) {
 
 	adapter.Errorf("plain failure")
 
-	if len(reporter.messages) != 1 || reporter.messages[0] != "plain failure" {
-		t.Fatalf("expected plain message without stack, got %v", reporter.messages)
-	}
-	if len(reporter.attachments) != 0 {
-		t.Fatalf("expected no attachment, got %d", len(reporter.attachments))
-	}
+	require.Len(t, reporter.messages, 1)
+	require.Equal(t, "plain failure", reporter.messages[0])
+	require.Empty(t, reporter.attachments)
 }
 
 func TestTestingT_Errorf_WithoutReporterFallsBackToFailer(t *testing.T) {
@@ -207,9 +166,8 @@ func TestTestingT_Errorf_WithoutReporterFallsBackToFailer(t *testing.T) {
 
 	adapter.Errorf("fallback %d", 7)
 
-	if len(fail.messages) != 1 || fail.messages[0] != "fallback 7" {
-		t.Fatalf("expected fallback to failer, got %v", fail.messages)
-	}
+	require.Len(t, fail.messages, 1)
+	require.Equal(t, "fallback 7", fail.messages[0])
 }
 
 func TestTestingT_Errorf_NilCurrentFallsBackToFailer(t *testing.T) {
@@ -218,9 +176,8 @@ func TestTestingT_Errorf_NilCurrentFallsBackToFailer(t *testing.T) {
 
 	adapter.Errorf("no current")
 
-	if len(fail.messages) != 1 || fail.messages[0] != "no current" {
-		t.Fatalf("expected fallback to failer, got %v", fail.messages)
-	}
+	require.Len(t, fail.messages, 1)
+	require.Equal(t, "no current", fail.messages[0])
 }
 
 func TestTestingT_FailNowDelegatesToFailer(t *testing.T) {
@@ -229,9 +186,7 @@ func TestTestingT_FailNowDelegatesToFailer(t *testing.T) {
 
 	adapter.FailNow()
 
-	if fail.failNow != 1 {
-		t.Fatalf("expected FailNow to delegate once, got %d", fail.failNow)
-	}
+	require.Equal(t, 1, fail.failNow)
 }
 
 func TestTestingT_FailNowWithoutFailerIsNoop(t *testing.T) {
@@ -249,21 +204,11 @@ func TestTestingT_Fatalf_RecordsMessageAndStopsTest(t *testing.T) {
 	// gomega.NewWithT invokes the reporter as t.Fatalf("\n%s", message).
 	adapter.Fatalf("\n%s", "Timed out after 60s.\nExpected\n    <bool>: false\nto be true")
 
-	if len(reporter.messages) != 1 {
-		t.Fatalf("expected one reported message, got %d", len(reporter.messages))
-	}
-	if !strings.Contains(reporter.messages[0], "Timed out after 60s.") {
-		t.Fatalf("expected gomega message recorded, got:\n%s", reporter.messages[0])
-	}
-	if !strings.Contains(reporter.messages[0], stackSectionHeader) {
-		t.Fatalf("expected inlined stack header, got:\n%s", reporter.messages[0])
-	}
-	if len(reporter.attachments) != 1 {
-		t.Fatalf("expected one stack attachment, got %d", len(reporter.attachments))
-	}
-	if fail.failNow != 1 {
-		t.Fatalf("expected the test to be stopped once, got %d", fail.failNow)
-	}
+	require.Len(t, reporter.messages, 1)
+	require.Contains(t, reporter.messages[0], "Timed out after 60s.")
+	require.Contains(t, reporter.messages[0], stackSectionHeader)
+	require.Len(t, reporter.attachments, 1)
+	require.Equal(t, 1, fail.failNow)
 }
 
 func TestTestingT_Fatalf_WithoutReporterFallsBackToFailer(t *testing.T) {
@@ -272,12 +217,9 @@ func TestTestingT_Fatalf_WithoutReporterFallsBackToFailer(t *testing.T) {
 
 	adapter.Fatalf("boom %d", 7)
 
-	if len(fail.messages) != 1 || fail.messages[0] != "boom 7" {
-		t.Fatalf("expected fallback message on failer, got %v", fail.messages)
-	}
-	if fail.failNow != 1 {
-		t.Fatalf("expected FailNow once, got %d", fail.failNow)
-	}
+	require.Len(t, fail.messages, 1)
+	require.Equal(t, "boom 7", fail.messages[0])
+	require.Equal(t, 1, fail.failNow)
 }
 
 func TestTestingT_HelperDelegatesToFailer(t *testing.T) {
@@ -286,59 +228,45 @@ func TestTestingT_HelperDelegatesToFailer(t *testing.T) {
 
 	adapter.Helper()
 
-	if fail.helperHits != 1 {
-		t.Fatalf("expected Helper to delegate once, got %d", fail.helperHits)
-	}
+	require.Equal(t, 1, fail.helperHits)
 }
 
 func TestTOptions(t *testing.T) {
 	t.Run("defaults enable inline stack and attachment", func(t *testing.T) {
 		opts := defaultTOptions()
-		if !opts.inlineStack || !opts.attachStack || opts.attachmentName != defaultStackAttachmentName {
-			t.Fatalf("unexpected defaults: %+v", opts)
-		}
+		require.True(t, opts.inlineStack)
+		require.True(t, opts.attachStack)
+		require.Equal(t, defaultStackAttachmentName, opts.attachmentName)
 	})
 
 	t.Run("WithInlineStack toggles inlineStack", func(t *testing.T) {
 		opts := defaultTOptions()
 
 		WithInlineStack(false)(&opts)
-		if opts.inlineStack {
-			t.Fatal("expected inlineStack disabled")
-		}
+		require.False(t, opts.inlineStack)
 
 		WithInlineStack(true)(&opts)
-		if !opts.inlineStack {
-			t.Fatal("expected inlineStack enabled")
-		}
+		require.True(t, opts.inlineStack)
 	})
 
 	t.Run("WithStackAttachment toggles attachStack", func(t *testing.T) {
 		opts := defaultTOptions()
 
 		WithStackAttachment(false)(&opts)
-		if opts.attachStack {
-			t.Fatal("expected attachStack disabled")
-		}
+		require.False(t, opts.attachStack)
 
 		WithStackAttachment(true)(&opts)
-		if !opts.attachStack {
-			t.Fatal("expected attachStack enabled")
-		}
+		require.True(t, opts.attachStack)
 	})
 
 	t.Run("WithStackAttachmentName overrides and ignores empty", func(t *testing.T) {
 		opts := defaultTOptions()
 
 		WithStackAttachmentName("")(&opts)
-		if opts.attachmentName != defaultStackAttachmentName {
-			t.Fatalf("expected default name preserved, got %q", opts.attachmentName)
-		}
+		require.Equal(t, defaultStackAttachmentName, opts.attachmentName)
 
 		WithStackAttachmentName("Trace")(&opts)
-		if opts.attachmentName != "Trace" {
-			t.Fatalf("expected overridden name, got %q", opts.attachmentName)
-		}
+		require.Equal(t, "Trace", opts.attachmentName)
 	})
 }
 
@@ -352,21 +280,12 @@ func TestT_AppliesOptionsAndWrapsConfigT(t *testing.T) {
 		WithStackAttachmentName("Trace"),
 	)
 
-	if adapter.opts.inlineStack || adapter.opts.attachStack {
-		t.Fatalf("expected options applied, got %+v", adapter.opts)
-	}
-	if adapter.opts.attachmentName != "Trace" {
-		t.Fatalf("unexpected attachment name %q", adapter.opts.attachmentName)
-	}
-	if adapter.fail == nil {
-		t.Fatal("expected reporter to wrap cfg.T()")
-	}
-	if adapter.current == nil {
-		t.Fatal("expected current resolver to be set")
-	}
-	if adapter.current() != nil {
-		t.Fatal("expected nil reporter while no Allure context is active")
-	}
+	require.False(t, adapter.opts.inlineStack)
+	require.False(t, adapter.opts.attachStack)
+	require.Equal(t, "Trace", adapter.opts.attachmentName)
+	require.NotNil(t, adapter.fail)
+	require.NotNil(t, adapter.current)
+	require.Nil(t, adapter.current())
 }
 
 func TestT_ResolvesActiveAllureContext(t *testing.T) {
@@ -377,17 +296,9 @@ func TestT_ResolvesActiveAllureContext(t *testing.T) {
 	cfg.Context.SetData(contextStateKey, state)
 
 	adapter := T(cfg)
-	if got := adapter.current(); got != active {
-		t.Fatalf("expected active Allure context, got %p", got)
-	}
+	require.Same(t, active, adapter.current())
 }
 
 func TestT_PanicsWhenPluginStateMissing(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic when plugin state is missing")
-		}
-	}()
-
-	_ = T(&axiom.Config{SubT: t})
+	require.Panics(t, func() { T(&axiom.Config{SubT: t}) })
 }
