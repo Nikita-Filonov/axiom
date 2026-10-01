@@ -94,16 +94,16 @@ func TestC(t *testing.T) { runner.RunCase(t, caseC, body) }
 - runner-scoped resource cleanups run once for the whole package, after `AfterAll`
 
 How this works under the hood: while `entry` runs, the runner is marked as **managed** (the lifecycle is owned by an
-outer manager, not by individual `t.Cleanup`s). In that mode every `RunCase` skips its own `t.Cleanup(r.ApplyFinish)`
-registration, because otherwise the very first `TestXxx` to call `RunCase` would tear the runner down on its own
+outer manager, not by individual `t.Cleanup`s). In that mode every `RunCase` skips its own `t.Cleanup` registration
+for the runner finish, because otherwise the very first `TestXxx` to call `RunCase` would tear the runner down on its own
 cleanup — defeating the whole point of having a package boundary. Once `RunPackage` returns, the flag is cleared and
 `RunCase` falls back to its standalone behavior.
 
 For custom harnesses that need to wrap the test entry point with additional behavior (signal handling, coverage
 post-processing, etc.), `axiom.RunPackageWith(runner, fn)` accepts any `func() int` and applies the same lifecycle.
 
-> ⚠️ If a `BeforeAll` hook panics, `entry` is not invoked and `AfterAll` does **not** run (the `defer r.ApplyFinish()`
-> is registered after `r.ApplyStart()` succeeds). The original panic propagates verbatim. If you need cleanup of
+> ⚠️ If a `BeforeAll` hook panics, `entry` is not invoked and `AfterAll` does **not** run (the deferred runner finish
+> is registered only after the runner start succeeds). The original panic propagates verbatim. If you need cleanup of
 > partially-initialized state, do it inside the failing `BeforeAll` itself via `defer`.
 
 #### Anti-pattern
@@ -133,7 +133,7 @@ wraps are active, allowing reporting and tracing plugins to observe their steps 
 ### Runner vs case scope
 
 Hooks are registered with `WithRunnerHooks` (runner scope) or `WithCaseHooks` (a single case). Case hooks are merged
-over runner hooks in `BuildConfig`, so for any given case the order is *runner hooks, then case hooks*.
+over runner hooks when each attempt's `Config` is built, so for any given case the order is *runner hooks, then case hooks*.
 
 ```go
 func WithRunnerHooks(opts ...HooksOption) RunnerOption
@@ -219,9 +219,7 @@ func TestHooksExample(t *testing.T) {
 			fmt.Println("doing prepare...")
 		})
 
-		cfg.Test(func(inner *axiom.Config) {
-			fmt.Println("inside test body")
-		})
+		fmt.Println("inside test body")
 
 		cfg.Step("finish", func() {
 			fmt.Println("finishing...")
