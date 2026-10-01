@@ -23,6 +23,9 @@ project author or a designated maintainer.
 - Prefer the simplest design that solves the demonstrated problem. Add a new
   abstraction, option, dependency, or public API only when an existing one
   cannot express the behavior clearly.
+- Before changing the core, check whether the existing API or a separately
+  versioned plugin can solve the problem. If the change still belongs in the
+  core, explain why the plugin approach is insufficient in the issue or PR.
 - Follow [Effective Go](https://go.dev/doc/effective_go) and
   [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments). Use
   `gofmt`, clear names, explicit errors, and small, cohesive packages.
