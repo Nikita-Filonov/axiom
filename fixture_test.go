@@ -21,7 +21,7 @@ func TestNewFixtures_Defaults(t *testing.T) {
 	f := axiom.NewFixtures()
 
 	assert.Nil(t, f.Registry)
-	assert.Nil(t, f.Cache)
+	assert.Nil(t, f.Cache())
 }
 
 func TestWithFixture(t *testing.T) {
@@ -66,7 +66,7 @@ func TestFixturesJoin(t *testing.T) {
 	assert.Equal(t, "C", getFixtureValue(t, result, "c"))
 
 	// Cache must always be empty in Join result
-	assert.Empty(t, result.Cache)
+	assert.Empty(t, result.Cache())
 }
 
 func TestFixturesJoin_ResetsCacheFromBothSides(t *testing.T) {
@@ -74,24 +74,20 @@ func TestFixturesJoin_ResetsCacheFromBothSides(t *testing.T) {
 		Registry: map[string]axiom.Fixture{
 			"a": func(cfg *axiom.Config) (any, func(), error) { return "A", nil, nil },
 		},
-		Cache: map[string]axiom.FixtureResult{
-			"a": {Value: "cached-A"},
-		},
 	}
+	f1.SetCache(map[string]any{"a": "cached-A"})
 	f2 := axiom.Fixtures{
 		Registry: map[string]axiom.Fixture{
 			"b": func(cfg *axiom.Config) (any, func(), error) { return "B", nil, nil },
 		},
-		Cache: map[string]axiom.FixtureResult{
-			"b": {Value: "cached-B"},
-		},
 	}
+	f2.SetCache(map[string]any{"b": "cached-B"})
 
 	result := f1.Join(f2)
 
 	assert.Contains(t, result.Registry, "a")
 	assert.Contains(t, result.Registry, "b")
-	assert.Empty(t, result.Cache)
+	assert.Empty(t, result.Cache())
 }
 
 func TestFixturesJoin_DoesNotMutateOriginalFixtures(t *testing.T) {
@@ -99,27 +95,23 @@ func TestFixturesJoin_DoesNotMutateOriginalFixtures(t *testing.T) {
 		Registry: map[string]axiom.Fixture{
 			"a": func(cfg *axiom.Config) (any, func(), error) { return "A", nil, nil },
 		},
-		Cache: map[string]axiom.FixtureResult{
-			"a": {Value: "cached-A"},
-		},
 	}
+	f1.SetCache(map[string]any{"a": "cached-A"})
 	f2 := axiom.Fixtures{
 		Registry: map[string]axiom.Fixture{
 			"b": func(cfg *axiom.Config) (any, func(), error) { return "B", nil, nil },
 		},
-		Cache: map[string]axiom.FixtureResult{
-			"b": {Value: "cached-B"},
-		},
 	}
+	f2.SetCache(map[string]any{"b": "cached-B"})
 
 	result := f1.Join(f2)
-	result.Cache["x"] = axiom.FixtureResult{Value: "X"}
+	result.Cache()["x"] = "X"
 	result.Registry["c"] = func(cfg *axiom.Config) (any, func(), error) { return "C", nil, nil }
 
 	assert.NotContains(t, f1.Registry, "c")
 	assert.NotContains(t, f2.Registry, "c")
-	assert.NotContains(t, f1.Cache, "x")
-	assert.NotContains(t, f2.Cache, "x")
+	assert.NotContains(t, f1.Cache(), "x")
+	assert.NotContains(t, f2.Cache(), "x")
 }
 
 func TestFixturesJoin_InitializesRegistryForEmptyReceiver(t *testing.T) {
@@ -134,8 +126,8 @@ func TestFixturesJoin_InitializesRegistryForEmptyReceiver(t *testing.T) {
 
 	assert.NotNil(t, result.Registry)
 	assert.Equal(t, "user", getFixtureValue(t, result, "user"))
-	assert.NotNil(t, result.Cache)
-	assert.Empty(t, result.Cleanups)
+	assert.NotNil(t, result.Cache())
+	assert.Empty(t, result.Cleanups())
 }
 
 func TestGetFixture_HappyPath(t *testing.T) {
@@ -150,7 +142,6 @@ func TestGetFixture_HappyPath(t *testing.T) {
 				return 42, func() { cleanupCalled = true }, nil
 			},
 		},
-		Cache: map[string]axiom.FixtureResult{},
 	}
 
 	cfg := &axiom.Config{
@@ -173,7 +164,7 @@ func TestGetFixture_HappyPath(t *testing.T) {
 	assert.Equal(t, 1, callCount, "fixture must NOT run twice")
 
 	assert.Empty(t, cfg.Hooks.AfterTest, "cleanups must not pollute user AfterTest hooks")
-	assert.Len(t, cfg.Fixtures.Cleanups, 1)
+	assert.Len(t, cfg.Fixtures.Cleanups(), 1)
 	requireEventTypes(t, events,
 		axiom.EventTypeFixtureSetupStart,
 		axiom.EventTypeFixtureSetupFinish,
@@ -181,7 +172,7 @@ func TestGetFixture_HappyPath(t *testing.T) {
 
 	cfg.Fixtures.Teardown(cfg)
 	assert.True(t, cleanupCalled, "cleanup must be executed")
-	assert.Empty(t, cfg.Fixtures.Cleanups, "cleanups must be drained")
+	assert.Empty(t, cfg.Fixtures.Cleanups(), "cleanups must be drained")
 	requireEventTypes(t, events,
 		axiom.EventTypeFixtureSetupStart,
 		axiom.EventTypeFixtureSetupFinish,
@@ -204,7 +195,6 @@ func TestUseFixtures_ExecutesAllAndCaches(t *testing.T) {
 				return "B", nil, nil
 			},
 		},
-		Cache: map[string]axiom.FixtureResult{},
 	}
 
 	cfg := &axiom.Config{
@@ -218,8 +208,8 @@ func TestUseFixtures_ExecutesAllAndCaches(t *testing.T) {
 
 	assert.Equal(t, 1, calls["a"])
 	assert.Equal(t, 1, calls["b"])
-	assert.Contains(t, cfg.Fixtures.Cache, "a")
-	assert.Contains(t, cfg.Fixtures.Cache, "b")
+	assert.Contains(t, cfg.Fixtures.Cache(), "a")
+	assert.Contains(t, cfg.Fixtures.Cache(), "b")
 }
 
 func TestUseFixtures_DoesNotExecuteTwice(t *testing.T) {
@@ -232,7 +222,6 @@ func TestUseFixtures_DoesNotExecuteTwice(t *testing.T) {
 				return 42, nil, nil
 			},
 		},
-		Cache: map[string]axiom.FixtureResult{},
 	}
 
 	cfg := &axiom.Config{
@@ -247,7 +236,7 @@ func TestUseFixtures_DoesNotExecuteTwice(t *testing.T) {
 	hook(cfg)
 
 	assert.Equal(t, 1, callCount, "fixture must be executed only once due to cache")
-	assert.Empty(t, cfg.Fixtures.Cleanups, "nil cleanup must not register a cleanup")
+	assert.Empty(t, cfg.Fixtures.Cleanups(), "nil cleanup must not register a cleanup")
 }
 
 func TestUseFixtures_RegistersCleanupOnFixturesStack(t *testing.T) {
@@ -259,7 +248,6 @@ func TestUseFixtures_RegistersCleanupOnFixturesStack(t *testing.T) {
 				return "X", func() { cleanupCalled = true }, nil
 			},
 		},
-		Cache: map[string]axiom.FixtureResult{},
 	}
 
 	cfg := &axiom.Config{
@@ -271,7 +259,7 @@ func TestUseFixtures_RegistersCleanupOnFixturesStack(t *testing.T) {
 	axiom.UseFixtures("x")(cfg)
 
 	assert.Empty(t, cfg.Hooks.AfterTest, "fixture cleanup must not touch user AfterTest hooks")
-	assert.Len(t, cfg.Fixtures.Cleanups, 1, "cleanup must be registered on the fixture stack")
+	assert.Len(t, cfg.Fixtures.Cleanups(), 1, "cleanup must be registered on the fixture stack")
 
 	cfg.Fixtures.Teardown(cfg)
 	assert.True(t, cleanupCalled, "cleanup must be executed")
@@ -288,7 +276,6 @@ func TestGetFixture_Missing_EmitsFailedFact(t *testing.T) {
 	cfg := &axiom.Config{
 		Fixtures: axiom.Fixtures{
 			Registry: map[string]axiom.Fixture{},
-			Cache:    map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeEventSink(func(e axiom.Event) {
@@ -310,7 +297,6 @@ func TestGetFixture_NilFixture_EmitsFailedFact(t *testing.T) {
 	cfg := &axiom.Config{
 		Fixtures: axiom.Fixtures{
 			Registry: map[string]axiom.Fixture{"x": nil},
-			Cache:    map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeEventSink(func(e axiom.Event) {
@@ -335,7 +321,6 @@ func TestGetFixture_FactoryError_EmitsFailedFact(t *testing.T) {
 					return nil, nil, fmt.Errorf("boom")
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeEventSink(func(e axiom.Event) {
@@ -363,7 +348,6 @@ func TestGetFixture_WrongType_EmitsFailedFact(t *testing.T) {
 					return "string", nil, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeEventSink(func(e axiom.Event) {
@@ -390,7 +374,6 @@ func TestGetFixture_CleanupPanic_EmitsPanicFact(t *testing.T) {
 				return "X", func() { panic("boom") }, nil
 			},
 		},
-		Cache: map[string]axiom.FixtureResult{},
 	}
 
 	cfg := &axiom.Config{
@@ -446,7 +429,6 @@ func TestFixturesTeardown_LIFOOrder(t *testing.T) {
 					return "session", func() { order = append(order, "session") }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Hooks: axiom.Hooks{},
 		SubT:  t,
@@ -468,7 +450,6 @@ func TestFixturesTeardown_RunsAfterUserAfterTestHooks(t *testing.T) {
 					return "db", func() { order = append(order, "fixture-cleanup") }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Hooks: axiom.Hooks{
 			AfterTest: []axiom.TestHook{
@@ -489,11 +470,14 @@ func TestFixturesTeardown_RunsAfterUserAfterTestHooks(t *testing.T) {
 
 func TestGetFixture_CachedValueWrongType_EmitsFailedFact(t *testing.T) {
 	var events []axiom.Event
+	calls := 0
 	cfg := &axiom.Config{
 		Fixtures: axiom.Fixtures{
-			Registry: map[string]axiom.Fixture{},
-			Cache: map[string]axiom.FixtureResult{
-				"x": {Value: "string"},
+			Registry: map[string]axiom.Fixture{
+				"x": func(*axiom.Config) (any, func(), error) {
+					calls++
+					return "string", nil, nil
+				},
 			},
 		},
 		Runtime: axiom.NewRuntime(
@@ -501,9 +485,12 @@ func TestGetFixture_CachedValueWrongType_EmitsFailedFact(t *testing.T) {
 		),
 		SubT: &testing.T{},
 	}
+	assert.Equal(t, "string", axiom.GetFixture[string](cfg, "x"))
+	events = nil
 
 	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "x") })
 
+	assert.Equal(t, 1, calls, "cached lookup with wrong type must not re-run the factory")
 	requireEventTypes(t, events, axiom.EventTypeFixtureSetupFailed)
 	assert.Equal(t, "unexpected type", events[0].Message)
 }
@@ -516,7 +503,6 @@ func TestGetFixture_FactoryError_DoesNotRegisterCleanup(t *testing.T) {
 					return nil, func() { t.Fatal("cleanup must not be registered on factory error") }, fmt.Errorf("boom")
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(),
 		SubT:    &testing.T{},
@@ -524,9 +510,9 @@ func TestGetFixture_FactoryError_DoesNotRegisterCleanup(t *testing.T) {
 
 	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "x") })
 
-	assert.Empty(t, cfg.Fixtures.Cleanups,
+	assert.Empty(t, cfg.Fixtures.Cleanups(),
 		"cleanup must not be registered when factory returned an error")
-	assert.NotContains(t, cfg.Fixtures.Cache, "x",
+	assert.NotContains(t, cfg.Fixtures.Cache(), "x",
 		"value must not be cached when factory returned an error")
 }
 
@@ -538,7 +524,6 @@ func TestGetFixture_NilCleanup_DoesNotRegisterAnything(t *testing.T) {
 					return "X", nil, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		SubT: t,
 	}
@@ -546,9 +531,9 @@ func TestGetFixture_NilCleanup_DoesNotRegisterAnything(t *testing.T) {
 	v := axiom.GetFixture[string](cfg, "x")
 	assert.Equal(t, "X", v)
 
-	assert.Empty(t, cfg.Fixtures.Cleanups,
+	assert.Empty(t, cfg.Fixtures.Cleanups(),
 		"nil cleanup must not be appended to the cleanup stack")
-	assert.Contains(t, cfg.Fixtures.Cache, "x",
+	assert.Contains(t, cfg.Fixtures.Cache(), "x",
 		"value must still be cached even with nil cleanup")
 }
 
@@ -564,7 +549,6 @@ func TestGetFixture_WrongTypeWithNonNilCleanup_StillRegistersCleanup(t *testing.
 					return "string", func() { cleanupCalled = true }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(),
 		SubT:    &testing.T{},
@@ -572,9 +556,9 @@ func TestGetFixture_WrongTypeWithNonNilCleanup_StillRegistersCleanup(t *testing.
 
 	runFixtureFatal(func() { _ = axiom.GetFixture[int](cfg, "x") })
 
-	assert.Len(t, cfg.Fixtures.Cleanups, 1,
+	assert.Len(t, cfg.Fixtures.Cleanups(), 1,
 		"cleanup must be registered even when caller-side type assertion fails")
-	assert.NotContains(t, cfg.Fixtures.Cache, "x",
+	assert.NotContains(t, cfg.Fixtures.Cache(), "x",
 		"value with mismatched type must not be cached")
 
 	cfg.Fixtures.Teardown(cfg)
@@ -584,7 +568,7 @@ func TestGetFixture_WrongTypeWithNonNilCleanup_StillRegistersCleanup(t *testing.
 
 func TestConfig_Test_DrainsFixtureCleanups_AfterAfterTestHooks(t *testing.T) {
 	// Lifecycle contract: Config.Test() must run AfterTest hooks first, then
-	// drain Fixtures.Cleanups. Hooks must observe live fixtures; cleanups must
+	// drain fixture cleanups. Hooks must observe live fixtures; cleanups must
 	// observe a cleared state afterwards.
 	var order []string
 
@@ -600,7 +584,6 @@ func TestConfig_Test_DrainsFixtureCleanups_AfterAfterTestHooks(t *testing.T) {
 					return "client", func() { order = append(order, "fixture-cleanup-client") }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Hooks: axiom.Hooks{
 			BeforeTest: []axiom.TestHook{
@@ -611,7 +594,7 @@ func TestConfig_Test_DrainsFixtureCleanups_AfterAfterTestHooks(t *testing.T) {
 			},
 			AfterTest: []axiom.TestHook{
 				func(cfg *axiom.Config) {
-					assert.Len(t, cfg.Fixtures.Cleanups, 2,
+					assert.Len(t, cfg.Fixtures.Cleanups(), 2,
 						"AfterTest must observe fixtures still alive")
 					order = append(order, "after")
 				},
@@ -632,7 +615,7 @@ func TestConfig_Test_DrainsFixtureCleanups_AfterAfterTestHooks(t *testing.T) {
 		"fixture-cleanup-db",
 	}, order, "Config.Test must drain cleanups LIFO after AfterTest hooks")
 
-	assert.Empty(t, cfg.Fixtures.Cleanups, "cleanups must be drained after Config.Test")
+	assert.Empty(t, cfg.Fixtures.Cleanups(), "cleanups must be drained after Config.Test")
 }
 
 func TestConfig_Test_RuntimeWrapEnclosesHooksAndFixtureCleanup(t *testing.T) {
@@ -657,7 +640,6 @@ func TestConfig_Test_RuntimeWrapEnclosesHooksAndFixtureCleanup(t *testing.T) {
 					}, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
@@ -715,7 +697,6 @@ func TestConfig_Test_RuntimeWrapKeepsSetupAndTeardownMiddlewareActiveForFixtureL
 					}, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
@@ -788,7 +769,6 @@ func TestConfig_Test_BodyPanicRunsDeferredLifecycleInsideRuntime(t *testing.T) {
 					}, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
@@ -863,7 +843,6 @@ func TestConfig_Test_BeforeTestPanicStillRunsAfterTestAndFixtureCleanup(t *testi
 					}, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
@@ -927,7 +906,6 @@ func TestConfig_Test_FixtureCleanupPanicPropagatesAfterRuntimeUnwinds(t *testing
 					}, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Runtime: axiom.NewRuntime(
 			axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
@@ -981,7 +959,6 @@ func TestConfig_Test_DeferredLifecyclePreservesOriginalPanicValue(t *testing.T) 
 					return "report", func() { panic(original) }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		SubT: t,
 	}
@@ -1085,7 +1062,6 @@ func TestConfig_Test_DeferredLifecyclePanicPrecedence(t *testing.T) {
 							}, nil
 						},
 					},
-					Cache: map[string]axiom.FixtureResult{},
 				},
 				Runtime: axiom.NewRuntime(
 					axiom.WithRuntimeEventSink(func(event axiom.Event) {
@@ -1145,7 +1121,6 @@ func TestConfig_Test_SkipNowRunsDeferredLifecycleInsideRuntime(t *testing.T) {
 						}, nil
 					},
 				},
-				Cache: map[string]axiom.FixtureResult{},
 			},
 			Runtime: axiom.NewRuntime(
 				axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
@@ -1200,7 +1175,6 @@ func TestConfig_Test_DrainsFixtureCleanups_WhenAfterTestPanics(t *testing.T) {
 					return "db", func() { order = append(order, "fixture-cleanup") }, nil
 				},
 			},
-			Cache: map[string]axiom.FixtureResult{},
 		},
 		Hooks: axiom.Hooks{
 			AfterTest: []axiom.TestHook{
@@ -1240,7 +1214,7 @@ func TestConfig_Test_DrainsFixtureCleanups_WhenAfterTestPanics(t *testing.T) {
 		"runtime-after",
 	}, order,
 		"fixture cleanup must still run after a panicking AfterTest hook")
-	assert.Empty(t, cfg.Fixtures.Cleanups, "cleanups must be drained even when AfterTest panics")
+	assert.Empty(t, cfg.Fixtures.Cleanups(), "cleanups must be drained even when AfterTest panics")
 	requireEventTypes(t, events,
 		axiom.EventTypeCaseStart,
 		axiom.EventTypeFixtureSetupStart,
@@ -1255,32 +1229,27 @@ func TestFixturesCopy_DeepCopyMaps(t *testing.T) {
 		Registry: map[string]axiom.Fixture{
 			"x": func(cfg *axiom.Config) (any, func(), error) { return 1, nil, nil },
 		},
-		Cache: map[string]axiom.FixtureResult{
-			"x": {Value: 1},
-		},
 	}
+	f.SetCache(map[string]any{"x": 1})
 
 	cp := f.Copy()
 	cp.Registry["y"] = func(cfg *axiom.Config) (any, func(), error) { return 2, nil, nil }
-	cp.Cache["y"] = axiom.FixtureResult{Value: 2}
+	cp.Cache()["y"] = 2
 
 	assert.NotContains(t, f.Registry, "y")
-	assert.NotContains(t, f.Cache, "y")
+	assert.NotContains(t, f.Cache(), "y")
 }
 
 func TestFixturesCopy_DeepCopiesCleanups(t *testing.T) {
 	var calls []string
-	f := axiom.Fixtures{
-		Cleanups: []axiom.FixtureCleanup{
-			func(*axiom.Config) { calls = append(calls, "original") },
-		},
-	}
+	var f axiom.Fixtures
+	f.SetCleanups(func(*axiom.Config) { calls = append(calls, "original") })
 
 	cp := f.Copy()
-	cp.Cleanups[0] = func(*axiom.Config) { calls = append(calls, "copy") }
+	cp.Cleanups()[0] = func(*axiom.Config) { calls = append(calls, "copy") }
 
-	f.Cleanups[0](nil)
-	cp.Cleanups[0](nil)
+	f.Cleanups()[0](nil)
+	cp.Cleanups()[0](nil)
 
 	assert.Equal(t, []string{"original", "copy"}, calls)
 }

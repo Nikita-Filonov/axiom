@@ -6,22 +6,13 @@ package axiom
 // error fails the current subtest and does not register cleanup.
 type Fixture func(cfg *Config) (any, func(), error)
 
-// FixtureResult holds a constructed value and its optional cleanup in a
-// Config's fixture cache.
-type FixtureResult struct {
-	Value   any
-	Cleanup func()
-}
-
-// FixtureCleanup is an attempt cleanup callback run in reverse setup order.
-type FixtureCleanup func(*Config)
-
 // Fixtures stores definitions and attempt scoped values. Runner and Case
 // definitions are merged into a fresh registry and cache for each attempt.
 type Fixtures struct {
 	Registry map[string]Fixture
-	Cache    map[string]FixtureResult
-	Cleanups []FixtureCleanup
+
+	cache    map[string]any
+	cleanups []func(*Config)
 }
 
 // FixturesOption configures a Fixtures registry.
@@ -70,14 +61,14 @@ func (f *Fixtures) Copy() Fixtures {
 			result.Registry[k] = v
 		}
 	}
-	if f.Cache != nil {
-		result.Cache = make(map[string]FixtureResult, len(f.Cache))
-		for k, v := range f.Cache {
-			result.Cache[k] = v
+	if f.cache != nil {
+		result.cache = make(map[string]any, len(f.cache))
+		for k, v := range f.cache {
+			result.cache[k] = v
 		}
 	}
-	if f.Cleanups != nil {
-		result.Cleanups = append([]FixtureCleanup{}, f.Cleanups...)
+	if f.cleanups != nil {
+		result.cleanups = append([]func(*Config){}, f.cleanups...)
 	}
 	return result
 }
@@ -93,8 +84,8 @@ func (f *Fixtures) Join(other Fixtures) Fixtures {
 	for k, v := range other.Registry {
 		result.Registry[k] = v
 	}
-	result.Cache = map[string]FixtureResult{}
-	result.Cleanups = nil
+	result.cache = map[string]any{}
+	result.cleanups = nil
 
 	return result
 }
@@ -104,17 +95,17 @@ func (f *Fixtures) Normalize() {
 	if f.Registry == nil {
 		f.Registry = map[string]Fixture{}
 	}
-	if f.Cache == nil {
-		f.Cache = map[string]FixtureResult{}
+	if f.cache == nil {
+		f.cache = map[string]any{}
 	}
 }
 
-// Teardown runs registered cleanups in reverse order.
-func (f *Fixtures) Teardown(cfg *Config) {
-	for i := len(f.Cleanups) - 1; i >= 0; i-- {
-		f.Cleanups[i](cfg)
+// teardown runs registered cleanups in reverse order.
+func (f *Fixtures) teardown(cfg *Config) {
+	for i := len(f.cleanups) - 1; i >= 0; i-- {
+		f.cleanups[i](cfg)
 	}
-	f.Cleanups = nil
+	f.cleanups = nil
 }
 
 // GetFixture returns the named value, constructing and caching it on first use
@@ -127,8 +118,10 @@ func GetFixture[T any](cfg *Config, name string) T {
 		panic("fixture: nil config")
 	}
 
-	if res, ok := cfg.Fixtures.Cache[name]; ok {
-		out, ok := res.Value.(T)
+	cfg.Fixtures.Normalize()
+
+	if cached, ok := cfg.Fixtures.cache[name]; ok {
+		out, ok := cached.(T)
 		if !ok {
 			cfg.Event(NewEvent(EventTypeFixtureSetupFailed, WithEventName(name), WithEventMessage("unexpected type")))
 			cfg.SubT.Fatalf("fixture %q has unexpected type", name)
@@ -158,7 +151,7 @@ func GetFixture[T any](cfg *Config, name string) T {
 	}
 
 	if cleanup != nil {
-		cfg.Fixtures.Cleanups = append(cfg.Fixtures.Cleanups, fixtureCleanupHook(name, cleanup))
+		cfg.Fixtures.cleanups = append(cfg.Fixtures.cleanups, fixtureCleanupHook(name, cleanup))
 	}
 
 	out, ok := val.(T)
@@ -167,7 +160,7 @@ func GetFixture[T any](cfg *Config, name string) T {
 		cfg.SubT.Fatalf("fixture %q has unexpected type", name)
 		return zero
 	}
-	cfg.Fixtures.Cache[name] = FixtureResult{Value: val, Cleanup: cleanup}
+	cfg.Fixtures.cache[name] = val
 	cfg.Event(NewEvent(EventTypeFixtureSetupFinish, WithEventName(name)))
 
 	return out
@@ -182,7 +175,7 @@ func UseFixtures(names ...string) func(cfg *Config) {
 	}
 }
 
-func fixtureCleanupHook(name string, cleanup func()) FixtureCleanup {
+func fixtureCleanupHook(name string, cleanup func()) func(*Config) {
 	return func(c *Config) {
 		c.Event(NewEvent(EventTypeFixtureCleanupStart, WithEventName(name)))
 		defer func() {
