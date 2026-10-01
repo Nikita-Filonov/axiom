@@ -79,8 +79,7 @@ func TestPlugin_DoesNotCollectRunnerRuntimeEvents(t *testing.T) {
 			return "ok", nil, nil
 		}),
 	)
-	c := axiom.NewCase(axiom.WithCaseName("case"))
-	cfg := runner.BuildConfig(t, &c)
+	cfg := &axiom.Config{Runner: runner, Case: &axiom.Case{Name: "case"}}
 
 	testtracing.Plugin(trace)(cfg)
 
@@ -113,16 +112,11 @@ func TestPlugin_DuplicateApplicationsCreateIndependentRecords(t *testing.T) {
 
 func TestPlugin_ClosesSinkOnTestingCleanup(t *testing.T) {
 	trace := testtracing.NewTrace()
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testtracing.Plugin(trace)))
 	var cfg *axiom.Config
 
-	t.Run("case", func(t *testing.T) {
-		cfg = &axiom.Config{
-			RootT:   t,
-			Runtime: axiom.NewRuntime(),
-		}
-		testtracing.Plugin(trace)(cfg)
-
-		cfg.Runtime.Test(cfg, func(_ *axiom.Config) {})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("case")), func(current *axiom.Config) {
+		cfg = current
 		cfg.Event(axiom.NewEvent(axiom.EventTypeLog))
 	})
 
@@ -130,8 +124,11 @@ func TestPlugin_ClosesSinkOnTestingCleanup(t *testing.T) {
 
 	records := trace.Snapshot()
 	require.Len(t, records, 1)
-	require.Len(t, records[0].Events, 1)
-	require.Equal(t, axiom.EventTypeLog, records[0].Events[0].Type)
+	var types []axiom.EventType
+	for _, event := range records[0].Events {
+		types = append(types, event.Type)
+	}
+	require.Equal(t, []axiom.EventType{axiom.EventTypeCaseStart, axiom.EventTypeLog, axiom.EventTypeCaseFinish}, types)
 }
 
 func TestPlugin_KeepsSinkActiveWhenTestingTUnavailable(t *testing.T) {
@@ -139,7 +136,8 @@ func TestPlugin_KeepsSinkActiveWhenTestingTUnavailable(t *testing.T) {
 	cfg := &axiom.Config{Runtime: axiom.NewRuntime()}
 	testtracing.Plugin(trace)(cfg)
 
-	cfg.Runtime.Test(cfg, func(_ *axiom.Config) {})
+	require.Len(t, cfg.Runtime.TestWraps, 1)
+	cfg.Runtime.TestWraps[0](func(*axiom.Config) {})(cfg)
 	cfg.Event(axiom.NewEvent(axiom.EventTypeLog))
 
 	records := trace.Snapshot()
