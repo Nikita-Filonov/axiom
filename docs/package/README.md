@@ -26,7 +26,7 @@ external service stub).
 ## Why it exists
 
 Without an explicit lifecycle boundary, a package-level `Runner` is tied to whichever `*testing.T` happened to call
-`RunCase` first. When that test completes, its `t.Cleanup` flushes `r.ApplyFinish` through `sync.Once`, and every
+`RunCase` first. When that test completes, its `t.Cleanup` finishes the runner through `sync.Once`, and every
 subsequent `TestXxx` sees a runner that has already torn down its `AfterAll` and resources.
 
 `RunPackage` solves this by wrapping `m.Run()` with the runner lifecycle directly:
@@ -91,20 +91,20 @@ func RunPackageWith(r *Runner, entry func() int) int
 
 While `entry` runs, the runner is internally marked as **managed** — meaning the lifecycle is owned by an outer
 manager (`RunPackageWith` here) rather than by individual `t.Cleanup`s. In that mode every `RunCase` skips its own
-`t.Cleanup(r.ApplyFinish)` registration, because otherwise the very first `TestXxx` to call `RunCase` would tear the
+`t.Cleanup(r.applyFinish)` registration, because otherwise the very first `TestXxx` to call `RunCase` would tear the
 runner down on its own cleanup — the exact problem `RunPackage` is meant to solve.
 
 Once `RunPackageWith` returns, the flag is cleared and `RunCase` falls back to its standalone behavior (registering
-`r.ApplyFinish` via `t.Cleanup` like before), so calling `RunCase` outside a `TestMain` context continues to work
+`r.applyFinish` via `t.Cleanup` like before), so calling `RunCase` outside a `TestMain` context continues to work
 exactly as it did.
 
 In code terms (`runner.go`):
 
 ```go
 func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
-    r.ApplyStart()
+    r.applyStart()
     if !r.managed.Load() {
-        t.Cleanup(r.ApplyFinish)
+        t.Cleanup(r.applyFinish)
     }
     r.runCase(t, c, action)
 }
@@ -117,8 +117,8 @@ func RunPackageWith(r *Runner, entry func() int) int {
     r.managed.Store(true)
     defer r.managed.Store(false)
 
-    r.ApplyStart()
-    defer r.ApplyFinish()
+    r.applyStart()
+    defer r.applyFinish()
     return entry()
 }
 ```
@@ -135,7 +135,7 @@ func RunPackageWith(r *Runner, entry func() int) int {
 | `AfterAll` itself panics             | the panic propagates after resource cleanups                                           |
 | `BeforeAll` panics                   | `entry` is **not** invoked and `AfterAll` does **not** run                             |
 
-> ⚠️ The last row is intentional. `defer r.ApplyFinish()` is registered **after** `r.ApplyStart()` succeeds, so if
+> ⚠️ The last row is intentional. `defer r.applyFinish()` is registered **after** `r.applyStart()` succeeds, so if
 > `BeforeAll` panics before completing, no `AfterAll` is queued. If your `BeforeAll` allocates resources before the
 > point where it can panic, clean them up inside the failing hook via its own `defer`.
 
