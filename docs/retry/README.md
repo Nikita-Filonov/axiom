@@ -1,5 +1,13 @@
 # 📘 Retry
 
+## 📑 Table of Contents
+
+- [Semantics](#semantics)
+- [Parallel Cases](#parallel-cases)
+- [Example](#example)
+
+---
+
 `Retry` defines how many times a test may re-run and how long to wait between attempts. `Retry` configuration may be
 applied at both Runner and `Case` level. Case-level settings override Runner-level defaults.
 
