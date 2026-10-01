@@ -497,6 +497,12 @@ func runLifecycleProbe(t *testing.T, mode string, wantFailure bool) []model.Test
 		"-test.count=1",
 		"-test.v",
 	)
+	for _, arg := range os.Args[1:] {
+		if strings.HasPrefix(arg, "-test.gocoverdir=") {
+			command.Args = append(command.Args, arg)
+			break
+		}
+	}
 	command.Env = lifecycleProbeEnvironment(mode, resultsDir)
 
 	output, err := command.CombinedOutput()

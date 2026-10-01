@@ -60,15 +60,15 @@ The plugin is distributed as a regular Go module and installed using standard Go
 Add the plugin dependency using `go get`:
 
 ```shell
-go get github.com/Nikita-Filonov/axiom/plugins/testassert
+go get github.com/Nikita-Filonov/axiom@v1.18.0 github.com/Nikita-Filonov/axiom/plugins/testassert@v0.25.0
 ```
 
 This will add the plugin to your `go.mod` file:
 
 ```text
 require (
-	github.com/Nikita-Filonov/axiom v0.3.0
-	github.com/Nikita-Filonov/axiom/plugins/testassert v0.1.0
+	github.com/Nikita-Filonov/axiom v1.18.0
+	github.com/Nikita-Filonov/axiom/plugins/testassert v0.25.0
 )
 ```
 
