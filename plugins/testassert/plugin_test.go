@@ -19,7 +19,7 @@ func TestPlugin_AssertSink_NoSubT_DoesNothing(t *testing.T) {
 
 	testassert.Plugin()(cfg)
 
-	cfg.Runtime.Assert(axiom.NewEqualAssert(1, 1, "msg"))
+	cfg.Assert(axiom.NewEqualAssert(1, 1, "msg"))
 
 	require.True(t, called)
 }
@@ -28,5 +28,5 @@ func TestPlugin_AssertSink_EvaluatesWithSubT(t *testing.T) {
 	cfg := &axiom.Config{SubT: t, Runtime: axiom.NewRuntime()}
 	testassert.Plugin()(cfg)
 
-	cfg.Runtime.Assert(axiom.NewEqualAssert(3, 3, "values must match"))
+	cfg.Assert(axiom.NewEqualAssert(3, 3, "values must match"))
 }
