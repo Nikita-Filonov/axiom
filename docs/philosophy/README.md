@@ -5,7 +5,7 @@
 ## 📑 Table of Contents
 
 - [Overview](#overview)
-- [What Axiom is not](#what-axiom-is-_not_)
+- [What Axiom is not](#what-axiom-is-not)
 - [Where Axiom fits](#where-axiom-fits)
 - [Axiom and other testing tools](#axiom-and-other-testing-tools)
 - [Core idea](#core-idea)
