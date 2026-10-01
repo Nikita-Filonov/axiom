@@ -131,7 +131,7 @@ var runner = axiom.NewRunner(
 	axiom.WithRunnerRuntime(
 
 		// Register middleware around every test action.
-		// The wrapper runs when cfg.Test(...) executes, not when the runner is built.
+		// The wrapper runs around each attempt, not when the runner is built.
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
 			return func(c *axiom.Config) {
 				fmt.Println("[runtime] before test")
@@ -154,8 +154,8 @@ var runner = axiom.NewRunner(
 			fmt.Println("[log]", l.Level, l.Text)
 		}),
 
-		// Event sinks observe raw facts emitted via cfg.Event(...) and by Axiom
-		// lifecycle helpers such as cfg.Test(...) and cfg.Step(...).
+		// Event sinks observe raw facts emitted via cfg.Event(...), by the attempt
+		// lifecycle, and by helpers such as cfg.Step(...).
 		axiom.WithRuntimeEventSink(func(e axiom.Event) {
 			fmt.Println("[event]", e.Type, e.Name, e.Message)
 		}),
