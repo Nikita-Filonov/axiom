@@ -121,7 +121,7 @@ func Plugin() axiom.Plugin {
 	// Config/Runtime and return; it should not run the test by itself.
 	return func(cfg *axiom.Config) {
 		// Test wraps are middleware. This registration only changes how the test
-		// will execute later, when cfg.Test(...) reaches Runtime.Test(...).
+		// will execute later, when the attempt runs.
 		cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
 			// The outer function receives the next action in the chain.
 			// The returned action becomes the decorated test body.
@@ -160,8 +160,8 @@ These plugins are intended both for direct use and as reference implementations 
   events (tests, steps, artefacts, metadata) into the Allure execution model.
 - **📝 Logger Plugin:** [testlogger](../../plugins/testlogger). Consumes structured log events emitted via `cfg.Log(...)`
   and forwards them to Go’s `log/slog` logging infrastructure.
-- **📊 Stats Plugin:** [teststats](../../plugins/teststats). Collects execution statistics for test cases, including
-  attempts, duration, final status, and metadata snapshots.
+- **📊 Stats Plugin:** [teststats](../../plugins/teststats). Records every attempt, including skips and cleanup
+  failures, groups retries into runs with flaky detection, and counts runs and attempts.
 - **🔎 Tracing Plugin:** [testtracing](../../plugins/testtracing). Records raw config-scoped runtime events into an
   in-memory trace for later inspection or export.
 - **🧭 Explain Plugin:** [testexplain](../../plugins/testexplain). Captures a structured explanation of the merged

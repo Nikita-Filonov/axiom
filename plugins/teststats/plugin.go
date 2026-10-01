@@ -1,27 +1,39 @@
 package teststats
 
-import (
-	"github.com/Nikita-Filonov/axiom"
-)
+import "github.com/Nikita-Filonov/axiom"
 
-// Plugin appends a result to stats when an attempt's AfterTest hook runs,
-// preserving each retry outcome for later analysis.
+var installedKey = axiom.NewLocalKey[map[*Stats]bool]("teststats.installed")
+
+// Plugin records an [Attempt] in stats for every attempt that starts or is
+// skipped by policy. The attempt is recorded when its testing.T finishes:
+// after hooks, fixture cleanup, child subtests, and t.Cleanup callbacks.
+// Installing the same stats more than once on a Config, for example on both
+// the Runner and the Case, records each attempt once. Plugin panics if stats
+// is nil.
 func Plugin(stats *Stats) axiom.Plugin {
-	return func(cfg *axiom.Config) {
-		result := NewCaseResult(cfg)
-		attempts := 0
-
-		cfg.Hooks.BeforeTest = append(
-			cfg.Hooks.BeforeTest,
-			func(_ *axiom.Config) { attempts++ },
-		)
-
-		cfg.Hooks.AfterTest = append(
-			cfg.Hooks.AfterTest,
-			func(c *axiom.Config) {
-				result.Finalize(c, attempts)
-				stats.Record(result)
-			},
-		)
+	if stats == nil {
+		panic("teststats: nil stats")
 	}
+
+	return func(cfg *axiom.Config) {
+		if markInstalled(cfg, stats) {
+			r := &recorder{cfg: cfg, stats: stats}
+			cfg.Runtime.EmitEventSink(r.observe)
+		}
+	}
+}
+
+// markInstalled reports whether stats was not yet installed on cfg.
+func markInstalled(cfg *axiom.Config, stats *Stats) bool {
+	installed, _ := axiom.GetLocal(cfg, installedKey)
+	if installed[stats] {
+		return false
+	}
+	if installed == nil {
+		installed = make(map[*Stats]bool)
+		axiom.SetLocal(cfg, installedKey, installed)
+	}
+	installed[stats] = true
+
+	return true
 }
