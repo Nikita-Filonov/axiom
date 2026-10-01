@@ -66,7 +66,7 @@ func TestFlagsAvailableToResourcesHooksFixturesAndPlugins(t *testing.T) {
 		}),
 	)
 	parse(t, fs, "-custom=55")
-	// Resources can be resolved directly, before Runner.ApplyStart.
+	// Resources can be resolved directly, before the runner starts.
 	require.Equal(t, 55, resource.Get(r))
 	require.Equal(t, 0, hooks)
 	for _, name := range []string{"first", "second"} {
