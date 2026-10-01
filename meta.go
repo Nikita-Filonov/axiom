@@ -18,6 +18,7 @@ const (
 type Meta struct {
 	Epic        string
 	Tags        []string
+	Owner       string
 	Suite       string
 	Story       string
 	Layer       string
@@ -47,6 +48,11 @@ func NewMeta(options ...MetaOption) Meta {
 // WithMetaEpic sets the epic classification.
 func WithMetaEpic(epic string) MetaOption {
 	return func(m *Meta) { m.Epic = epic }
+}
+
+// WithMetaOwner sets the person or team responsible for the test.
+func WithMetaOwner(owner string) MetaOption {
+	return func(m *Meta) { m.Owner = owner }
 }
 
 // WithMetaSuite sets the suite name used in reports.
@@ -145,6 +151,7 @@ func WithMetaTestCases(testCases []string) MetaOption {
 func (m *Meta) Copy() Meta {
 	result := Meta{
 		Epic:        m.Epic,
+		Owner:       m.Owner,
 		Suite:       m.Suite,
 		Story:       m.Story,
 		Layer:       m.Layer,
@@ -181,6 +188,9 @@ func (m *Meta) Join(other Meta) Meta {
 
 	if other.Epic != "" {
 		result.Epic = other.Epic
+	}
+	if other.Owner != "" {
+		result.Owner = other.Owner
 	}
 	if other.Suite != "" {
 		result.Suite = other.Suite

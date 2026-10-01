@@ -16,6 +16,7 @@ func TestNewMeta_Defaults(t *testing.T) {
 	assert.Nil(t, m.TestCases)
 
 	assert.Empty(t, m.Epic)
+	assert.Empty(t, m.Owner)
 	assert.Empty(t, m.Suite)
 	assert.Empty(t, m.SubSuite)
 	assert.Empty(t, m.ParentSuite)
@@ -30,6 +31,7 @@ func TestNewMeta_Defaults(t *testing.T) {
 func TestNewMeta_WithOptions(t *testing.T) {
 	m := axiom.NewMeta(
 		axiom.WithMetaEpic("Payments"),
+		axiom.WithMetaOwner("payments-team"),
 		axiom.WithMetaSuite("API"),
 		axiom.WithMetaSubSuite("Transfers"),
 		axiom.WithMetaParentSuite("PaymentsRoot"),
@@ -49,6 +51,7 @@ func TestNewMeta_WithOptions(t *testing.T) {
 	)
 
 	assert.Equal(t, "Payments", m.Epic)
+	assert.Equal(t, "payments-team", m.Owner)
 	assert.Equal(t, "API", m.Suite)
 	assert.Equal(t, "Transfers", m.SubSuite)
 	assert.Equal(t, "PaymentsRoot", m.ParentSuite)
@@ -115,6 +118,7 @@ func TestMetaNormalize_DoesNotOverrideExistingLabels(t *testing.T) {
 func TestMetaJoin_OverridesSimpleFields(t *testing.T) {
 	base := axiom.Meta{
 		Epic:     "BaseEpic",
+		Owner:    "base-team",
 		Story:    "BaseStory",
 		Layer:    "BaseLayer",
 		Feature:  "BaseFeature",
@@ -125,6 +129,7 @@ func TestMetaJoin_OverridesSimpleFields(t *testing.T) {
 
 	other := axiom.Meta{
 		Epic:     "NewEpic",
+		Owner:    "new-team",
 		Story:    "NewStory",
 		Layer:    "NewLayer",
 		Feature:  "NewFeature",
@@ -136,6 +141,7 @@ func TestMetaJoin_OverridesSimpleFields(t *testing.T) {
 	result := base.Join(other)
 
 	assert.Equal(t, "NewEpic", result.Epic)
+	assert.Equal(t, "new-team", result.Owner)
 	assert.Equal(t, "NewStory", result.Story)
 	assert.Equal(t, "NewLayer", result.Layer)
 	assert.Equal(t, "NewFeature", result.Feature)
@@ -235,6 +241,7 @@ func TestMetaJoin_LabelOverridesExistingKeys(t *testing.T) {
 func TestMetaJoin_DoesNotOverrideEmptyFields(t *testing.T) {
 	base := axiom.Meta{
 		Epic:     "A",
+		Owner:    "team-a",
 		Story:    "B",
 		Layer:    "C",
 		Feature:  "D",
@@ -251,6 +258,7 @@ func TestMetaJoin_DoesNotOverrideEmptyFields(t *testing.T) {
 	result := base.Join(other)
 
 	assert.Equal(t, "A", result.Epic)
+	assert.Equal(t, "team-a", result.Owner)
 	assert.Equal(t, "B", result.Story)
 	assert.Equal(t, "C", result.Layer)
 	assert.Equal(t, "D", result.Feature)
@@ -280,6 +288,7 @@ func TestMetaJoin_DoesNotOverrideEmptySuites(t *testing.T) {
 func TestMetaCopy_DeepCopyCollections(t *testing.T) {
 	m := axiom.Meta{
 		Epic:      "E",
+		Owner:     "team-a",
 		Tags:      []string{"a"},
 		Issues:    []string{"i"},
 		TestCases: []string{"tc"},
@@ -297,4 +306,5 @@ func TestMetaCopy_DeepCopyCollections(t *testing.T) {
 	assert.Equal(t, "tc", m.TestCases[0])
 	assert.Equal(t, "team-a", m.Labels["owner"])
 	assert.Equal(t, "E", cp.Epic)
+	assert.Equal(t, "team-a", cp.Owner)
 }

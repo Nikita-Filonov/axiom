@@ -3,7 +3,12 @@
 User-facing changes to Axiom since 2026-03-26, reconstructed from the repository's commits and release tags. Core
 versions and plugin versions are independent. The first core release in this period was `v0.15.0` on 2026-04-16.
 
-## Core releases
+## Core versions
+
+### v1.18.0 — 2026-10-01
+
+- Added `Meta.Owner` and `WithMetaOwner` for a test's responsible person or team. Case metadata can override a Runner
+  owner.
 
 ### v1.17.0 — 2026-09-26
 

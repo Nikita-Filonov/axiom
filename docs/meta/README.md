@@ -7,6 +7,7 @@ level. `Case` metadata overrides `Runner` metadata when merged.
 Metadata includes:
 
 - epic, feature, story
+- owner (person or team responsible for the test)
 - tags
 - severity
 - labels (key/value)
@@ -40,6 +41,7 @@ func TestMetaExample(t *testing.T) {
 	runner := axiom.NewRunner(
 		axiom.WithRunnerMeta(
 			axiom.WithMetaEpic("authentication"),
+			axiom.WithMetaOwner("backend-team"),
 			axiom.WithMetaFeature("login"),
 			axiom.WithMetaPlatform("backend"),
 			axiom.WithMetaSeverity(axiom.SeverityCritical),
@@ -55,6 +57,7 @@ func TestMetaExample(t *testing.T) {
 	c := axiom.NewCase(
 		axiom.WithCaseName("user can authenticate"),
 		axiom.WithCaseMeta(
+			axiom.WithMetaOwner("auth-team"), // overrides Runner owner
 			axiom.WithMetaStory("valid login flow"),
 			axiom.WithMetaTag("smoke"),
 			axiom.WithMetaLayer("api"),
@@ -68,6 +71,7 @@ func TestMetaExample(t *testing.T) {
 		meta := cfg.Meta
 
 		fmt.Println("Epic:", meta.Epic)
+		fmt.Println("Owner:", meta.Owner)
 		fmt.Println("Feature:", meta.Feature)
 		fmt.Println("Platform:", meta.Platform)
 		fmt.Println("Story:", meta.Story)

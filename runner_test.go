@@ -247,7 +247,7 @@ func TestRunnerCopy_CopiesHistoryAndUsesFreshLifecycle(t *testing.T) {
 
 func TestRunnerBuildConfig(t *testing.T) {
 	r := axiom.NewRunner(
-		axiom.WithRunnerMeta(axiom.WithMetaEpic("RunnerEpic")),
+		axiom.WithRunnerMeta(axiom.WithMetaEpic("RunnerEpic"), axiom.WithMetaOwner("runner-team")),
 		axiom.WithRunnerSkip(axiom.WithSkipReason("runner skip")),
 		axiom.WithRunnerRetry(axiom.WithRetryTimes(10)),
 		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
@@ -258,7 +258,7 @@ func TestRunnerBuildConfig(t *testing.T) {
 		axiom.WithCaseID("CASE-ID"),
 		axiom.WithCaseName("CaseName"),
 		axiom.WithCaseDescription("CaseDescription"),
-		axiom.WithCaseMeta(axiom.WithMetaStory("Story")),
+		axiom.WithCaseMeta(axiom.WithMetaStory("Story"), axiom.WithMetaOwner("case-team")),
 		axiom.WithCaseSkip(axiom.WithSkipEnabled(true)),
 		axiom.WithCaseRetry(axiom.WithRetryDelay(7)),
 		axiom.WithCaseContext(axiom.WithContextData("y", 2)),
@@ -272,6 +272,7 @@ func TestRunnerBuildConfig(t *testing.T) {
 
 	// Meta merge
 	assert.Equal(t, "RunnerEpic", cfg.Meta.Epic)
+	assert.Equal(t, "case-team", cfg.Meta.Owner)
 	assert.Equal(t, "Story", cfg.Meta.Story)
 
 	// Skip merge
