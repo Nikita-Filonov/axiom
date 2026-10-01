@@ -169,8 +169,8 @@ func (r *Runtime) EmitArtefactSink(s SinkArtefactAction) {
 	r.ArtefactSinks = append(r.ArtefactSinks, s)
 }
 
-// Step runs a named action through registered step wrappers.
-func (r *Runtime) Step(name string, fn func()) {
+// step runs a named action through registered step wrappers.
+func (r *Runtime) step(name string, fn func()) {
 	wrapped := fn
 	for i := len(r.StepWraps) - 1; i >= 0; i-- {
 		wrapped = r.StepWraps[i](name, wrapped)
@@ -179,8 +179,8 @@ func (r *Runtime) Step(name string, fn func()) {
 	wrapped()
 }
 
-// Test runs an attempt through registered test wrappers.
-func (r *Runtime) Test(c *Config, action TestAction) {
+// test runs an attempt through registered test wrappers.
+func (r *Runtime) test(c *Config, action TestAction) {
 	wrapped := action
 	for i := len(r.TestWraps) - 1; i >= 0; i-- {
 		wrapped = r.TestWraps[i](wrapped)
@@ -189,8 +189,8 @@ func (r *Runtime) Test(c *Config, action TestAction) {
 	wrapped(c)
 }
 
-// Setup runs a named action through registered setup wrappers.
-func (r *Runtime) Setup(name string, fn func()) {
+// setup runs a named action through registered setup wrappers.
+func (r *Runtime) setup(name string, fn func()) {
 	wrapped := fn
 	for i := len(r.SetupWraps) - 1; i >= 0; i-- {
 		wrapped = r.SetupWraps[i](name, wrapped)
@@ -198,8 +198,8 @@ func (r *Runtime) Setup(name string, fn func()) {
 	wrapped()
 }
 
-// Teardown runs a named action through registered teardown wrappers.
-func (r *Runtime) Teardown(name string, fn func()) {
+// teardown runs a named action through registered teardown wrappers.
+func (r *Runtime) teardown(name string, fn func()) {
 	wrapped := fn
 	for i := len(r.TeardownWraps) - 1; i >= 0; i-- {
 		wrapped = r.TeardownWraps[i](name, wrapped)
@@ -207,29 +207,29 @@ func (r *Runtime) Teardown(name string, fn func()) {
 	wrapped()
 }
 
-// Log sends a structured log to registered sinks.
-func (r *Runtime) Log(l Log) {
+// log sends a structured log to registered sinks.
+func (r *Runtime) log(l Log) {
 	for _, sink := range r.LogSinks {
 		sink(l)
 	}
 }
 
-// Event sends a raw event to registered sinks.
-func (r *Runtime) Event(e Event) {
+// event sends a raw event to registered sinks.
+func (r *Runtime) event(e Event) {
 	for _, sink := range r.EventSinks {
 		sink(e)
 	}
 }
 
-// Assert sends an assertion fact to registered sinks.
-func (r *Runtime) Assert(a Assert) {
+// assert sends an assertion fact to registered sinks.
+func (r *Runtime) assert(a Assert) {
 	for _, sink := range r.AssertSinks {
 		sink(a)
 	}
 }
 
-// Artefact sends an artefact to registered sinks.
-func (r *Runtime) Artefact(a Artefact) {
+// artefact sends an artefact to registered sinks.
+func (r *Runtime) artefact(a Artefact) {
 	for _, sink := range r.ArtefactSinks {
 		sink(a)
 	}
