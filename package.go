@@ -28,7 +28,7 @@ func RunPackageWith(r *Runner, entry func() int) int {
 	r.managed.Store(true)
 	defer r.managed.Store(false)
 
-	r.ApplyStart()
-	defer r.ApplyFinish()
+	r.applyStart()
+	defer r.applyFinish()
 	return entry()
 }
