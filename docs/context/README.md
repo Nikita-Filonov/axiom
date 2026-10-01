@@ -1,5 +1,13 @@
 # 📘 Context
 
+## 📑 Table of Contents
+
+- [Design principles](#design-principles)
+- [Example](#example)
+- [Typed keys](#typed-keys)
+
+---
+
 `Context` provides structured per-test **execution context** used by plugins, fixtures, steps, and integrations. It
 represents **lifecycle and cancellation boundaries**, not concrete technologies.
 
