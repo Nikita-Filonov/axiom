@@ -1,5 +1,12 @@
 # 📘 Assert
 
+## 📑 Table of Contents
+
+- [Key Principles](#key-principles)
+- [Example](#example)
+
+---
+
 `Assert` represents a **structured assertion event** emitted during test execution.
 
 Assertions in Axiom are **declarative and observational**: they describe _what was asserted_, not
