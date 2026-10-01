@@ -21,6 +21,14 @@ jobs:
         with:
           go-version: ${{ inputs.go-version }}
 
+      - name: Use checked-out core and plugin modules
+        run: |
+          go work init .
+          for module in plugins/*; do
+            test -f "$module/go.mod" || continue
+            go work use "./$module"
+          done
+
       - name: Download dependencies
         run: go mod download
 
