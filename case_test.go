@@ -362,9 +362,7 @@ func TestCaseCopy_DeepCopyMutableFields(t *testing.T) {
 		}),
 	)
 	base.Hooks.BeforeTest = append(base.Hooks.BeforeTest, func(cfg *axiom.Config) {})
-	base.Fixtures.Cache = map[string]axiom.FixtureResult{
-		"cached": {Value: "x"},
-	}
+	base.Fixtures.SetCache(map[string]any{"cached": "x"})
 
 	cloned := base.Copy()
 
@@ -379,7 +377,7 @@ func TestCaseCopy_DeepCopyMutableFields(t *testing.T) {
 	cloned.Fixtures.Registry["fx2"] = func(cfg *axiom.Config) (any, func(), error) {
 		return 2, nil, nil
 	}
-	cloned.Fixtures.Cache["cached2"] = axiom.FixtureResult{Value: "y"}
+	cloned.Fixtures.Cache()["cached2"] = "y"
 
 	assert.Equal(t, "smoke", base.Meta.Tags[0])
 	assert.Equal(t, "ISSUE-1", base.Meta.Issues[0])
@@ -390,7 +388,7 @@ func TestCaseCopy_DeepCopyMutableFields(t *testing.T) {
 	assert.Len(t, base.Hooks.BeforeTest, 1)
 	assert.Len(t, base.Runtime.LogSinks, 1)
 	assert.NotContains(t, base.Fixtures.Registry, "fx2")
-	assert.NotContains(t, base.Fixtures.Cache, "cached2")
+	assert.NotContains(t, base.Fixtures.Cache(), "cached2")
 }
 
 func TestCaseCopy_PluginsSlice_IsIndependent(t *testing.T) {
