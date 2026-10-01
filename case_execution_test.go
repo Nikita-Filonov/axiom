@@ -1,4 +1,4 @@
-package axiom
+package axiom_test
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,12 +34,11 @@ func runCaseExecutionHelper(t *testing.T, testName string, env ...string) (strin
 
 func TestCaseExecution_WaitBeforeAttempt_AppliesRetryDelay(t *testing.T) {
 	const delay = 5 * time.Millisecond
-	execution := &caseExecution{
-		baseConfig: &Config{Retry: Retry{Delay: delay}},
-	}
+	runner := axiom.NewRunner(axiom.WithRunnerRetry(axiom.WithRetryDelay(delay)))
+	execution := axiom.NewCaseExecution(runner, t, axiom.NewCase(), nil)
 
 	started := time.Now()
-	execution.waitBeforeAttempt(2)
+	execution.WaitBeforeAttempt(2)
 
 	assert.GreaterOrEqual(t, time.Since(started), delay)
 }
@@ -100,39 +100,39 @@ func TestCaseExecution_ParallelRetry_LifecycleHelperProcess(t *testing.T) {
 	var delayObserved bool
 	var effectiveParallel bool
 
-	runner := NewRunner(
-		WithRunnerRetry(
-			WithRetryTimes(3),
-			WithRetryDelay(retryDelay),
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRetry(
+			axiom.WithRetryTimes(3),
+			axiom.WithRetryDelay(retryDelay),
 		),
-		WithRunnerParallel(WithParallelEnabled()),
-		WithRunnerPlugins(func(cfg *Config) {
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
 			pluginInstalls++
-			cfg.Runtime.EmitTestWrap(func(next TestAction) TestAction {
-				return func(cfg *Config) {
+			cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
+				return func(cfg *axiom.Config) {
 					wrappedActions++
 					next(cfg)
 				}
 			})
 		}),
-		WithRunnerHooks(
-			WithBeforeTest(func(cfg *Config) { beforeTests++ }),
-			WithAfterTest(func(cfg *Config) { afterTests++ }),
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) { beforeTests++ }),
+			axiom.WithAfterTest(func(cfg *axiom.Config) { afterTests++ }),
 		),
-		WithRunnerFixture("value", func(cfg *Config) (any, func(), error) {
+		axiom.WithRunnerFixture("value", func(cfg *axiom.Config) (any, func(), error) {
 			fixtureSetups++
 			return fixtureSetups, func() { fixtureCleanups++ }, nil
 		}),
-		WithRunnerResource("shared", func(runner *Runner) (any, func(), error) {
+		axiom.WithRunnerResource("shared", func(runner *axiom.Runner) (any, func(), error) {
 			resourceSetups++
 			return "resource", func() { resourceCleanups++ }, nil
 		}),
 	)
 
-	caseOptions := []CaseOption{WithCaseName("parallel retry case")}
+	caseOptions := []axiom.CaseOption{axiom.WithCaseName("parallel retry case")}
 	if disableParallel {
 		caseOptions = append(caseOptions,
-			WithCaseParallel(WithParallelDisabled()),
+			axiom.WithCaseParallel(axiom.WithParallelDisabled()),
 		)
 	}
 
@@ -154,15 +154,15 @@ func TestCaseExecution_ParallelRetry_LifecycleHelperProcess(t *testing.T) {
 		)
 	})
 
-	runner.RunCase(t, NewCase(caseOptions...), func(cfg *Config) {
+	runner.RunCase(t, axiom.NewCase(caseOptions...), func(cfg *axiom.Config) {
 		attempts++
 		effectiveParallel = cfg.Parallel.Enabled
 
-		fixtureValue := GetFixture[int](cfg, "value")
+		fixtureValue := axiom.GetFixture[int](cfg, "value")
 		if fixtureValue != attempts {
 			cfg.T().Errorf("fixture value leaked between attempts: got %d, attempt %d", fixtureValue, attempts)
 		}
-		if resource := MustResource[string](cfg.Runner, "shared"); resource != "resource" {
+		if resource := axiom.MustResource[string](cfg.Runner, "shared"); resource != "resource" {
 			cfg.T().Errorf("unexpected shared resource: %q", resource)
 		}
 
@@ -232,16 +232,16 @@ func TestCaseExecution_ParallelRetry_SkipHelperProcess(t *testing.T) {
 	var pluginInstalls atomic.Int64
 	var attempts atomic.Int64
 
-	runner := NewRunner(
-		WithRunnerRetry(WithRetryTimes(3)),
-		WithRunnerParallel(WithParallelEnabled()),
-		WithRunnerPlugins(func(cfg *Config) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(3)),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
 			pluginInstalls.Add(1)
 		}),
 	)
-	testCase := NewCase(
-		WithCaseName("skipped"),
-		WithCaseSkip(SkipBecause("not applicable")),
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("skipped"),
+		axiom.WithCaseSkip(axiom.SkipBecause("not applicable")),
 	)
 
 	t.Cleanup(func() {
@@ -252,30 +252,30 @@ func TestCaseExecution_ParallelRetry_SkipHelperProcess(t *testing.T) {
 		)
 	})
 
-	runner.RunCase(t, testCase, func(cfg *Config) {
+	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
 		attempts.Add(1)
 	})
 }
 
 func TestCaseExecution_SkipIsScopedToSelectedCase(t *testing.T) {
-	runner := NewRunner()
+	runner := axiom.NewRunner()
 	skippedActionRan := false
 	nextActionRan := false
 
 	runner.RunCase(
 		t,
-		NewCase(
-			WithCaseName("skipped"),
-			WithCaseSkip(SkipBecause("not applicable")),
+		axiom.NewCase(
+			axiom.WithCaseName("skipped"),
+			axiom.WithCaseSkip(axiom.SkipBecause("not applicable")),
 		),
-		func(cfg *Config) {
+		func(cfg *axiom.Config) {
 			skippedActionRan = true
 		},
 	)
 	runner.RunCase(
 		t,
-		NewCase(WithCaseName("next")),
-		func(cfg *Config) {
+		axiom.NewCase(axiom.WithCaseName("next")),
+		func(cfg *axiom.Config) {
 			nextActionRan = true
 		},
 	)
@@ -303,17 +303,17 @@ func TestCaseExecution_ParallelRetry_NamePluginHelperProcess(t *testing.T) {
 		t.Skip("helper process")
 	}
 
-	runner := NewRunner(
-		WithRunnerRetry(WithRetryTimes(2)),
-		WithRunnerParallel(WithParallelEnabled()),
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(2)),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 	)
 
 	var attempts int
 	var applications int
-	testCase := NewCase(
-		WithCaseName("name"),
-		WithCaseMeta(WithMetaFeature("Feature")),
-		WithCasePlugins(func(cfg *Config) {
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("name"),
+		axiom.WithCaseMeta(axiom.WithMetaFeature("Feature")),
+		axiom.WithCasePlugins(func(cfg *axiom.Config) {
 			applications++
 			cfg.Case.Name = fmt.Sprintf("[%s] %s", cfg.Meta.Feature, cfg.Case.Name)
 		}),
@@ -330,7 +330,7 @@ func TestCaseExecution_ParallelRetry_NamePluginHelperProcess(t *testing.T) {
 		)
 	})
 
-	runner.RunCase(t, testCase, func(cfg *Config) {
+	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
 		attempts++
 		names = append(names, cfg.Case.Name)
 
@@ -348,20 +348,20 @@ func TestCaseExecution_CaseRetryOneUsesRegularParallelExecution(t *testing.T) {
 	var pluginInstalls atomic.Int64
 	var actionTestName string
 
-	runner := NewRunner(
-		WithRunnerRetry(WithRetryTimes(3)),
-		WithRunnerParallel(WithParallelEnabled()),
-		WithRunnerPlugins(func(cfg *Config) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(3)),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
 			pluginInstalls.Add(1)
 		}),
 	)
-	testCase := NewCase(
-		WithCaseName("name"),
-		WithCaseRetry(WithRetryTimes(1)),
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("name"),
+		axiom.WithCaseRetry(axiom.WithRetryTimes(1)),
 	)
 
 	t.Run("scope", func(t *testing.T) {
-		runner.RunCase(t, testCase, func(cfg *Config) {
+		runner.RunCase(t, testCase, func(cfg *axiom.Config) {
 			attempts.Add(1)
 			actionTestName = cfg.T().Name()
 		})
@@ -377,16 +377,16 @@ func TestCaseExecution_CaseParallelEnablesRetryWrapper(t *testing.T) {
 	var actionTestName string
 	var effectiveParallel bool
 
-	runner := NewRunner(
-		WithRunnerRetry(WithRetryTimes(3)),
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(3)),
 	)
-	testCase := NewCase(
-		WithCaseName("name"),
-		WithCaseParallel(WithParallelEnabled()),
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("name"),
+		axiom.WithCaseParallel(axiom.WithParallelEnabled()),
 	)
 
 	t.Run("scope", func(t *testing.T) {
-		runner.RunCase(t, testCase, func(cfg *Config) {
+		runner.RunCase(t, testCase, func(cfg *axiom.Config) {
 			attempts.Add(1)
 			actionTestName = cfg.T().Name()
 			effectiveParallel = cfg.Parallel.Enabled
@@ -401,19 +401,19 @@ func TestCaseExecution_CaseParallelEnablesRetryWrapper(t *testing.T) {
 func TestCaseExecution_RunAttemptsAppliesPoliciesInOrder(t *testing.T) {
 	var order []string
 
-	execution := newCaseExecution(
-		NewRunner(),
+	execution := axiom.NewCaseExecution(
+		axiom.NewRunner(),
 		t,
-		NewCase(WithCaseName("name")),
-		func(cfg *Config) {
+		axiom.NewCase(axiom.WithCaseName("name")),
+		func(cfg *axiom.Config) {
 			order = append(order, "action")
 		},
 	)
 
-	execution.runAttempts(
+	execution.RunAttempts(
 		t,
-		func(cfg *Config) { order = append(order, "first") },
-		func(cfg *Config) { order = append(order, "second") },
+		func(cfg *axiom.Config) { order = append(order, "first") },
+		func(cfg *axiom.Config) { order = append(order, "second") },
 	)
 
 	assert.Equal(t, []string{"first", "second", "action"}, order)
@@ -461,18 +461,18 @@ func (s *parallelRetrySuiteState) attemptCount(name string) int {
 }
 
 type parallelRetryIntegrationSuite struct {
-	Suite
+	axiom.Suite
 	state *parallelRetrySuiteState
 }
 
 func (s *parallelRetryIntegrationSuite) TestParallelRetries() {
 	for _, name := range []string{"first", "second"} {
-		testCase := NewCase(WithCaseName(name))
-		s.RunCase(testCase, func(cfg *Config) {
+		testCase := axiom.NewCase(axiom.WithCaseName(name))
+		s.RunCase(testCase, func(cfg *axiom.Config) {
 			attempt := s.state.nextAttempt(cfg.Case.Name)
 			s.state.actions.Add(1)
-			_ = GetFixture[int64](cfg, "value")
-			_ = MustResource[int64](cfg.Runner, "shared")
+			_ = axiom.GetFixture[int64](cfg, "value")
+			_ = axiom.MustResource[int64](cfg.Runner, "shared")
 
 			if attempt == 1 {
 				s.state.ready <- cfg.Case.Name
@@ -503,27 +503,27 @@ func TestCaseExecution_SuiteParallelRetry_HelperProcess(t *testing.T) {
 	}
 
 	state := newParallelRetrySuiteState()
-	runner := NewRunner(
-		WithRunnerRetry(WithRetryTimes(2)),
-		WithRunnerParallel(WithParallelEnabled()),
-		WithRunnerPlugins(func(cfg *Config) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(2)),
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
 			state.pluginInstalls.Add(1)
-			cfg.Runtime.EmitTestWrap(func(next TestAction) TestAction {
-				return func(cfg *Config) {
+			cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
+				return func(cfg *axiom.Config) {
 					state.wrappedActions.Add(1)
 					next(cfg)
 				}
 			})
 		}),
-		WithRunnerHooks(
-			WithBeforeTest(func(cfg *Config) { state.beforeTests.Add(1) }),
-			WithAfterTest(func(cfg *Config) { state.afterTests.Add(1) }),
+		axiom.WithRunnerHooks(
+			axiom.WithBeforeTest(func(cfg *axiom.Config) { state.beforeTests.Add(1) }),
+			axiom.WithAfterTest(func(cfg *axiom.Config) { state.afterTests.Add(1) }),
 		),
-		WithRunnerFixture("value", func(cfg *Config) (any, func(), error) {
+		axiom.WithRunnerFixture("value", func(cfg *axiom.Config) (any, func(), error) {
 			value := state.fixtureSetups.Add(1)
 			return value, func() { state.fixtureCleanups.Add(1) }, nil
 		}),
-		WithRunnerResource("shared", func(runner *Runner) (any, func(), error) {
+		axiom.WithRunnerResource("shared", func(runner *axiom.Runner) (any, func(), error) {
 			value := state.resourceSetups.Add(1)
 			return value, func() { state.resourceCleanups.Add(1) }, nil
 		}),
@@ -564,12 +564,12 @@ func TestCaseExecution_SuiteParallelRetry_HelperProcess(t *testing.T) {
 		)
 	})
 
-	testSuite := NewSuiteFactory(
+	testSuite := axiom.NewSuiteFactory(
 		t,
 		func() *parallelRetryIntegrationSuite {
 			return &parallelRetryIntegrationSuite{state: state}
 		},
-		WithSuiteConfigRunner(runner),
+		axiom.WithSuiteConfigRunner(runner),
 	)
 	testSuite.Test(
 		"parallel retry cases",
@@ -580,31 +580,32 @@ func TestCaseExecution_SuiteParallelRetry_HelperProcess(t *testing.T) {
 
 func TestCaseExecution_KeepsTemplateIsolatedFromBasePlugins(t *testing.T) {
 	pluginInstalls := 0
-	runner := NewRunner(
-		WithRunnerPlugins(func(cfg *Config) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
 			pluginInstalls++
 			cfg.Case.Name = "plugin:" + cfg.Case.Name
 			cfg.Case.Context.SetData("base-plugin", pluginInstalls)
 			cfg.Context.SetData("plugin-install", pluginInstalls)
 		}),
 	)
-	testCase := NewCase(
-		WithCaseName("case"),
-		WithCaseContext(WithContextData("source", "original")),
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("case"),
+		axiom.WithCaseContext(axiom.WithContextData("source", "original")),
 	)
 
-	execution := newCaseExecution(runner, t, testCase, func(cfg *Config) {})
-	firstAttempt := execution.newAttemptConfig()
-	secondAttempt := execution.newAttemptConfig()
+	execution := axiom.NewCaseExecution(runner, t, testCase, func(cfg *axiom.Config) {})
+	first := execution.BaseConfig().Execution.NextAttempt()
+	firstAttempt := execution.NewConfig(first)
+	secondAttempt := execution.NewConfig(first.NextAttempt())
 
-	if execution.caseTemplate.Name != "case" {
-		t.Fatalf("case template was mutated: %q", execution.caseTemplate.Name)
+	if execution.CaseTemplate().Name != "case" {
+		t.Fatalf("case template was mutated: %q", execution.CaseTemplate().Name)
 	}
-	if _, exists := execution.caseTemplate.Context.Data["base-plugin"]; exists {
+	if _, exists := execution.CaseTemplate().Context.Data["base-plugin"]; exists {
 		t.Fatal("base plugin mutation leaked into the case template")
 	}
-	if execution.baseConfig.Case.Name != "plugin:case" {
-		t.Fatalf("unexpected base case name: %q", execution.baseConfig.Case.Name)
+	if execution.BaseConfig().Case.Name != "plugin:case" {
+		t.Fatalf("unexpected base case name: %q", execution.BaseConfig().Case.Name)
 	}
 	if firstAttempt.Case.Name != "plugin:case" {
 		t.Fatalf("unexpected first attempt name: %q", firstAttempt.Case.Name)
@@ -621,34 +622,35 @@ func TestCaseExecution_KeepsTemplateIsolatedFromBasePlugins(t *testing.T) {
 }
 
 func TestCaseExecution_CreatesFreshAttemptConfigs(t *testing.T) {
-	runner := NewRunner()
-	localKey := NewLocalKey[string]("attempt")
-	testCase := NewCase(
-		WithCaseName("case"),
-		WithCaseContext(WithContextData("value", "template")),
-		WithCaseFixture("fixture", func(cfg *Config) (any, func(), error) {
+	runner := axiom.NewRunner()
+	localKey := axiom.NewLocalKey[string]("attempt")
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("case"),
+		axiom.WithCaseContext(axiom.WithContextData("value", "template")),
+		axiom.WithCaseFixture("fixture", func(cfg *axiom.Config) (any, func(), error) {
 			return "value", nil, nil
 		}),
 	)
-	execution := newCaseExecution(runner, t, testCase, func(cfg *Config) {})
+	execution := axiom.NewCaseExecution(runner, t, testCase, func(cfg *axiom.Config) {})
 
-	firstAttempt := execution.newAttemptConfig()
+	first := execution.BaseConfig().Execution.NextAttempt()
+	firstAttempt := execution.NewConfig(first)
 	firstAttempt.Context.SetData("value", "changed")
-	firstAttempt.Fixtures.Cache["fixture"] = FixtureResult{Value: "cached"}
-	SetLocal(firstAttempt, localKey, "first")
+	firstAttempt.Fixtures.Cache()["fixture"] = "cached"
+	axiom.SetLocal(firstAttempt, localKey, "first")
 
-	secondAttempt := execution.newAttemptConfig()
+	secondAttempt := execution.NewConfig(first.NextAttempt())
 
 	if firstAttempt == secondAttempt {
 		t.Fatal("attempt configs must have different identities")
 	}
-	if got := MustContextValue[string](&secondAttempt.Context, "value"); got != "template" {
+	if got := axiom.MustContextValue[string](&secondAttempt.Context, "value"); got != "template" {
 		t.Fatalf("attempt context leaked: %q", got)
 	}
-	if len(secondAttempt.Fixtures.Cache) != 0 {
-		t.Fatalf("attempt fixture cache leaked: %#v", secondAttempt.Fixtures.Cache)
+	if len(secondAttempt.Fixtures.Cache()) != 0 {
+		t.Fatalf("attempt fixture cache leaked: %#v", secondAttempt.Fixtures.Cache())
 	}
-	if value, exists := GetLocal(secondAttempt, localKey); exists {
+	if value, exists := axiom.GetLocal(secondAttempt, localKey); exists {
 		t.Fatalf("attempt local value leaked: %q", value)
 	}
 }

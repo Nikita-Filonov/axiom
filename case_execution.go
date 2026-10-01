@@ -16,17 +16,15 @@ type caseExecution struct {
 }
 
 func newCaseExecution(runner *Runner, rootT *testing.T, testCase Case, action TestAction) *caseExecution {
-	baseCase := testCase.Copy()
-	baseConfig := runner.BuildConfig(rootT, &baseCase)
-	baseConfig.ApplyPlugins()
-
-	return &caseExecution{
+	e := &caseExecution{
 		rootT:        rootT,
 		runner:       runner,
 		action:       action,
-		baseConfig:   baseConfig,
 		caseTemplate: testCase,
 	}
+	e.baseConfig = e.newConfig(newExecution())
+
+	return e
 }
 
 func (e *caseExecution) run() {
@@ -53,16 +51,18 @@ func (e *caseExecution) runParallelRetry() {
 }
 
 func (e *caseExecution) runAttempts(parentT *testing.T, policies ...executionPolicy) {
-	for attempt := 1; attempt <= e.baseConfig.Retry.Times; attempt++ {
-		e.waitBeforeAttempt(attempt)
+	execution := e.baseConfig.Execution
+	for execution.Attempt < e.baseConfig.Retry.Times {
+		execution = execution.nextAttempt()
+		e.waitBeforeAttempt(execution.Attempt)
 
-		attemptConfig := e.newAttemptConfig()
+		attemptConfig := e.newConfig(execution)
 		ok := parentT.Run(attemptConfig.Case.Name, func(attemptT *testing.T) {
 			attemptConfig.SubT = attemptT
 			for _, policy := range policies {
 				policy(attemptConfig)
 			}
-			attemptConfig.Test(e.action)
+			attemptConfig.test(e.action)
 		})
 
 		if ok {
@@ -71,12 +71,12 @@ func (e *caseExecution) runAttempts(parentT *testing.T, policies ...executionPol
 	}
 }
 
-func (e *caseExecution) newAttemptConfig() *Config {
+func (e *caseExecution) newConfig(execution Execution) *Config {
 	attemptCase := e.caseTemplate.Copy()
-	attemptConfig := e.runner.BuildConfig(e.rootT, &attemptCase)
-	attemptConfig.ApplyPlugins()
+	cfg := e.runner.buildConfig(e.rootT, &attemptCase, execution)
+	cfg.applyPlugins()
 
-	return attemptConfig
+	return cfg
 }
 
 func (e *caseExecution) waitBeforeAttempt(attempt int) {
