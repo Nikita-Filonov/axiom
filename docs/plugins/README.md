@@ -164,6 +164,8 @@ These plugins are intended both for direct use and as reference implementations 
   failures, groups retries into runs with flaky detection, and counts runs and attempts.
 - **🔎 Tracing Plugin:** [testtracing](../../plugins/testtracing). Records raw config-scoped runtime events into an
   in-memory trace for later inspection or export.
+- **🔭 OpenTelemetry Plugin:** [testotel](../../plugins/testotel). Exports per-attempt spans and selected lifecycle
+  events through a caller-provided OpenTelemetry tracer provider.
 - **🧭 Explain Plugin:** [testexplain](../../plugins/testexplain). Captures a structured explanation of the merged
   runner/case configuration before test execution.
 - **🏷 Tags Plugin:** [testtags](../../plugins/testtags). Filters test execution based on metadata tags using include /
