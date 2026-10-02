@@ -14,6 +14,12 @@
 
 ## Overview
 
+> **Note:** The `plugins/` directory groups independently versioned extension modules. Some implement `axiom.Plugin`
+> and are registered with `axiom.WithRunnerPlugins(...)` or `axiom.WithCasePlugins(...)`. Others provide
+> [runner resources](../resource), such as [testenv](../../plugins/testenv) and [testflags](../../plugins/testflags).
+> Register these with `axiom.WithRunnerResources(testenv.Resource(), testflags.Resource())`; their snapshots are
+> loaded lazily and shared by the runner's tests.
+
 A `Plugin` is a function that configures test execution via `Config` and its `Runtime`. Plugins extend Axiom without
 changing its core. They may attach hooks, wraps, context values, reporting integrations, filtering logic, or custom
 instrumentation.
@@ -151,10 +157,10 @@ Plugins commonly interact with:
 
 ## Built-in Plugins
 
-Axiom ships with several built-in plugins that demonstrate common patterns for extending the runtime. Each plugin is
-fully self-contained and documented in its own README.
+Axiom ships with several extension modules that demonstrate common patterns for extending the runtime or providing
+runner resources. Each module is fully self-contained and documented in its own README.
 
-These plugins are intended both for direct use and as reference implementations when writing custom plugins.
+These modules are intended both for direct use and as reference implementations when writing custom extensions.
 
 - **🟣 Allure Plugin:** [testallure](../../plugins/testallure). Generates Allure reports by projecting Axiom runtime
   events (tests, steps, artefacts, metadata) into the Allure execution model.
@@ -178,9 +184,9 @@ These plugins are intended both for direct use and as reference implementations 
 - **🧟 Quarantine Plugin:** [testquarantine](../../plugins/testquarantine). Quarantines known-flaky cases by skipping
   them before execution with a recorded reason, so they stay visible without gating the suite. Can be configured to run
   them anyway in non-gating jobs.
-- **🚩 Flags Plugin:** [testflags](../../plugins/testflags). Shares typed CLI flags with runner resources, hooks,
+- **🚩 Flags Resource:** [testflags](../../plugins/testflags). Shares typed CLI flags with runner resources, hooks,
   fixtures, and tests.
-- **🌱 Environment Plugin:** [testenv](../../plugins/testenv). Shares a typed snapshot of environment variables with
+- **🌱 Environment Resource:** [testenv](../../plugins/testenv). Shares a typed snapshot of environment variables with
   runner resources, hooks, fixtures, plugins, and tests.
 - **🧵 Leak Checks Plugin:** [testleaks](../../plugins/testleaks). Checks attempt-labeled goroutines after the body
   and its later-registered cleanups, plus explicitly tracked resources that were not released.
