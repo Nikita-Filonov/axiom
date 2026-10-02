@@ -178,3 +178,5 @@ These plugins are intended both for direct use and as reference implementations 
   them anyway in non-gating jobs.
 - **🚩 Flags Plugin:** [testflags](../../plugins/testflags). Shares typed CLI flags with runner resources, hooks,
   fixtures, and tests.
+- **🌱 Environment Plugin:** [testenv](../../plugins/testenv). Shares a typed snapshot of environment variables with
+  runner resources, hooks, fixtures, plugins, and tests.
