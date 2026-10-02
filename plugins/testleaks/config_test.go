@@ -3,24 +3,21 @@ package testleaks
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWithIgnoreFunction(t *testing.T) {
 	c := newConfig(WithIgnoreFunction("worker"), WithGracePeriod(0), WithoutGoroutines())
-	if len(c.IgnoreFunctions) != 1 || c.IgnoreFunctions[0] != "worker" || c.GracePeriod != 0 || c.Goroutines {
-		t.Fatalf("config = %+v", c)
-	}
-	defer func() {
-		if recover() == nil {
-			t.Error("empty function name did not panic")
-		}
-	}()
-	WithIgnoreFunction("")
+	assert.Equal(t, []string{"worker"}, c.IgnoreFunctions)
+	assert.Zero(t, c.GracePeriod)
+	assert.False(t, c.Goroutines)
+	assert.Panics(t, func() { WithIgnoreFunction("") })
 }
 
 func TestDefaultConfig(t *testing.T) {
 	c := newConfig()
-	if c.GracePeriod != 200*time.Millisecond || !c.Goroutines || len(c.IgnoreFunctions) != 0 {
-		t.Fatalf("default config = %+v", c)
-	}
+	assert.Equal(t, 200*time.Millisecond, c.GracePeriod)
+	assert.True(t, c.Goroutines)
+	assert.Empty(t, c.IgnoreFunctions)
 }

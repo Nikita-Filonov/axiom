@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Nikita-Filonov/axiom"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func waitOnChannel(ready chan<- struct{}, done <-chan struct{}) {
@@ -43,42 +45,29 @@ func TestGoroutineLabelsIsolateAttempts(t *testing.T) {
 	start(secondID, secondDone)
 
 	first, err := findGoroutines(firstID, nil)
-	if err != nil || goroutineCount(first) != 1 {
-		t.Fatalf("first attempt: count=%d, err=%v", goroutineCount(first), err)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), goroutineCount(first))
 	second, err := findGoroutines(secondID, nil)
-	if err != nil || goroutineCount(second) != 1 {
-		t.Fatalf("second attempt: count=%d, err=%v", goroutineCount(second), err)
-	}
-	if !strings.Contains(first[0].stack, "waitOnChannel") {
-		t.Fatalf("missing worker stack: %s", first[0].stack)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), goroutineCount(second))
+	require.Len(t, first, 1)
+	assert.Contains(t, first[0].stack, "waitOnChannel")
 
 	ignored, err := findGoroutines(firstID, []string{
 		"github.com/Nikita-Filonov/axiom/plugins/testleaks.waitOnChannel",
 	})
-	if err != nil || len(ignored) != 0 {
-		t.Fatalf("ignored goroutine: count=%d, err=%v", len(ignored), err)
-	}
+	require.NoError(t, err)
+	assert.Empty(t, ignored)
 	close(firstDone)
-	deadline := time.Now().Add(time.Second)
-	for {
-		first, err = findGoroutines(firstID, nil)
-		if err != nil {
-			t.Fatal(err)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		remaining, err := findGoroutines(firstID, nil)
+		if assert.NoError(c, err) {
+			assert.Empty(c, remaining, "finished worker remains in profile")
 		}
-		if len(first) == 0 {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("finished worker remains in profile: %v", first)
-		}
-		time.Sleep(time.Millisecond)
-	}
+	}, time.Second, time.Millisecond)
 	second, err = findGoroutines(secondID, nil)
-	if err != nil || goroutineCount(second) != 1 {
-		t.Fatalf("second attempt changed: count=%d, err=%v", goroutineCount(second), err)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), goroutineCount(second), "second attempt changed")
 }
 
 func TestResourceCleanupRunsBeforeVerification(t *testing.T) {
@@ -126,19 +115,14 @@ func TestTrackReadCloser(t *testing.T) {
 	source := &countingReadCloser{Reader: strings.NewReader("body")}
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("close response body")), func(cfg *axiom.Config) {
 		body := TrackReadCloser(cfg, "response body", source)
-		got, err := io.ReadAll(body)
-		if err != nil || string(got) != "body" {
-			cfg.T().Fatalf("read: body=%q, err=%v", got, err)
-		}
 		cfg.T().Cleanup(func() {
-			if err := body.Close(); err != nil {
-				cfg.T().Error(err)
-			}
+			assert.NoError(cfg.T(), body.Close())
 		})
+		got, err := io.ReadAll(body)
+		require.NoError(cfg.T(), err)
+		assert.Equal(cfg.T(), "body", string(got))
 	})
-	if source.closes != 1 {
-		t.Fatalf("Close calls = %d, want 1", source.closes)
-	}
+	assert.Equal(t, 1, source.closes)
 }
 
 func TestPolicySkipDoesNotRunCheck(t *testing.T) {
@@ -146,7 +130,7 @@ func TestPolicySkipDoesNotRunCheck(t *testing.T) {
 	runner.RunCase(t, axiom.NewCase(
 		axiom.WithCaseName("skipped"),
 		axiom.WithCaseSkip(axiom.SkipBecause("disabled")),
-	), func(*axiom.Config) { t.Fatal("skipped body ran") })
+	), func(cfg *axiom.Config) { assert.Fail(cfg.T(), "skipped body ran") })
 }
 
 func TestDuplicateInstallationAndValidation(t *testing.T) {
@@ -154,26 +138,22 @@ func TestDuplicateInstallationAndValidation(t *testing.T) {
 	plugin := Plugin()
 	plugin(cfg)
 	plugin(cfg)
-	if len(cfg.Runtime.TestWraps) != 1 {
-		t.Fatalf("test wraps = %d, want 1", len(cfg.Runtime.TestWraps))
-	}
-	assertPanic := func(name string, fn func()) {
-		t.Helper()
-		t.Run(name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Error("expected panic")
-				}
-			}()
-			fn()
+	assert.Len(t, cfg.Runtime.TestWraps, 1)
+	for _, tc := range []struct {
+		fn   func()
+		name string
+	}{
+		{name: "nil config", fn: func() { plugin(nil) }},
+		{name: "nil option", fn: func() { Plugin(nil) }},
+		{name: "negative grace", fn: func() { WithGracePeriod(-time.Second) }},
+		{name: "missing plugin", fn: func() { Track(&axiom.Config{}, "connection") }},
+		{name: "empty name", fn: func() { Track(cfg, "") }},
+		{name: "nil read closer", fn: func() { TrackReadCloser(cfg, "body", nil) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Panics(t, tc.fn)
 		})
 	}
-	assertPanic("nil config", func() { plugin(nil) })
-	assertPanic("nil option", func() { Plugin(nil) })
-	assertPanic("negative grace", func() { WithGracePeriod(-time.Second) })
-	assertPanic("missing plugin", func() { Track(&axiom.Config{}, "connection") })
-	assertPanic("empty name", func() { Track(cfg, "") })
-	assertPanic("nil read closer", func() { TrackReadCloser(cfg, "body", nil) })
 }
 
 func TestLeakProbe(t *testing.T) {
@@ -196,7 +176,7 @@ func TestLeakProbe(t *testing.T) {
 			go waitOnChannel(ready, done)
 			<-ready
 		default:
-			t.Fatalf("unknown probe mode: %s", mode)
+			require.FailNow(cfg.T(), "unknown probe mode", "mode: %s", mode)
 		}
 	})
 }
@@ -211,20 +191,15 @@ func TestLeakFailures(t *testing.T) {
 	} {
 		t.Run(probe.mode, func(t *testing.T) {
 			exe, err := os.Executable()
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			cmd := exec.Command(exe, "-test.run=^TestLeakProbe$", "-test.v")
 			cmd.Env = append(os.Environ(), "AXIOM_TESTLEAKS_PROBE="+probe.mode)
 			output, err := cmd.CombinedOutput()
-			if err == nil {
-				t.Fatalf("leaking case passed:\n%s", output)
-			}
-			if !strings.Contains(string(output), probe.want) {
-				t.Fatalf("missing %q in output:\n%s", probe.want, output)
-			}
-			if probe.mode == "resource" && !strings.Contains(string(output), "plugin_test.go:") {
-				t.Fatalf("missing resource registration site:\n%s", output)
+			require.Error(t, err, "leaking case passed:\n%s", output)
+			require.NotContains(t, string(output), "WARNING: DATA RACE", "data race in leak probe")
+			assert.Contains(t, string(output), probe.want)
+			if probe.mode == "resource" {
+				assert.Contains(t, string(output), "plugin_test.go:", "missing resource registration site")
 			}
 		})
 	}

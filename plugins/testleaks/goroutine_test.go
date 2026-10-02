@@ -7,21 +7,19 @@ import (
 	"testing"
 
 	"github.com/google/pprof/profile"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadGoroutinesErrors(t *testing.T) {
 	want := errors.New("profile unavailable")
 	_, err := readGoroutines("attempt", nil, func(io.Writer) error { return want })
-	if !errors.Is(err, want) {
-		t.Fatalf("capture error = %v, want %v", err, want)
-	}
+	require.ErrorIs(t, err, want)
 	_, err = readGoroutines("attempt", nil, func(w io.Writer) error {
 		_, err := io.WriteString(w, "not a profile")
 		return err
 	})
-	if err == nil {
-		t.Fatal("malformed profile parsed successfully")
-	}
+	require.Error(t, err, "malformed profile parsed successfully")
 }
 
 func TestReadGoroutinesSamples(t *testing.T) {
@@ -52,24 +50,19 @@ func TestReadGoroutinesSamples(t *testing.T) {
 	}
 	p := &profile.Profile{Sample: []*profile.Sample{matching, withoutValue, wrongAttempt, ignored}}
 	got := goroutinesFromProfile(p, "attempt", []string{"keepAlive"})
-	if len(got) != 2 || goroutineCount(got) != 4 {
-		t.Fatalf("goroutines = %+v, want two groups and four workers", got)
-	}
-	if !strings.Contains(got[0].stack, "worker.go:12") || !strings.Contains(got[1].stack, "other.go:34") {
-		t.Fatalf("unexpected stacks: %+v", got)
-	}
+	require.Len(t, got, 2)
+	assert.Equal(t, int64(4), goroutineCount(got))
+	assert.Contains(t, got[0].stack, "worker.go:12")
+	assert.Contains(t, got[1].stack, "other.go:34")
 }
 
 func TestFormatStackCornerCases(t *testing.T) {
-	if got := formatStack(&profile.Sample{}); got != "" {
-		t.Fatalf("empty stack = %q", got)
-	}
+	assert.Empty(t, formatStack(&profile.Sample{}))
 	lines := []profile.Line{{}}
 	for i := 0; i < 17; i++ {
 		lines = append(lines, profile.Line{Function: &profile.Function{Name: "frame", Filename: "f.go"}, Line: int64(i + 1)})
 	}
 	got := formatStack(&profile.Sample{Location: []*profile.Location{{Line: lines}}})
-	if strings.Count(got, "  frame\n") != 16 || !strings.HasSuffix(got, "  ...") {
-		t.Fatalf("stack truncation = %q", got)
-	}
+	assert.Equal(t, 16, strings.Count(got, "  frame\n"))
+	assert.True(t, strings.HasSuffix(got, "  ..."), "stack truncation = %q", got)
 }

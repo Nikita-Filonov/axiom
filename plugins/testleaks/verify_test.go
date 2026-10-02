@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type recordingReporter struct {
@@ -22,24 +25,20 @@ func TestVerify(t *testing.T) {
 	t.Run("clean without goroutine sampling", func(t *testing.T) {
 		r := &recordingReporter{}
 		verify(r, newAttemptState(), "id", Config{}, func(string, []string) ([]goroutine, error) {
-			t.Fatal("goroutine finder called while disabled")
+			assert.Fail(t, "goroutine finder called while disabled")
 			return nil, nil
 		})
-		if r.helpers != 1 || len(r.messages) != 0 {
-			t.Fatalf("reporter = %+v", r)
-		}
+		assert.Equal(t, 1, r.helpers)
+		assert.Empty(t, r.messages)
 	})
 	t.Run("profile error", func(t *testing.T) {
 		r := &recordingReporter{}
 		verify(r, newAttemptState(), "id", Config{Goroutines: true, IgnoreFunctions: []string{"intentional"}}, func(id string, ignored []string) ([]goroutine, error) {
-			if id != "id" || len(ignored) != 1 || ignored[0] != "intentional" {
-				t.Fatalf("finder arguments: %q, %v", id, ignored)
-			}
+			assert.Equal(t, "id", id)
+			assert.Equal(t, []string{"intentional"}, ignored)
 			return nil, errors.New("broken profile")
 		})
-		if len(r.messages) != 1 || r.messages[0] != "testleaks: goroutine profile: broken profile" {
-			t.Fatalf("messages = %v", r.messages)
-		}
+		assert.Equal(t, []string{"testleaks: goroutine profile: broken profile"}, r.messages)
 	})
 	t.Run("worker exits during grace period", func(t *testing.T) {
 		r := &recordingReporter{}
@@ -51,25 +50,21 @@ func TestVerify(t *testing.T) {
 			}
 			return nil, nil
 		})
-		if calls != 2 || len(r.messages) != 0 {
-			t.Fatalf("calls = %d, messages = %v", calls, r.messages)
-		}
+		assert.Equal(t, 2, calls)
+		assert.Empty(t, r.messages)
 	})
 	t.Run("resource remains after grace period", func(t *testing.T) {
 		r := &recordingReporter{}
 		state := newAttemptState()
 		state.add("socket", "socket.go:12")
 		verify(r, state, "id", Config{GracePeriod: time.Millisecond}, nil)
-		if len(r.messages) != 1 || !strings.Contains(r.messages[0], "socket (registered at socket.go:12)") {
-			t.Fatalf("messages = %v", r.messages)
-		}
+		require.Len(t, r.messages, 1)
+		assert.Contains(t, r.messages[0], "socket (registered at socket.go:12)")
 	})
 }
 
 func TestFormatReport(t *testing.T) {
-	if got := formatReport(nil, nil); got != "" {
-		t.Fatalf("empty report = %q", got)
-	}
+	assert.Empty(t, formatReport(nil, nil))
 	groups := make([]goroutine, 9)
 	for i := range groups {
 		groups[i] = goroutine{count: 2, stack: "worker stack"}
@@ -79,11 +74,7 @@ func TestFormatReport(t *testing.T) {
 		"18 goroutine(s) still running", "... 1 more stack group(s)",
 		"1 tracked resource(s) not released", "- db (registered at db.go:9)",
 	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("report missing %q: %s", want, got)
-		}
+		assert.Contains(t, got, want)
 	}
-	if strings.Count(got, "worker stack") != 8 {
-		t.Fatalf("reported stack groups = %d, want 8", strings.Count(got, "worker stack"))
-	}
+	assert.Equal(t, 8, strings.Count(got, "worker stack"))
 }

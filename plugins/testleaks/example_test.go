@@ -8,6 +8,8 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testleaks"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLeakChecksExample(t *testing.T) {
@@ -36,14 +38,11 @@ func TestLeakChecksExample(t *testing.T) {
 		// Closing a tracked ReadCloser releases its resource handle.
 		body := testleaks.TrackReadCloser(cfg, "response body", io.NopCloser(strings.NewReader("ok")))
 		cfg.T().Cleanup(func() {
-			if err := body.Close(); err != nil {
-				cfg.T().Error(err)
-			}
+			assert.NoError(cfg.T(), body.Close())
 		})
 		payload, err := io.ReadAll(body)
-		if err != nil || string(payload) != "ok" {
-			cfg.T().Fatalf("read response: payload=%q, err=%v", payload, err)
-		}
+		require.NoError(cfg.T(), err)
+		assert.Equal(cfg.T(), "ok", string(payload))
 
 		// Track any other resource until its actual cleanup completes.
 		subscription := testleaks.Track(cfg, "temporary subscription")

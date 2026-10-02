@@ -5,24 +5,21 @@ import (
 	"testing"
 
 	"github.com/Nikita-Filonov/axiom"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWrapAttemptWithoutTestingT(t *testing.T) {
 	called := false
 	wrapped := wrapAttempt(newAttemptState(), Config{})(func(*axiom.Config) { called = true })
 	wrapped(&axiom.Config{})
-	if !called {
-		t.Fatal("wrapped action was not called")
-	}
+	assert.True(t, called, "wrapped action was not called")
 }
 
 func TestWrapAttemptWithoutParentContext(t *testing.T) {
 	t.Run("attempt", func(t *testing.T) {
 		cfg := &axiom.Config{RootT: t}
 		wrapped := wrapAttempt(newAttemptState(), Config{})(func(current *axiom.Config) {
-			if current != cfg {
-				t.Fatal("wrapped action received a different config")
-			}
+			assert.Same(t, cfg, current, "wrapped action received a different config")
 		})
 		wrapped(cfg)
 	})
@@ -32,15 +29,11 @@ func TestAttemptID(t *testing.T) {
 	cfg := &axiom.Config{}
 	first := attemptID(cfg)
 	second := attemptID(cfg)
-	if first == "" || second == "" || first == second {
-		t.Fatalf("random attempt IDs are not distinct: %q, %q", first, second)
-	}
+	assert.NotEmpty(t, first)
+	assert.NotEmpty(t, second)
+	assert.NotEqual(t, first, second, "random attempt IDs are not distinct")
 	cfg.Execution.ID = "execution"
 	cfg.Execution.Attempt = 2
-	if got := attemptID(cfg); got != "execution/2" {
-		t.Fatalf("attempt ID = %q", got)
-	}
-	if !strings.HasPrefix(labelKey, "github.com/Nikita-Filonov/axiom/plugins/testleaks") {
-		t.Fatalf("pprof label key is not namespaced: %q", labelKey)
-	}
+	assert.Equal(t, "execution/2", attemptID(cfg))
+	assert.True(t, strings.HasPrefix(labelKey, "github.com/Nikita-Filonov/axiom/plugins/testleaks"), "pprof label key is not namespaced")
 }
