@@ -135,6 +135,17 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### testenv v0.1.0 — 2026-10-02
+
+- Added the independent `testenv` module for typed environment variables shared
+  through a lazy runner resource. Values are captured on first access; typed
+  keys support required variables and defaults.
+
+### testflags v0.3.0 — 2026-10-02
+
+- Clarified the plugin documentation and moved resource construction into a
+  dedicated method. The public API and behavior are unchanged.
+
 ### teststats v0.31.0 — 2026-10-01
 
 - Replaced the old `CaseResult` and public counter fields with `Attempt`, `Run`,
