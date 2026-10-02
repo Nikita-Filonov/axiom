@@ -91,8 +91,8 @@ produce no exported spans.
 
 ## Installation
 
-The plugin is an independently versioned Go module. After its first release,
-install it with standard Go tooling:
+The plugin is an independently versioned Go module. Install it with standard
+Go tooling:
 
 ```shell
 go get github.com/Nikita-Filonov/axiom/plugins/testotel
@@ -132,9 +132,11 @@ func TestTracedCase(t *testing.T) {
 	})
 
 	// Installing the plugin on the Runner traces every case attempt it runs.
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(
-		testotel.Plugin(testotel.WithTracerProvider(provider)),
-	))
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(
+			testotel.Plugin(testotel.WithTracerProvider(provider)),
+		),
+	)
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("request works")), func(cfg *axiom.Config) {
 		// Pass the attempt context to instrumented clients. This child span
 		// stands in for a span created by an HTTP or database client.
