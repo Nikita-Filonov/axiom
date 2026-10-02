@@ -38,12 +38,14 @@ func Resource(options ...ConfigOption) axiom.ResourceRegistrar {
 	if c.Source == nil {
 		panic("testflags: nil flag source")
 	}
-	return axiom.DefineResource(stateKey.Name(), func(*axiom.Runner) (*state, func(), error) {
-		return &state{
-			read:   sync.OnceValue(func() *Flags { return snapshot(c.Source) }),
-			source: c.Source,
-		}, nil, nil
-	})
+	return axiom.DefineResource(stateKey.Name(), c.build)
+}
+
+func (c Config) build(*axiom.Runner) (*state, func(), error) {
+	return &state{
+		read:   sync.OnceValue(func() *Flags { return snapshot(c.Source) }),
+		source: c.Source,
+	}, nil, nil
 }
 
 // Get returns the runner's flag snapshot or panics if TryGet fails.
