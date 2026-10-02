@@ -95,7 +95,7 @@ func TestJUnitReportExample(t *testing.T) {
 ## Configuration
 
 | API                                      | Purpose                                                                        |
-| ---------------------------------------- | ------------------------------------------------------------------------------ |
+|------------------------------------------|--------------------------------------------------------------------------------|
 | `testjunit.NewReporter()`                | Create an empty collector that stores results and exports XML.                 |
 | `testjunit.Plugin(reporter, options...)` | Record attempts in the supplied reporter. Options belong to this installation. |
 | `testjunit.WithSuiteName(name)`          | Set the suite name and testcase `classname`; the default is `axiom`.           |
@@ -111,7 +111,7 @@ func TestJUnitReportExample(t *testing.T) {
 ### XML structure
 
 | Element or attribute           | Value                                                                   |
-| ------------------------------ | ----------------------------------------------------------------------- |
+|--------------------------------|-------------------------------------------------------------------------|
 | `<testsuites>`                 | Report root with totals across all suites.                              |
 | `<testsuite>`                  | One group per suite name.                                               |
 | `<testcase>`                   | One executed or policy-skipped attempt.                                 |
@@ -129,7 +129,7 @@ func TestJUnitReportExample(t *testing.T) {
 ### Outcomes
 
 | Attempt outcome   | XML result                                                                                           |
-| ----------------- | ---------------------------------------------------------------------------------------------------- |
+|-------------------|------------------------------------------------------------------------------------------------------|
 | Passed            | A testcase without `<failure>` or `<skipped>`.                                                       |
 | Failed            | `<failure>` with an available Axiom lifecycle message, or `test failed` for direct Go test failures. |
 | Skipped           | `<skipped>` with the policy skip reason, or `skipped` when no reason is available.                   |
@@ -156,7 +156,7 @@ and runner resource cleanup outside the attempt.
 ### When to export
 
 | Export point                               | Results available                                                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+|--------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | After a sequential `RunCase`               | The recorded attempt; late status corrections may still be pending.                                                       |
 | During test execution                      | Attempts collected so far; parallel cases may still be running.                                                           |
 | In a parent test's cleanup                 | Final child outcomes **if the export callback was registered before running the cases**, so it runs after reconciliation. |
@@ -175,7 +175,7 @@ and runner resource cleanup outside the attempt.
 ### Writing a report
 
 | Method                     | Behavior                                                                                  |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
+|----------------------------|-------------------------------------------------------------------------------------------|
 | `reporter.Write(w)`        | Write a complete XML snapshot to an `io.Writer`.                                          |
 | `reporter.WriteFile(path)` | Create parent directories, write a temporary file beside the destination, then rename it. |
 
@@ -219,7 +219,7 @@ package to prevent overwrites, and a distinct suite name to distinguish packages
 ### Publishing the report
 
 | CI system                                                                           | Integration                                                                                                                 |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+|-------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | [GitLab](https://docs.gitlab.com/ci/testing/unit_test_reports/)                     | Upload `reports/junit.xml` with `artifacts:reports:junit`; use `artifacts:when: always` to retain reports from failed jobs. |
 | [Jenkins](https://plugins.jenkins.io/junit/)                                        | Publish the file with the JUnit plugin.                                                                                     |
 | [GitHub Actions](https://docs.github.com/en/actions/tutorials/store-and-share-data) | Upload the file as a workflow artifact. Displaying JUnit results in the GitHub UI requires a separate report publisher.     |
