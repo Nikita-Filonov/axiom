@@ -1,4 +1,4 @@
-# CLI flags (`testflags`)
+# 🚩 CLI Flags Plugin (`testflags`)
 
 ---
 
