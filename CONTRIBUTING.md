@@ -107,6 +107,10 @@ project author or a designated maintainer.
 
 - [ ] Installation only configures a `Config`; it does not run test actions or
   perform irreversible external work.
+- [ ] Keep Config-local installation keys and duplicate-installation bookkeeping
+  in `installation.go`, with key names prefixed by the full plugin import path.
+  Keep runtime callback registration in `plugin.go` and preserve the plugin's
+  installation identity and option precedence.
 - [ ] The plugin is deterministic and safe when applied to a planning Config
   and again to each attempt Config. Retries do not accidentally accumulate
   state, callbacks, or side effects.

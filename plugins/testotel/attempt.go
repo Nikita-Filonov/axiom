@@ -26,8 +26,6 @@ const (
 	statusSkipped = "skipped"
 )
 
-var attemptKey = axiom.NewLocalKey[*attempt]("testotel.attempt")
-
 type attempt struct {
 	cfg    *axiom.Config
 	tracer trace.Tracer

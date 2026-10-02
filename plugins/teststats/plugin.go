@@ -2,8 +2,6 @@ package teststats
 
 import "github.com/Nikita-Filonov/axiom"
 
-var installedKey = axiom.NewLocalKey[map[*Stats]bool]("teststats.installed")
-
 // Plugin records an [Attempt] in stats for every attempt that starts or is
 // skipped by policy. The attempt is recorded when its testing.T finishes:
 // after hooks, fixture cleanup, child subtests, and t.Cleanup callbacks.
@@ -16,24 +14,10 @@ func Plugin(stats *Stats) axiom.Plugin {
 	}
 
 	return func(cfg *axiom.Config) {
-		if markInstalled(cfg, stats) {
-			r := &recorder{cfg: cfg, stats: stats}
-			cfg.Runtime.EmitEventSink(r.observe)
+		if !markInstalled(cfg, stats) {
+			return
 		}
+		r := &recorder{cfg: cfg, stats: stats}
+		cfg.Runtime.EmitEventSink(r.observe)
 	}
-}
-
-// markInstalled reports whether stats was not yet installed on cfg.
-func markInstalled(cfg *axiom.Config, stats *Stats) bool {
-	installed, _ := axiom.GetLocal(cfg, installedKey)
-	if installed[stats] {
-		return false
-	}
-	if installed == nil {
-		installed = make(map[*Stats]bool)
-		axiom.SetLocal(cfg, installedKey, installed)
-	}
-	installed[stats] = true
-
-	return true
 }

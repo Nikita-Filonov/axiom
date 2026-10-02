@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,9 +46,17 @@ func TestPlugin_RealFailureLifecycles(t *testing.T) {
 			exe, err := os.Executable()
 			require.NoError(t, err)
 			cmd := exec.Command(exe, "-test.run=^TestStatsLifecycleProbe$")
+			// Include the failing subprocess in the parent coverage report.
+			for _, arg := range os.Args[1:] {
+				if strings.HasPrefix(arg, "-test.gocoverdir=") {
+					cmd.Args = append(cmd.Args, arg)
+					break
+				}
+			}
 			cmd.Env = append(os.Environ(), "AXIOM_STATS_PROBE="+tc.mode, "AXIOM_STATS_OUTPUT="+path)
 			output, err := cmd.CombinedOutput()
 			require.Error(t, err, "an earlier Go test failure must remain a failure: %s", output)
+			require.NotContains(t, string(output), "WARNING: DATA RACE", "data race in lifecycle probe")
 
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "%s", output)

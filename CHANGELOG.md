@@ -135,6 +135,14 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### testtracing v0.18.0 — 2026-10-02
+
+- Repeated installation with the same `Trace` and `Config`, including on both
+  Runner and Case, now registers one collector instead of creating duplicate
+  records. Different traces and retry attempts remain independent, and repeated
+  events are preserved. Use separate Trace collectors for independent copies of
+  the event stream. Nil Trace and Config arguments now panic during installation.
+
 ### testjunit v0.1.0 — 2026-10-02
 
 - Added the independent `testjunit` module. It exports executed and

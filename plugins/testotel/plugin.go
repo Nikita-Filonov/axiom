@@ -16,12 +16,10 @@ func Plugin(options ...Option) axiom.Plugin {
 		if cfg == nil {
 			panic("testotel: nil config")
 		}
-		if _, installed := axiom.GetLocal(cfg, attemptKey); installed {
+		a, installed := installAttempt(cfg, tracer)
+		if !installed {
 			return
 		}
-
-		a := &attempt{cfg: cfg, tracer: tracer}
-		axiom.SetLocal(cfg, attemptKey, a)
 		cfg.Runtime.EmitEventSink(a.observe)
 	}
 }

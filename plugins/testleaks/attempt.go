@@ -9,6 +9,8 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
+const labelKey = "github.com/Nikita-Filonov/axiom/plugins/testleaks.attempt"
+
 func wrapAttempt(state *attemptState, c Config) axiom.WrapTestAction {
 	return func(next axiom.TestAction) axiom.TestAction {
 		return func(current *axiom.Config) {
