@@ -210,20 +210,20 @@ The table shows the first plugin version since 2026-03-26 and the versions for t
 
 | Plugin           | First version in period | 2026-10-02 release |
 |------------------|-------------------------|--------------------|
-| `testallure`     | `v0.13.0`               | `v0.39.0`          |
-| `testassert`     | `v0.10.0`               | `v0.30.0`          |
-| `testenv`        | `v0.1.0`                | `v0.3.0`           |
-| `testexplain`    | `v0.1.0`                | `v0.18.0`          |
-| `testflags`      | `v0.1.0`                | `v0.5.0`           |
-| `testjunit`      | `v0.1.0`                | `v0.1.0`           |
-| `testleaks`      | `v0.1.0`                | `v0.1.0`           |
-| `testlogger`     | `v0.12.0`               | `v0.32.0`          |
-| `testotel`       | `v0.1.0`                | `v0.2.0`           |
-| `testquarantine` | `v0.1.0`                | `v0.12.0`          |
-| `teststats`      | `v0.13.0`               | `v0.33.0`          |
-| `testtags`       | `v0.13.0`               | `v0.33.0`          |
-| `testtimeout`    | `v0.1.0`                | `v0.12.0`          |
-| `testtracing`    | `v0.1.0`                | `v0.18.0`          |
+| `testallure`     | `v0.13.0`               | `v0.40.0`          |
+| `testassert`     | `v0.10.0`               | `v0.31.0`          |
+| `testenv`        | `v0.1.0`                | `v0.4.0`           |
+| `testexplain`    | `v0.1.0`                | `v0.19.0`          |
+| `testflags`      | `v0.1.0`                | `v0.6.0`           |
+| `testjunit`      | `v0.1.0`                | `v0.2.0`           |
+| `testleaks`      | `v0.1.0`                | `v0.2.0`           |
+| `testlogger`     | `v0.12.0`               | `v0.33.0`          |
+| `testotel`       | `v0.1.0`                | `v0.3.0`           |
+| `testquarantine` | `v0.1.0`                | `v0.13.0`          |
+| `teststats`      | `v0.13.0`               | `v0.34.0`          |
+| `testtags`       | `v0.13.0`               | `v0.34.0`          |
+| `testtimeout`    | `v0.1.0`                | `v0.13.0`          |
+| `testtracing`    | `v0.1.0`                | `v0.19.0`          |
 
 Notable plugin changes in this period:
 
