@@ -74,8 +74,8 @@ first read build their own snapshot; copies made afterward share the cached one.
 
 ## Installation
 
-The plugin is an independently versioned Go module. After its first release,
-install it with standard Go tooling:
+The plugin is an independently versioned Go module. Install it with standard
+Go tooling:
 
 ```shell
 go get github.com/Nikita-Filonov/axiom/plugins/testenv

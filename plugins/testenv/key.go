@@ -9,30 +9,6 @@ import (
 	"github.com/Nikita-Filonov/axiom"
 )
 
-// EnvConfig describes a typed environment variable. Name is required.
-// Variables without WithDefault are required when read.
-type EnvConfig struct {
-	Name    string
-	Default any
-}
-
-// EnvOption configures a typed environment key.
-type EnvOption func(*EnvConfig)
-
-// WithName sets the exact, case-sensitive environment variable name.
-func WithName(name string) EnvOption {
-	return func(c *EnvConfig) { c.Name = name }
-}
-
-// WithDefault makes an unset variable optional. Its type must match the key's
-// constructor exactly; nil and mismatched values panic during construction.
-func WithDefault(value any) EnvOption {
-	if value == nil {
-		panic("testenv: nil default")
-	}
-	return func(c *EnvConfig) { c.Default = value }
-}
-
 // EnvKey is a typed handle to one variable in a Runner's environment snapshot.
 // The zero value is invalid. A key is safe to reuse across runners.
 type EnvKey[T any] struct {
@@ -119,13 +95,7 @@ func Float64(options ...EnvOption) EnvKey[float64] {
 func Duration(options ...EnvOption) EnvKey[time.Duration] { return define(time.ParseDuration, options) }
 
 func define[T any](parse func(string) (T, error), options []EnvOption) EnvKey[T] {
-	c := EnvConfig{}
-	for _, option := range options {
-		if option == nil {
-			panic("testenv: nil env option")
-		}
-		option(&c)
-	}
+	c := newEnvConfig(options...)
 	if c.Name == "" || strings.ContainsAny(c.Name, "=\x00") {
 		panic(fmt.Sprintf("testenv: invalid environment variable name %q", c.Name))
 	}
