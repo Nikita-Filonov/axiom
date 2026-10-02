@@ -3,24 +3,9 @@ package testflags
 import (
 	"errors"
 	"flag"
-	"sync"
 
 	"github.com/Nikita-Filonov/axiom"
 )
-
-// Config selects the flag set to snapshot. The default is flag.CommandLine.
-type Config struct {
-	Source *flag.FlagSet
-}
-
-// ConfigOption configures a runner's flag resource.
-type ConfigOption func(*Config)
-
-// WithSource selects an already registered flag set. It must be non-nil and
-// parsed before first access. WithFlagSet selects this set for declarations.
-func WithSource(fs *flag.FlagSet) ConfigOption {
-	return func(c *Config) { c.Source = fs }
-}
 
 // Resource defines a flag snapshot for registration with axiom.WithRunnerResources.
 // It does not read or parse flags and can be declared at package level. The first
@@ -28,24 +13,8 @@ func WithSource(fs *flag.FlagSet) ConfigOption {
 // It panics for a nil option or source. Configure runners before execution.
 // Repeated installation replaces the definition, following Axiom resource rules.
 func Resource(options ...ConfigOption) axiom.ResourceRegistrar {
-	c := Config{Source: flag.CommandLine}
-	for _, option := range options {
-		if option == nil {
-			panic("testflags: nil config option")
-		}
-		option(&c)
-	}
-	if c.Source == nil {
-		panic("testflags: nil flag source")
-	}
+	c := newConfig(options...)
 	return axiom.DefineResource(stateKey.Name(), c.build)
-}
-
-func (c Config) build(*axiom.Runner) (*state, func(), error) {
-	return &state{
-		read:   sync.OnceValue(func() *Flags { return snapshot(c.Source) }),
-		source: c.Source,
-	}, nil, nil
 }
 
 // Get returns the runner's flag snapshot or panics if TryGet fails.
