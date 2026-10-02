@@ -182,3 +182,7 @@ These plugins are intended both for direct use and as reference implementations 
   fixtures, and tests.
 - **🌱 Environment Plugin:** [testenv](../../plugins/testenv). Shares a typed snapshot of environment variables with
   runner resources, hooks, fixtures, plugins, and tests.
+- **🧵 Leak Checks Plugin:** [testleaks](../../plugins/testleaks). Checks attempt-labeled goroutines after the body
+  and its later-registered cleanups, plus explicitly tracked resources that were not released.
+- **📄 JUnit XML Plugin:** [testjunit](../../plugins/testjunit). Exports finished case attempts as JUnit XML for CI
+  test reports.
