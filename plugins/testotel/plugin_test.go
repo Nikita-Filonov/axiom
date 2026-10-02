@@ -170,7 +170,8 @@ func TestLifecycleFailureAndDuplicateInstallation(t *testing.T) {
 }
 
 func TestContextFallbackAndValidation(t *testing.T) {
-	parent := context.WithValue(t.Context(), struct{}{}, "parent")
+	parent, cancel := context.WithCancel(t.Context())
+	defer cancel()
 	cfg := &axiom.Config{Context: axiom.Context{Raw: parent}}
 	require.Same(t, parent, testotel.Context(cfg))
 	require.NotNil(t, testotel.Context(&axiom.Config{}))
