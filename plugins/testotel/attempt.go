@@ -123,10 +123,6 @@ func (a *attempt) record(event axiom.Event) {
 
 func (a *attempt) finish(t *testing.T) {
 	a.mu.Lock()
-	if !a.started || a.ended {
-		a.mu.Unlock()
-		return
-	}
 	a.ended = true
 	span := a.span
 	failed := a.failed || t.Failed()
