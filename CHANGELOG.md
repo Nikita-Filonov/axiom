@@ -135,6 +135,23 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### testotel v0.1.0 — 2026-10-02
+
+- Added the independent `testotel` module. It emits one OpenTelemetry span per
+  case attempt or policy skip, correlates retries, records selected lifecycle
+  events, and provides `Context(cfg)` for child spans. The caller owns the SDK
+  and exporter.
+
+### testenv v0.2.0 — 2026-10-02
+
+- Moved resource configuration and its builder into `config.go`, and the
+  environment snapshot into `envs.go`. The public API and behavior are unchanged.
+
+### testflags v0.4.0 — 2026-10-02
+
+- Moved flag and resource configuration into `config.go`. The public API and
+  behavior are unchanged.
+
 ### testenv v0.1.0 — 2026-10-02
 
 - Added the independent `testenv` module for typed environment variables shared
@@ -163,22 +180,24 @@ versions and plugin versions are independent. The first core release in this per
 
 ### Plugin release index
 
-The table shows the first plugin tag since 2026-03-26 and the latest published
-tag as of 2026-10-02. Many tags only update the required Axiom version.
+The table shows the first plugin version since 2026-03-26 and the versions in the
+2026-10-02 release. Plugin versions are independent of the core version. Releases
+without a note above have no user-facing changes in this batch.
 
-| Plugin           | First tag in period | Latest published tag |
-|------------------|---------------------|----------------------|
-| `testallure`     | `v0.13.0`           | `v0.37.0`            |
-| `testassert`     | `v0.10.0`           | `v0.28.0`            |
-| `testenv`        | `v0.1.0`            | `v0.1.0`             |
-| `testexplain`    | `v0.1.0`            | `v0.16.0`            |
-| `testflags`      | `v0.1.0`            | `v0.3.0`             |
-| `testlogger`     | `v0.12.0`           | `v0.30.0`            |
-| `testquarantine` | `v0.1.0`            | `v0.10.0`            |
-| `teststats`      | `v0.13.0`           | `v0.31.0`            |
-| `testtags`       | `v0.13.0`           | `v0.31.0`            |
-| `testtimeout`    | `v0.1.0`            | `v0.10.0`            |
-| `testtracing`    | `v0.1.0`            | `v0.16.0`            |
+| Plugin           | First version in period | 2026-10-02 release |
+|------------------|-------------------------|--------------------|
+| `testallure`     | `v0.13.0`               | `v0.38.0`          |
+| `testassert`     | `v0.10.0`               | `v0.29.0`          |
+| `testenv`        | `v0.1.0`                | `v0.2.0`           |
+| `testexplain`    | `v0.1.0`                | `v0.17.0`          |
+| `testflags`      | `v0.1.0`                | `v0.4.0`           |
+| `testlogger`     | `v0.12.0`               | `v0.31.0`          |
+| `testotel`       | `v0.1.0`                | `v0.1.0`           |
+| `testquarantine` | `v0.1.0`                | `v0.11.0`          |
+| `teststats`      | `v0.13.0`               | `v0.32.0`          |
+| `testtags`       | `v0.13.0`               | `v0.32.0`          |
+| `testtimeout`    | `v0.1.0`                | `v0.11.0`          |
+| `testtracing`    | `v0.1.0`                | `v0.17.0`          |
 
 Notable plugin changes in this period:
 
