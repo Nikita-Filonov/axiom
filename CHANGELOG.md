@@ -135,6 +135,23 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### testjunit v0.1.0 — 2026-10-02
+
+- Added the independent `testjunit` module. It exports executed and
+  policy-skipped attempts as JUnit XML, including retry outcomes, timing, and
+  available lifecycle failure messages. Its own recorder reconciles late test
+  failures during parent cleanup and depends only on Axiom core. Reports can be
+  written to an `io.Writer` or to a file after tests finish. Register it with
+  `testjunit.Plugin(reporter, options...)`; suite options belong to each plugin
+  installation, and a shared reporter groups results by suite name.
+
+### testleaks v0.1.0 — 2026-10-02
+
+- Added the independent `testleaks` module. It checks attempt-labeled goroutines
+  after the test body and its later-registered cleanups, and reports explicitly
+  tracked resources that were not released. It supports a grace period, exact
+  function-name exclusions, and an `io.ReadCloser` tracking wrapper.
+
 ### testotel v0.1.0 — 2026-10-02
 
 - Added the independent `testotel` module. It emits one OpenTelemetry span per
@@ -180,24 +197,25 @@ versions and plugin versions are independent. The first core release in this per
 
 ### Plugin release index
 
-The table shows the first plugin version since 2026-03-26 and the versions in the
-2026-10-02 release. Plugin versions are independent of the core version. Releases
-without a note above have no user-facing changes in this batch.
+The table shows the first plugin version since 2026-03-26 and the versions for the
+2026-10-02 release. Plugin versions are independent of the core version.
 
 | Plugin           | First version in period | 2026-10-02 release |
 |------------------|-------------------------|--------------------|
-| `testallure`     | `v0.13.0`               | `v0.38.0`          |
-| `testassert`     | `v0.10.0`               | `v0.29.0`          |
-| `testenv`        | `v0.1.0`                | `v0.2.0`           |
-| `testexplain`    | `v0.1.0`                | `v0.17.0`          |
-| `testflags`      | `v0.1.0`                | `v0.4.0`           |
-| `testlogger`     | `v0.12.0`               | `v0.31.0`          |
-| `testotel`       | `v0.1.0`                | `v0.1.0`           |
-| `testquarantine` | `v0.1.0`                | `v0.11.0`          |
-| `teststats`      | `v0.13.0`               | `v0.32.0`          |
-| `testtags`       | `v0.13.0`               | `v0.32.0`          |
-| `testtimeout`    | `v0.1.0`                | `v0.11.0`          |
-| `testtracing`    | `v0.1.0`                | `v0.17.0`          |
+| `testallure`     | `v0.13.0`               | `v0.39.0`          |
+| `testassert`     | `v0.10.0`               | `v0.30.0`          |
+| `testenv`        | `v0.1.0`                | `v0.3.0`           |
+| `testexplain`    | `v0.1.0`                | `v0.18.0`          |
+| `testflags`      | `v0.1.0`                | `v0.5.0`           |
+| `testjunit`      | `v0.1.0`                | `v0.1.0`           |
+| `testleaks`      | `v0.1.0`                | `v0.1.0`           |
+| `testlogger`     | `v0.12.0`               | `v0.32.0`          |
+| `testotel`       | `v0.1.0`                | `v0.2.0`           |
+| `testquarantine` | `v0.1.0`                | `v0.12.0`          |
+| `teststats`      | `v0.13.0`               | `v0.33.0`          |
+| `testtags`       | `v0.13.0`               | `v0.33.0`          |
+| `testtimeout`    | `v0.1.0`                | `v0.12.0`          |
+| `testtracing`    | `v0.1.0`                | `v0.18.0`          |
 
 Notable plugin changes in this period:
 
