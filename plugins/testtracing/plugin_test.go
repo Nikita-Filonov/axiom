@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/Nikita-Filonov/axiom/plugins/testtracing"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,7 +91,7 @@ func TestPlugin_DoesNotCollectRunnerRuntimeEvents(t *testing.T) {
 	require.Empty(t, records)
 }
 
-func TestPlugin_DuplicateApplicationsCreateIndependentRecords(t *testing.T) {
+func TestPlugin_DuplicateApplicationsRecordEventsOnce(t *testing.T) {
 	trace := testtracing.NewTrace()
 	cfg := &axiom.Config{
 		Case: &axiom.Case{Name: "case"},
@@ -99,15 +100,18 @@ func TestPlugin_DuplicateApplicationsCreateIndependentRecords(t *testing.T) {
 
 	plugin(cfg)
 	plugin(cfg)
-	cfg.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
+	event := axiom.Event{Type: axiom.EventTypeLog, Message: "repeated event"}
+	cfg.Event(event)
+	// A separately constructed plugin using the same Trace is also a duplicate.
+	testtracing.Plugin(trace)(cfg)
+	cfg.Event(event)
 
 	records := trace.Snapshot()
-	require.Len(t, records, 2)
-	for _, record := range records {
-		require.Equal(t, "case", record.Case.Name)
-		require.Len(t, record.Events, 1)
-		require.Equal(t, axiom.EventTypeCaseStart, record.Events[0].Type)
-	}
+	require.Len(t, records, 1)
+	assert.Equal(t, "case", records[0].Case.Name)
+	assert.Equal(t, []axiom.Event{event, event}, records[0].Events)
+	assert.Len(t, cfg.Runtime.EventSinks, 1)
+	assert.Len(t, cfg.Runtime.TestWraps, 1)
 }
 
 func TestPlugin_ClosesSinkOnTestingCleanup(t *testing.T) {

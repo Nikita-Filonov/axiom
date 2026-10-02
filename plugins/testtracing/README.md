@@ -7,6 +7,7 @@
 - [Overview](#overview)
 - [What the plugin does](#what-the-plugin-does)
 - [Installation](#installation)
+- [Repeated installation](#repeated-installation)
 - [Example](#example)
 
 ---
@@ -42,6 +43,24 @@ Add the plugin dependency using `go get`:
 ```shell
 go get github.com/Nikita-Filonov/axiom/plugins/testtracing
 ```
+
+---
+
+## Repeated installation
+
+Install `testtracing.Plugin(trace)` on a Runner, a Case, or both:
+
+- The same `*Trace` on the same `Config` registers one event sink and one test wrap.
+- Different traces collect independently, including when attached to the same Config.
+- Different Config values have separate records, including retry attempts and parallel cases.
+- Repeated events emitted by the test are preserved; only duplicate installation is ignored.
+- Reinstalling on a finished Config does not reopen its closed sink.
+
+A nil Trace or Config panics. Configure plugins before execution; shared Trace
+collection and snapshots are safe for concurrent use.
+
+Earlier versions created duplicate records when the same trace was installed
+twice. Use separate Trace collectors if you need independent copies of the event stream.
 
 ---
 
