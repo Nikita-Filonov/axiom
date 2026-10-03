@@ -1,194 +1,130 @@
 # 📘 Plugins
 
----
+This guide is for authors of `axiom.Plugin` implementations. For available modules, installation instructions, and
+runner resources, see the [plugin and resource index](../../plugins).
 
 ## 📑 Table of Contents
 
-- [Overview](#overview)
-- [Plugin Contract](#plugin-contract)
-- [Installing Plugins](#installing-plugins)
-- [Writing a Plugin](#writing-a-plugin)
-- [Built-in Plugins](#built-in-plugins)
+- [Plugin contract](#plugin-contract)
+- [Example: timing a test body](#example-timing-a-test-body)
+- [Example: decorating a case name](#example-decorating-a-case-name)
+- [Choosing an extension point](#choosing-an-extension-point)
+- [Lifecycle and state](#lifecycle-and-state)
+- [Testing and documentation](#testing-and-documentation)
 
----
+## Plugin contract
 
-## Overview
+An `axiom.Plugin` is a `func(*axiom.Config)`. A Runner applies its plugins first, followed by the Case plugins, in
+registration order. Each invocation configures the given `Config`: it can change merged settings or register Runtime
+wrappers and sinks. Test actions, steps, and fixtures run later. Keep installation cheap and free of irreversible work.
 
-> **Note:** The `plugins/` directory groups independently versioned extension modules. Some implement `axiom.Plugin`
-> and are registered with `axiom.WithRunnerPlugins(...)` or `axiom.WithCasePlugins(...)`. Others provide
-> [runner resources](../resource), such as [testenv](../../plugins/testenv) and [testflags](../../plugins/testflags).
-> Register these with `axiom.WithRunnerResources(testenv.Resource(), testflags.Resource())`; their snapshots are
-> loaded lazily and shared by the runner's tests.
+Axiom applies plugins to a planning `Config` to decide skip, retry, and parallel policy. It then builds a fresh
+`Config` and applies plugins again for each attempt. A policy skip may have no attempt `Config`. Each attempt gets its
+own `Local` state and fixture cache; the Runner and any collectors captured by plugin closures may be shared.
 
-A `Plugin` is a function that configures test execution via `Config` and its `Runtime`. Plugins extend Axiom without
-changing its core. They may attach hooks, wraps, context values, reporting integrations, filtering logic, or custom
-instrumentation.
+## Example: timing a test body
 
-A plugin is applied:
-
-1. At `Runner` level (global, applied first)
-2. At `Case` level (applied after Runner plugins)
-
-Plugins form a deterministic mutation pipeline.
-
-A plugin does **not** execute tests or steps — it only decorates execution by registering behavior in `Config` and
-`Runtime`.
-
----
-
-## Plugin Contract
-
-Plugins are installation-time decorators for a built `Config`.
-
-A plugin should:
-
-- register hooks, wraps, sinks, context, metadata, skip rules, or other execution configuration
-- be deterministic and safe to apply more than once across retry attempts
-- return without executing test logic
-
-A plugin should not:
-
-- call `cfg.Test`, `cfg.Step`, `cfg.Setup`, or `cfg.Teardown` during installation
-- create irreversible external side effects during installation
-- depend on being applied only once for the whole runner lifetime
-
-Runner-level plugins are applied before case-level plugins.
-
-Axiom may build more than one `Config` for a case, for example when calculating execution policy and when running retry
-attempts. Because of that, plugin installation must stay cheap, deterministic, and side-effect-light.
-
-Every build starts from a fresh copy of the declared `Case`. Mutations made by one plugin application do not become the
-input of the next retry attempt. This makes decorators such as the following valid without accumulating prefixes:
+This example registers a wrapper during installation. The clock starts only when an attempt executes, and `defer`
+reports its duration even if the body panics. The duration ends when `next` returns; it does not include later
+`testing.T.Cleanup` callbacks. Policy skips do not execute test wrappers.
 
 ```go
-func NamePlugin() axiom.Plugin {
-	return func(cfg *axiom.Config) {
-		cfg.Case.Name = fmt.Sprintf("[%s] %s", cfg.Meta.Feature, cfg.Case.Name)
-	}
-}
-```
-
-For a Case named `name` with feature `Feature`, every attempt sees `[Feature] name`; the declared Case remains `name`.
-
-A plugin is a configuration decorator, not a test execution point.
-
----
-
-## Installing Plugins
-
-Axiom plugins are distributed as **regular Go modules**. There is no plugin manager, registry, or custom installation
-mechanism.
-
-Plugins are installed and versioned using standard Go tooling.
-
-### Installing a plugin
-
-Use `go get` with the plugin module path:
-
-```bash
-go get github.com/Nikita-Filonov/axiom/plugins/testtags
-```
-
-This will add the plugin as a dependency to your `go.mod` file:
-
-```text
-require (
-	github.com/Nikita-Filonov/axiom
-	github.com/Nikita-Filonov/axiom/plugins/testtags
-)
-```
-
-Each plugin is **versioned independently** of the Axiom core. Pin the version with `@vX.Y.Z` if your project needs
-reproducible builds.
-
----
-
-## Writing a Plugin
-
-A plugin has the type:
-
-```go
-type Plugin func(cfg *axiom.Config)
-```
-
-A minimal plugin:
-
-```go
-package myplugin
+package example_test
 
 import (
-	"fmt"
+	"testing"
+	"time"
 
 	"github.com/Nikita-Filonov/axiom"
 )
 
-func Plugin() axiom.Plugin {
-	// A plugin is applied to each built Config. It should register behavior on
-	// Config/Runtime and return; it should not run the test by itself.
+func TimingPlugin() axiom.Plugin {
 	return func(cfg *axiom.Config) {
-		// Test wraps are middleware. This registration only changes how the test
-		// will execute later, when the attempt runs.
 		cfg.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
-			// The outer function receives the next action in the chain.
-			// The returned action becomes the decorated test body.
-			return func(c *axiom.Config) {
-				fmt.Println("before test")
-				next(c)
-				fmt.Println("after test")
+			return func(current *axiom.Config) {
+				start := time.Now()
+				defer func() {
+					if t := current.T(); t != nil {
+						t.Logf("test body took %s", time.Since(start))
+					}
+				}()
+				next(current)
 			}
 		})
 	}
 }
+
+func TestTimed(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(TimingPlugin()),
+	)
+
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("timed")), func(cfg *axiom.Config) {
+		cfg.Step("work", func() {})
+	})
+}
 ```
 
-Plugins commonly interact with:
+The plugin uses only Axiom core and Go's standard library. Integrations that need external packages belong in their
+own Go modules under `plugins/`.
 
-- `cfg.Runtime.EmitTestWrap(...)` — wrap test execution
-- `cfg.Runtime.EmitStepWrap(...)` — wrap step execution
-- `cfg.Runtime.EmitLogSink(...)` — consume logs
-- `cfg.Runtime.EmitAssertSink(...)` — consume asserts
-- `cfg.Runtime.EmitArtefactSink(...)` — consume artefacts
-- `cfg.Hooks.*` — lifecycle hooks
-- `cfg.Skip` — skip logic
-- `cfg.Context` — context injection
-- `cfg.Meta` — metadata modification
+## Example: decorating a case name
 
----
+A plugin can also change the current `Config` directly. This function can be added to the example above:
 
-## Built-in Plugins
+```go
+func PrefixName(prefix string) axiom.Plugin {
+    return func (cfg *axiom.Config) {
+        cfg.Case.Name = prefix + cfg.Case.Name
+    }
+}
+```
 
-Axiom ships with several extension modules that demonstrate common patterns for extending the runtime or providing
-runner resources. Each module is fully self-contained and documented in its own README.
+Use it with `axiom.WithCasePlugins(PrefixName("[smoke] "))`. Every build starts from the declared Case, so retries see
+one prefix rather than an accumulating series of prefixes; the declared Case name stays unchanged.
 
-These modules are intended both for direct use and as reference implementations when writing custom extensions.
+## Choosing an extension point
 
-- **🟣 Allure Plugin:** [testallure](../../plugins/testallure). Generates Allure reports by projecting Axiom runtime
-  events (tests, steps, artefacts, metadata) into the Allure execution model.
-- **📝 Logger Plugin:** [testlogger](../../plugins/testlogger). Consumes structured log events emitted via `cfg.Log(...)`
-  and forwards them to Go’s `log/slog` logging infrastructure.
-- **📊 Stats Plugin:** [teststats](../../plugins/teststats). Records every attempt, including skips and cleanup
-  failures, groups retries into runs with flaky detection, and counts runs and attempts.
-- **🔎 Tracing Plugin:** [testtracing](../../plugins/testtracing). Records raw config-scoped runtime events into an
-  in-memory trace for later inspection or export.
-- **🔭 OpenTelemetry Plugin:** [testotel](../../plugins/testotel). Exports per-attempt spans and selected lifecycle
-  events through a caller-provided OpenTelemetry tracer provider.
-- **🧭 Explain Plugin:** [testexplain](../../plugins/testexplain). Captures a structured explanation of the merged
-  runner/case configuration before test execution.
-- **🏷 Tags Plugin:** [testtags](../../plugins/testtags). Filters test execution based on metadata tags using include /
-  exclude rules. Can be configured via code or environment variables.
-- **✅ Assert Plugin:** [testassert](../../plugins/testassert). Bridges Axiom’s structured runtime assertions with
-  `stretchr/testify/assert`. Allows test code to emit declarative assertion events without coupling to a specific
-  assertion backend.
-- **⏱ Timeout Plugin:** [testtimeout](../../plugins/testtimeout). Enforces a per-case wall-clock deadline, failing a
-  hanging case with a readable message and an attached goroutine dump instead of stalling the whole test binary.
-- **🧟 Quarantine Plugin:** [testquarantine](../../plugins/testquarantine). Quarantines known-flaky cases by skipping
-  them before execution with a recorded reason, so they stay visible without gating the suite. Can be configured to run
-  them anyway in non-gating jobs.
-- **🚩 Flags Resource:** [testflags](../../plugins/testflags). Shares typed CLI flags with runner resources, hooks,
-  fixtures, and tests.
-- **🌱 Environment Resource:** [testenv](../../plugins/testenv). Shares a typed snapshot of environment variables with
-  runner resources, hooks, fixtures, plugins, and tests.
-- **🧵 Leak Checks Plugin:** [testleaks](../../plugins/testleaks). Checks attempt-labeled goroutines after the body
-  and its later-registered cleanups, plus explicitly tracked resources that were not released.
-- **📄 JUnit XML Plugin:** [testjunit](../../plugins/testjunit). Exports finished case attempts as JUnit XML for CI
-  test reports.
+| Need                                             | Use                                                           |
+|--------------------------------------------------|---------------------------------------------------------------|
+| Change metadata or skip policy before execution  | Mutate the current `Config` during installation.              |
+| Surround a test, step, setup, or teardown action | Register the corresponding `cfg.Runtime.Emit*Wrap` callback.  |
+| Observe events, logs, assertions, or artefacts   | Register the corresponding `cfg.Runtime.Emit*Sink` callback.  |
+| Share a lazy value across a Runner's tests       | Define a [runner resource](../resource) rather than a plugin. |
+
+The [Runtime guide](../runtime) describes the wrapper and sink signatures. Earlier wrappers are outermost; sinks
+receive values in registration order. Calling `cfg.Step`, `cfg.Setup`, or other test actions during installation runs
+them too early. A sink or wrapper can use them later, when the attempt is executing.
+
+For complete implementations, see [teststats' event recorder](../../plugins/teststats/plugin.go) and
+[testtracing's test wrapper](../../plugins/testtracing/plugin.go).
+
+## Lifecycle and state
+
+- **Planning versus attempts.** `cfg.Execution.Attempt` is zero on the planning `Config` and one-based on attempts.
+  `cfg.T()` can return the root `*testing.T` during planning, so it does not identify a running attempt. An event sink
+  can observe a policy `case.skip` on the planning `Config`; a test wrapper cannot observe it.
+- **Repeated installation.** Applying the same plugin at Runner and Case level can register callbacks twice on one
+  `Config`. Decide and document whether that is intentional. If one registration is required, keep a typed
+  `Config.Local` marker in `installation.go`, named with the full plugin import path. Scope it to the collector too
+  when separate collectors should receive independent records.
+  See [testtracing's installation](../../plugins/testtracing/installation.go).
+- **Ownership and concurrency.** Attempt-local mutable state belongs on its `Config`. Synchronize collectors shared
+  by parallel attempts. `Config.Local` is not safe for concurrent mutation. Register cleanup when the attempt runs;
+  `testing.T.Cleanup` executes callbacks in reverse registration order.
+- **Timing and failures.** The body may panic or call `FailNow` or `SkipNow`. Use `defer` or cleanup for state that must
+  be released. A failure reported after a plugin's final cleanup cannot change a result that it already published;
+  reporting plugins should document that limit.
+
+For plugins that observe both Runner and Case scopes, test the order and option precedence explicitly. The first
+installation may win for one collector, while two different collectors may both be valid.
+
+## Testing and documentation
+
+Give a new plugin its own `go.mod`, tests, and README. Document what it observes, changes, and owns, including option
+precedence, duplicate installation, cleanup, and concurrency behavior. Keep runnable examples alongside the code.
+
+Use `testify/assert` and `testify/require` in tests as required by [CONTRIBUTING.md](../../CONTRIBUTING.md). Cover
+planning and attempt Configs, Runner and Case application, skips, retries, failures, cleanup, and parallel execution
+where relevant. Run `go vet ./...`, `go test -race ./...`, and `go test -cover ./...` from the plugin's module
+directory; each production package must reach 100.0% statement coverage.
