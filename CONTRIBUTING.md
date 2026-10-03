@@ -4,7 +4,7 @@ Axiom extends Go's `testing` package. Keep it small, explicit, predictable, and
 compatible with ordinary `go test`. These rules apply to the core module, every
 plugin module, tests, examples, and documentation.
 
-## Table of Contents
+## 📑 Table of Contents
 
 - [Before any pull request](#before-any-pull-request)
 - [Project principles](#project-principles)
