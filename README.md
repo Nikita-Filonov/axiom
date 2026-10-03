@@ -192,5 +192,5 @@ following folders:
 - [./docs/hooks](./docs/hooks) — lifecycle hooks for tests, steps, and subtests
 - [./docs/params](./docs/params) — typed parameter injection for test cases
 - [./docs/context](./docs/context) — structured global and per-test context values
-- [./docs/plugins](./docs/plugins) — plugin system, built-in plugins, and guidelines for writing custom plugins
+- [./docs/plugins](./docs/plugins) — plugin system and guidelines for writing custom plugins
 - [./docs/glossary](./docs/glossary) — definitions of all core Axiom concepts
