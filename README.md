@@ -9,6 +9,7 @@
 [![CI](https://github.com/Nikita-Filonov/axiom/actions/workflows/workflow-test.yml/badge.svg)](https://github.com/Nikita-Filonov/axiom/actions/workflows/workflow-test.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Nikita-Filonov/axiom.svg)](https://pkg.go.dev/github.com/Nikita-Filonov/axiom)
 [![codecov](https://codecov.io/gh/Nikita-Filonov/axiom/branch/main/graph/badge.svg)](https://codecov.io/gh/Nikita-Filonov/axiom)
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/avelino/awesome-go)
 [![License](https://img.shields.io/github/license/Nikita-Filonov/axiom)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Nikita-Filonov/axiom?style=social)](https://github.com/Nikita-Filonov/axiom/stargazers)
 
