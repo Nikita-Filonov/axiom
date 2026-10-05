@@ -8,11 +8,12 @@ import (
 // AxiomTestTimeout is the environment variable read by ConfigFromEnv.
 const AxiomTestTimeout = "AXIOM_TEST_TIMEOUT"
 
-// Config controls the attempt timeout, failure message, and goroutine dump.
+// Config controls the attempt timeout, context deadline, failure message, and goroutine dump.
 type Config struct {
-	Timeout        time.Duration
-	Message        string
-	DumpGoroutines bool
+	Timeout         time.Duration
+	ContextDeadline bool
+	Message         string
+	DumpGoroutines  bool
 }
 
 // ConfigOption configures test timeout behavior.
@@ -32,6 +33,13 @@ func NewConfig(opts ...ConfigOption) Config {
 // It does not stop the test body. A non-positive duration disables the wrapper.
 func WithTimeout(timeout time.Duration) ConfigOption {
 	return func(c *Config) { c.Timeout = timeout }
+}
+
+// WithContextDeadline gives Raw, DB, MQ, and RPC contexts the attempt timeout's
+// deadline. Their existing earlier deadlines still apply. The derived contexts
+// are canceled when the attempt finishes or times out.
+func WithContextDeadline() ConfigOption {
+	return func(c *Config) { c.ContextDeadline = true }
 }
 
 // WithMessage sets the failure text reported when the timeout expires.

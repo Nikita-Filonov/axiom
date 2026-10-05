@@ -12,6 +12,7 @@ func TestNewConfig_Defaults(t *testing.T) {
 	cfg := testtimeout.NewConfig()
 
 	assert.Equal(t, time.Duration(0), cfg.Timeout)
+	assert.False(t, cfg.ContextDeadline)
 	assert.True(t, cfg.DumpGoroutines)
 	assert.Empty(t, cfg.Message)
 }
@@ -20,6 +21,12 @@ func TestWithTimeout(t *testing.T) {
 	cfg := testtimeout.NewConfig(testtimeout.WithTimeout(3 * time.Second))
 
 	assert.Equal(t, 3*time.Second, cfg.Timeout)
+}
+
+func TestWithContextDeadline(t *testing.T) {
+	cfg := testtimeout.NewConfig(testtimeout.WithContextDeadline())
+
+	assert.True(t, cfg.ContextDeadline)
 }
 
 func TestWithoutGoroutineDump(t *testing.T) {

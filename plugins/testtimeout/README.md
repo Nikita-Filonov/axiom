@@ -31,9 +31,10 @@ At runtime, for every case, the plugin:
 - runs the test body under a wall-clock timer
 - on timeout, marks the case as failed with a clear message (`testtimeout: case exceeded <budget>`)
 - attaches a full goroutine dump as an artefact (enabled by default) so the hang can be diagnosed
+- optionally gives the attempt's contexts the same deadline and cancels them when the attempt finishes
 - re-raises any panic from the body on the test goroutine, preserving Axiom's lifecycle panic handling
 
-If the case finishes within the budget, the plugin adds no observable behavior.
+Without `WithContextDeadline()`, a case that finishes within the budget has no observable change.
 
 ---
 
@@ -42,6 +43,7 @@ If the case finishes within the budget, the plugin adds no observable behavior.
 The plugin is configured with functional options:
 
 - `WithTimeout(d)` — the per-case wall-clock budget. A non-positive value disables the plugin.
+- `WithContextDeadline()` — give the attempt's Raw, DB, MQ, and RPC contexts the same deadline as `WithTimeout(d)`; disabled by default.
 - `WithoutGoroutineDump()` — do not attach the goroutine dump artefact on timeout.
 - `WithMessage(msg)` — override the default failure message.
 - `ConfigFromEnv()` — read the budget from the environment.
@@ -62,10 +64,11 @@ export AXIOM_TEST_TIMEOUT=10s
 
 ## Semantics and caveats
 
-Go cannot forcibly interrupt a running goroutine. On timeout the plugin fails the case and returns, but the body
-goroutine is left to finish on its own. For the timeout to release resources promptly, prefer bodies that honor a
-context deadline (for example via `cfg.Context.RPC`); the wall-clock guard is the backstop that guarantees the case is
-reported instead of hanging.
+- `WithTimeout(d)` marks the attempt as failed after `d`. Its goroutine may keep running.
+- `WithContextDeadline()` gives `Raw`, `DB`, `MQ`, and `RPC` that same deadline, measured from the start of the attempt
+  (after any parallel-test pause). Earlier parent deadlines still apply.
+- The contexts are canceled when the attempt finishes or times out. This is a limit for the whole attempt, not a fresh
+  timeout for each DB, MQ, or RPC call. Operations that ignore cancellation may keep running.
 
 ---
 
@@ -110,6 +113,7 @@ func TestTimeoutExample(t *testing.T) {
 		axiom.WithRunnerPlugins(
 			testtimeout.Plugin(
 				testtimeout.WithTimeout(5*time.Second),
+				testtimeout.WithContextDeadline(), // optional: cancel attempt contexts at the same deadline
 				testtimeout.ConfigFromEnv(), // optional: AXIOM_TEST_TIMEOUT overrides the budget
 			),
 		),
