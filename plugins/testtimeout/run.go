@@ -42,6 +42,7 @@ func runWithTimeout(c *axiom.Config, cfg Config, next axiom.TestAction) {
 	select {
 	case outcome = <-done:
 	case <-timer.C:
+		// Both channels may be ready; a body that finished before the deadline wins.
 		select {
 		case outcome = <-done:
 		default:
@@ -50,6 +51,7 @@ func runWithTimeout(c *axiom.Config, cfg Config, next axiom.TestAction) {
 		}
 	}
 
+	// A body returning because its context expired must still fail the attempt.
 	if !outcome.finishedAt.Before(deadline) {
 		reportTimeout(c, cfg)
 		return
