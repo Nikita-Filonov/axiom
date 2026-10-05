@@ -135,6 +135,12 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### testtimeout v0.14.0 — 2026-10-05
+
+- Added `WithContextDeadline()` to give `Raw`, `DB`, `MQ`, and `RPC` contexts the same deadline as the case timeout.
+  The contexts are canceled when the attempt finishes or times out; earlier parent deadlines still apply.
+- An attempt that returns after its deadline is reported as timed out, including when it returns on context cancellation.
+
 ### testtracing v0.18.0 — 2026-10-02
 
 - Repeated installation with the same `Trace` and `Config`, including on both
