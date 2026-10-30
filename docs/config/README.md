@@ -20,6 +20,7 @@ Every retry attempt receives a **fresh** `Config`, ensuring deterministic test b
 
 - [Why Config exists](#why-config-exists)
 - [Attempt lifecycle](#attempt-lifecycle)
+- [Named operations vs lifecycle](#named-operations-vs-lifecycle)
 - [Example](#example)
 - [Local State](#local-state)
 - [How Config Is Built (Merging Model)](#how-config-is-built-merging-model)
@@ -73,6 +74,26 @@ A policy skip replaces this sequence with a single `case.skip` event.
 Fixture cleanup is therefore able to use `cfg.Log`, `cfg.Step`, `cfg.Teardown`, `cfg.Assert`, and `cfg.Artefact` while
 attempt-scoped plugins are still active. `cfg.Setup` and `cfg.Teardown` execute their functions immediately; automatic
 end-of-attempt scheduling comes from the cleanup returned by a fixture.
+
+---
+
+## Named operations vs lifecycle
+
+`cfg.Setup(name, fn)` and `cfg.Teardown(name, fn)` run `fn` at the point where they are called, just like `cfg.Step`.
+They emit setup/teardown events and pass the action through the corresponding runtime wrappers, so reporters can show
+named setup and teardown operations. Calling `cfg.Teardown` in the test body runs its callback **before** the rest of
+that body, not after it.
+
+| Need                                                                           | Use                                             |
+|--------------------------------------------------------------------------------|-------------------------------------------------|
+| Name an operation at the current point for events or reporting                 | `cfg.Setup` or `cfg.Teardown`                   |
+| Run code before or after each test attempt                                     | [`WithBeforeTest` or `WithAfterTest`](../hooks) |
+| Run code once around a runner lifecycle                                        | [`WithBeforeAll` or `WithAfterAll`](../hooks)   |
+| Automatically clean up a per-attempt dependency after the body and `AfterTest` | [Fixture cleanup](../fixture)                   |
+
+You can call `cfg.Setup` inside a `BeforeTest` hook or `cfg.Teardown` inside an `AfterTest` hook or fixture cleanup
+when that work should also appear as a named operation in reports. The hook or fixture determines **when** it runs;
+the `Config` method supplies the name, events, and wrappers.
 
 ---
 
