@@ -112,7 +112,7 @@ When a project grows, you quickly run into hard limitations:
 
 - no fixtures or resource lifecycle management
 - no before/after hooks
-- no retry mechanism for flaky operations
+- no structured retry lifecycle for individual test cases
 - no metadata (tags, severity, labels, layers, epics)
 - no step model for readable reporting
 - no plugin or extension architecture
@@ -128,7 +128,7 @@ Instead of replacing Go’s testing ecosystem, Axiom extends it with a powerful 
 
 - **Fixtures** — lazy-evaluated, cached resources with automatic cleanup
 - **Hooks** — before/after runner, test attempt, and step
-- **Retries** — isolated repeat attempts with configurable delay
+- **Retries** — isolated repeat attempts with configurable delay for diagnostics; an earlier failure still fails `go test` (see [retry semantics](./docs/retry))
 - **Metadata** — tags, severity, labels, epics, features, stories
 - **Step model** — structured execution with reporting support
 - **Plugins** — clean extension mechanism for integrating tooling (Allure, metrics, filtering, etc.)

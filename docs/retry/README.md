@@ -4,6 +4,7 @@
 
 - [Semantics](#semantics)
 - [Parallel Cases](#parallel-cases)
+- [Re-running failed tests with gotestsum](#re-running-failed-tests-with-gotestsum)
 - [Example](#example)
 
 ---
@@ -11,8 +12,13 @@
 `Retry` defines how many times a test may re-run and how long to wait between attempts. `Retry` configuration may be
 applied at both Runner and `Case` level. Case-level settings override Runner-level defaults.
 
-A retry is applied only when the test body returns a failure. Each retry creates a fresh `Config`, causing fixtures to
+A retry is applied when an attempt fails. Each retry creates a fresh `Config`, causing fixtures to
 re-evaluate and hooks to re-run, ensuring isolated, deterministic attempts.
+
+> Axiom retries happen within one `go test` run. Once an attempt reports a failure to `testing.T`, that run remains
+> failed even if a later attempt passes. Use a tool that starts a new `go test` run, such as
+> [gotestsum](https://github.com/gotestyourself/gotestsum#re-running-failed-tests), when a passing rerun should determine
+> the final command result.
 
 This model enables:
 
@@ -55,6 +61,22 @@ applied for every attempt as they are for a sequential retry.
 
 Go does not allow a failed `testing.T` to become successful again. Retry therefore re-executes the Case lifecycle, but
 does not erase a failure already reported by an earlier attempt.
+
+---
+
+## Re-running failed tests with `gotestsum`
+
+`gotestsum` runs standard `go test` commands and can start a fresh run for failed tests. Axiom tests need no special
+integration because they are ordinary Go tests. From a Go module directory, run:
+
+```sh
+gotestsum --rerun-fails
+```
+
+This is a command-level retry: it reruns a failed Go test in a new invocation. Axiom's `Retry` controls attempts within
+one invocation and preserves every failure reported to `testing.T`. See the
+[gotestsum rerun documentation](https://github.com/gotestyourself/gotestsum#re-running-failed-tests) for options and
+argument handling.
 
 ---
 
@@ -108,9 +130,12 @@ func TestRetryExample(t *testing.T) {
 		}
 
 		cfg.Step("finalize", func() {
-			fmt.Println("success on attempt", attempt)
+			fmt.Println("action completed on attempt", attempt)
 		})
 	})
 }
 
 ```
+
+This example deliberately produces a failing `go test` result: attempts 1 and 2 call `Fail`, and attempt 3 completes
+the action. It demonstrates repeated attempt lifecycles, not recovery of the final test result.
