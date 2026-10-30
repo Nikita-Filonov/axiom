@@ -1,6 +1,7 @@
 package testassert
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Nikita-Filonov/axiom"
@@ -14,11 +15,17 @@ func HandleAssert(t *testing.T, a axiom.Assert) {
 	case axiom.AssertEqual:
 		assert.Equal(t, a.Expected, a.Actual, a.Message)
 
-	case axiom.AssertTrue:
-		assert.True(t, a.Actual.(bool), a.Message)
-
-	case axiom.AssertFalse:
-		assert.False(t, a.Actual.(bool), a.Message)
+	case axiom.AssertTrue, axiom.AssertFalse:
+		actual, ok := a.Actual.(bool)
+		if !ok {
+			assert.Fail(t, fmt.Sprintf("%s assertion requires bool Actual, got %T", a.Type, a.Actual), a.Message)
+			return
+		}
+		if a.Type == axiom.AssertTrue {
+			assert.True(t, actual, a.Message)
+		} else {
+			assert.False(t, actual, a.Message)
+		}
 
 	case axiom.AssertError:
 		assert.Error(t, a.Error, a.Message)

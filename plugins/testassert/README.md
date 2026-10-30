@@ -51,6 +51,10 @@ Each assertion includes:
 - expected / actual values (where applicable)
 - optional message
 
+`AssertTrue` and `AssertFalse` require a `bool` in `Actual`. The `NewTrueAssert` and `NewFalseAssert`
+constructors enforce this. If a custom `axiom.Assert` contains another type or `nil`, the plugin
+fails the test with a type diagnostic instead of panicking.
+
 ---
 
 ## Installation
