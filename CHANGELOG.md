@@ -5,6 +5,15 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Core versions
 
+### v1.20.0 — 2026-10-31
+
+- Clarified that a failed retry attempt keeps the Go test run failed even if a later attempt passes, and documented
+  command-level reruns with `gotestsum`.
+- Clarified that `Config.Setup` and `Config.Teardown` execute at the call site; use hooks or fixture cleanup to schedule
+  work around a test attempt.
+- Expanded the plugin authoring and installation guides, including plugin lifecycle and state handling.
+- This release changes documentation only; the core API and runtime behavior are unchanged from v1.19.0.
+
 ### v1.19.0 — 2026-10-01
 
 - **Breaking:** `Runner.BuildConfig`, `Runner.ApplyStart`, and `Runner.ApplyFinish` are no longer exported. `RunCase`,
