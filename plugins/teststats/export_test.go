@@ -105,6 +105,7 @@ func TestPlugin_ExportsLifecycleAndDeduplicatesInstallations(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, loaded.Incomplete())
 			assert.Empty(t, loaded.Stats.Attempts())
+			assert.Zero(t, loaded.Stats.Elapsed())
 			require.Len(t, loaded.Unfinished, 1)
 			assert.Equal(t, teststats.StateRunning, loaded.Unfinished[0].State)
 			cfg.T().Cleanup(func() {
@@ -143,6 +144,9 @@ func TestPlugin_ExportsLifecycleAndDeduplicatesInstallations(t *testing.T) {
 	assert.Equal(t, one.Summary(), loaded.Stats.Summary())
 	assert.Equal(t, one.Attempts()[0].ProcessID, loaded.Stats.Attempts()[0].ProcessID)
 	assert.True(t, one.Attempts()[0].Start.Equal(loaded.Stats.Attempts()[0].Start))
+	assert.Equal(t, a.End.Sub(a.Start), loaded.Stats.Elapsed())
+	recorded := one.Attempts()[0]
+	assert.Equal(t, recorded.End.Sub(recorded.Start), one.Elapsed())
 }
 
 func TestPlugin_ExportsParallelRunsWithRepeatedNames(t *testing.T) {

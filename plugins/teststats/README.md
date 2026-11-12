@@ -17,7 +17,7 @@ One `RunCase` call produces a run; each retry produces an attempt.
 go get github.com/Nikita-Filonov/axiom github.com/Nikita-Filonov/axiom/plugins/teststats
 ```
 
-The examples below use the `v0.36.0` API. To work from this checkout, see
+The guides use the `v0.37.0` API. To work from this checkout, see
 [local development](docs/CONFIGURATION.md#local-development).
 
 ## Connect the plugin
@@ -44,7 +44,7 @@ runner := axiom.NewRunner(
 | Task                                                       | Guide                                      |
 |------------------------------------------------------------|--------------------------------------------|
 | Choose options and defaults                                | [Configuration](docs/CONFIGURATION.md)     |
-| Read attempts, runs, counts, and filtered results          | [Statistics in memory](docs/STATISTICS.md) |
+| Read attempts, runs, counts, elapsed time, and filtered results | [Statistics in memory](docs/STATISTICS.md) |
 | Save JSON from one or several test packages                | [JSON output](docs/JSON-OUTPUT.md)         |
 | Load files in a notifier or another process                | [Loading results](docs/LOADING.md)         |
 | Inspect `attempt-1.json` and `run.json`                    | [JSON format](docs/JSON-FORMAT.md)         |

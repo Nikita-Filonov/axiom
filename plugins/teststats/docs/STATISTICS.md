@@ -4,6 +4,7 @@
 
 - [Complete example](#complete-example)
 - [What each method returns](#what-each-method-returns)
+- [Elapsed test time](#elapsed-test-time)
 - [A failed attempt followed by a pass](#a-failed-attempt-followed-by-a-pass)
 - [Filter results](#filter-results)
 
@@ -59,15 +60,49 @@ empty or partial results. See [when results are recorded](LIFECYCLE.md#when-file
 
 ## What each method returns
 
-| Method             | Result                                                              | Order                                                  |
-|--------------------|---------------------------------------------------------------------|--------------------------------------------------------|
-| `stats.Attempts()` | One [Attempt](../attempt.go) per completed execution or policy skip | Start time, then ProcessID, RunID, and attempt number  |
-| `stats.Runs()`     | [Runs](../run.go) grouping retries by ProcessID and RunID           | Earliest start of each run; attempts ordered by number |
-| `stats.Summary()`  | [Counts](../summary.go) for runs and attempts                       | `Total`, `Passed`, `Failed`, `Skipped`, `Flaky`        |
+| Method             | Result                                                                  | Order                                                  |
+|--------------------|-------------------------------------------------------------------------|--------------------------------------------------------|
+| `stats.Attempts()` | One [Attempt](../attempt.go) per completed execution or policy skip     | Start time, then ProcessID, RunID, and attempt number  |
+| `stats.Runs()`     | [Runs](../run.go) grouping retries by ProcessID and RunID               | Earliest start of each run; attempts ordered by number |
+| `stats.Summary()`  | [Counts](../summary.go) for runs and attempts                           | `Total`, `Passed`, `Failed`, `Skipped`, `Flaky`        |
+| `stats.Elapsed()`  | `time.Duration` from earliest start to latest end of completed attempts | Zero for an empty collector                            |
 
 Methods are safe for concurrent use and return copies. Two `RunCase` calls create different runs even when the
 Case ID and name are the same. Metadata is captured when the attempt starts.
 `ProcessID` also keeps runs from different test binaries separate when [loading saved results](LOADING.md).
+
+## Elapsed test time
+
+Available since `v0.37.0`:
+
+```go
+elapsed := stats.Elapsed()
+fmt.Println("test time:", elapsed)
+```
+
+| Attempt | Start    | End      | Duration |
+|---------|----------|----------|----------|
+| A       | 10:00:00 | 10:00:06 | 6s       |
+| B       | 10:00:02 | 10:00:05 | 3s       |
+| A retry | 10:00:08 | 10:00:10 | 2s       |
+
+```text
+stats.Elapsed():        10s = 10:00:10 - 10:00:00
+Sum of attempt durations: 11s
+```
+
+Overlaps are counted once. Gaps between attempts and runs remain part of the span.
+The same method works on `result.Stats` after `Load` and on the collector returned by `Filter`.
+
+| Available data                                                     | `Elapsed()`                                                          |
+|--------------------------------------------------------------------|----------------------------------------------------------------------|
+| No completed attempts, including a run with only running snapshots | `0`                                                                  |
+| Finished and finalized attempts                                    | Earliest start to latest end, across all processes                   |
+| Partial results                                                    | Span of the retained completed attempts; check `result.Incomplete()` |
+
+This measures recorded test activity, not the whole `go test` command. Compilation and startup before the first
+attempt are excluded. Running attempts do not extend the span to the current time. Saved files use wall-clock
+timestamps; results collected across machines require comparable clocks.
 
 ## A failed attempt followed by a pass
 

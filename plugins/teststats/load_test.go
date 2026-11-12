@@ -80,6 +80,7 @@ func TestLoad_SeparatesProcessesAndRebuildsRuns(t *testing.T) {
 	assert.Equal(t, "qa", runs[0].Meta.Owner)
 	assert.Equal(t, failed.Duration+passed.Duration, runs[0].Duration)
 	assert.Equal(t, passed.End.Sub(failed.Start), runs[0].Elapsed)
+	assert.Equal(t, passed.End.Sub(failed.Start), loaded.Stats.Elapsed())
 
 	again, err := Load(dir)
 	require.NoError(t, err)
@@ -108,6 +109,7 @@ func TestLoad_UnfinishedAttemptsKeepTheirObservedState(t *testing.T) {
 	assert.Empty(t, loaded.Issues)
 	assert.Equal(t, 2, loaded.Stats.Summary().Attempts.Total)
 	assert.Equal(t, StatusFailed, loaded.Stats.Runs()[0].Status)
+	assert.Equal(t, finished.End.Sub(first.Start), loaded.Stats.Elapsed(), "running attempts do not extend elapsed time")
 	require.Len(t, loaded.Unfinished, 2)
 	assert.Equal(t, StateFinished, loaded.Unfinished[0].State)
 	assert.Equal(t, StatusFailed, loaded.Unfinished[0].Attempt.Status)
@@ -168,6 +170,7 @@ func TestLoad_InvalidAttemptsDoNotDiscardOtherResults(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, loaded.Incomplete())
 			assert.Equal(t, 1, loaded.Stats.Summary().Attempts.Passed)
+			assert.Equal(t, time.Millisecond, loaded.Stats.Elapsed(), "invalid attempts do not contribute timing")
 			require.Len(t, loaded.Issues, 1)
 			assert.Equal(t, name, loaded.Issues[0].Path)
 			assert.Contains(t, loaded.Issues[0].Error(), name)
@@ -195,6 +198,7 @@ func TestLoad_MissingAndMalformedData(t *testing.T) {
 		assert.True(t, loaded.Incomplete())
 		assert.Empty(t, loaded.Issues)
 		assert.Empty(t, loaded.Stats.Attempts())
+		assert.Zero(t, loaded.Stats.Elapsed())
 	})
 	t.Run("unreadable-root", func(t *testing.T) {
 		for _, dir := range []string{"", "  ", filepath.Join(t.TempDir(), "missing")} {

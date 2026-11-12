@@ -17,6 +17,7 @@ func TestStats_ZeroValueIsEmpty(t *testing.T) {
 	assert.Empty(t, s.Attempts())
 	assert.Empty(t, s.Runs())
 	assert.Zero(t, s.Summary())
+	assert.Zero(t, s.Elapsed())
 }
 
 func TestStats_AddAndQueriesCopyAttempts(t *testing.T) {
@@ -114,6 +115,7 @@ func TestStats_ConcurrentWritersAndReaders(t *testing.T) {
 				_ = s.Filter(func(Attempt) bool { return true })
 				_ = s.Runs()
 				_ = s.Summary()
+				_ = s.Elapsed()
 			}
 		})
 	}

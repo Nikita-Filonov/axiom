@@ -100,7 +100,8 @@ Use `result.Stats.Summary().Runs` to count cases, or `.Attempts` to count every 
 | Flaky                                  | `counts.Flaky` — separate from Passed and Failed                     |
 | Partial data                           | `result.Incomplete()`; show even when all observed counts are passed |
 | Test-process outcome                   | Original `go test` exit code from CI                                 |
-| CI run time, environment, report links | CI/application configuration                                         |
+| Elapsed test time                      | `result.Stats.Elapsed()`                                             |
+| Environment, report links              | CI/application configuration                                         |
 
 For a notifier that currently reads `TEST_PASSED`, `TEST_FAILED`, `TEST_SKIPPED`, and `TEST_BROKEN`, replace those
 count inputs with one results directory. Axiom has no `broken` status: lifecycle failures count as failed attempts.
@@ -110,7 +111,18 @@ If `Load` returns an error, report statistics as unavailable. A zero test exit c
 still means the saved statistics are incomplete. A nonzero test exit code remains a failure even if all saved
 attempts passed. Keep the [original test exit code](JSON-OUTPUT.md#preserve-the-test-exit-code-in-ci) when the notifier exits.
 
-Summed attempt durations are not CI wall time: parallel cases can overlap. Keep measuring CI run time separately.
+For test time, replace `RUN_TIME` and shell timing calculations with:
+
+```go
+elapsed := result.Stats.Elapsed()
+```
+
+Label this as test time: it spans the earliest start to the latest end of completed attempts, including gaps and
+counting overlaps once. It excludes compilation and startup before the first attempt. With no completed attempts
+it returns `0`; with partial results it covers only the retained completed attempts. If `Load` fails, show time as
+unavailable. See [elapsed test time](STATISTICS.md#elapsed-test-time).
+
+Keep external timing only if the notification must measure the entire command or CI job.
 
 ## Which files are loaded
 

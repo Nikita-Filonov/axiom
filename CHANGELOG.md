@@ -144,6 +144,13 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### teststats v0.37.0 — 2026-11-12
+
+- Added `Stats.Elapsed()` to measure the span from the earliest completed attempt start to the latest end.
+  Overlapping tests are counted once; gaps between retries and runs are included. Empty statistics return zero.
+  The method also works with loaded and filtered results. Partial results use only retained completed attempts;
+  this does not measure compilation, process startup, or the full CI job. The v1 JSON format is unchanged.
+
 ### teststats v0.36.0 — 2026-11-12
 
 - **Breaking:** `Plugin` now accepts options only. Replace `Plugin(stats)` with `Plugin(WithStats(stats))`.
@@ -255,7 +262,7 @@ documented here as of 2026-11-12. Plugin versions are independent of the core ve
 | `testlogger`     | `v0.12.0`               | `v0.34.0`          |
 | `testotel`       | `v0.1.0`                | `v0.4.0`           |
 | `testquarantine` | `v0.1.0`                | `v0.14.0`          |
-| `teststats`      | `v0.13.0`               | `v0.36.0`          |
+| `teststats`      | `v0.13.0`               | `v0.37.0`          |
 | `testtags`       | `v0.13.0`               | `v0.35.0`          |
 | `testtimeout`    | `v0.1.0`                | `v0.15.0`          |
 | `testtracing`    | `v0.1.0`                | `v0.20.0`          |
