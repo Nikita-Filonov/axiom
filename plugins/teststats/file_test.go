@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,6 +48,41 @@ func (f *failingFile) Close() error {
 		return errors.Join(err, errFileFailure)
 	}
 	return err
+}
+
+func TestWriteArtifact_EncodingErrorPreservesExistingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "attempt-1.json")
+	require.NoError(t, os.WriteFile(path, []byte("previous"), 0600))
+	record := completedArtifact(1, StatusPassed)
+	record.Start = time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC)
+	err := writeArtifact(path, record)
+	require.ErrorContains(t, err, "year outside of range")
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "previous", string(data))
+}
+
+func TestReplaceFile_PreservesWriteAndCleanupErrors(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "attempt-1.json")
+	require.NoError(t, os.WriteFile(path, []byte("previous"), 0600))
+	cleanupErr := errors.New("cannot remove temporary file")
+	err := replaceFile(path, []byte("replacement"), fileOperations{
+		mkdirAll: os.MkdirAll,
+		createTemp: func(dir, pattern string) (artifactFile, error) {
+			return os.CreateTemp(dir, pattern)
+		},
+		rename: func(string, string) error { return errFileFailure },
+		remove: func(string) error { return cleanupErr },
+	})
+	require.ErrorIs(t, err, errFileFailure)
+	assert.ErrorIs(t, err, cleanupErr)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "previous", string(data))
+	leftover, err := filepath.Glob(filepath.Join(dir, ".teststats-*.tmp"))
+	require.NoError(t, err)
+	assert.Len(t, leftover, 1, "the cleanup error explains the leftover temporary file")
 }
 
 func TestReplaceFile_PreservesPublishedSnapshotOnFailure(t *testing.T) {

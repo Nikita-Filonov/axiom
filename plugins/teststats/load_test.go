@@ -3,13 +3,11 @@ package teststats
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -344,54 +342,4 @@ func TestLoad_EmptyProcessAndRunDirectoriesAreIncomplete(t *testing.T) {
 			assert.NotEmpty(t, loaded.Issues)
 		})
 	}
-}
-
-func TestDecodeAttempt_RejectsMissingNullAndUnknownFields(t *testing.T) {
-	valid, err := json.Marshal(finalizedArtifact(1, StatusPassed))
-	require.NoError(t, err)
-	for _, field := range []string{"name", "test_name", "meta", "duration_ns", "status"} {
-		t.Run("missing-"+field, func(t *testing.T) {
-			var fields map[string]json.RawMessage
-			require.NoError(t, json.Unmarshal(valid, &fields))
-			delete(fields, field)
-			data, err := json.Marshal(fields)
-			require.NoError(t, err)
-			_, err = decodeAttemptArtifact(data)
-			require.Error(t, err)
-		})
-	}
-	for _, badMeta := range []string{
-		"null",
-		`{"tags":[null]}`,
-		`{"labels":{"team":null}}`,
-		`{"unknown":"value"}`,
-		`{"Owner":"qa"}`,
-		`{"labels":{"team":"one","team":"two"}}`,
-	} {
-		t.Run("meta-"+badMeta, func(t *testing.T) {
-			data := strings.Replace(string(valid), `"meta":{}`, `"meta":`+badMeta, 1)
-			_, err := decodeAttemptArtifact([]byte(data))
-			require.Error(t, err)
-		})
-	}
-	_, err = decodeAttemptArtifact([]byte(strings.Replace(string(valid), `"name":"case"`, `"name":null`, 1)))
-	require.Error(t, err)
-	_, err = decodeAttemptArtifact([]byte(strings.Replace(string(valid), `"name":"case"`, `"name":"case","unknown":true`, 1)))
-	require.Error(t, err)
-	_, err = decodeAttemptArtifact([]byte(strings.Replace(string(valid), `"status":"passed"`, `"status":"failed","STATUS":"passed"`, 1)))
-	require.Error(t, err)
-	_, err = decodeAttemptArtifact([]byte(strings.Replace(string(valid), `"status":"passed"`, `"status":"failed","status":"passed"`, 1)))
-	require.Error(t, err)
-
-	running := newAttemptArtifact("run", Attempt{
-		Number: 1,
-		Start:  time.Now(),
-	}, StateRunning, 1)
-	data, err := json.Marshal(running)
-	require.NoError(t, err)
-	_, err = decodeAttemptArtifact([]byte(strings.Replace(string(data), `"state":"running"`, `"state":"running","status":""`, 1)))
-	require.Error(t, err)
-	assert.True(t, (LoadResult{}).Incomplete())
-	assert.ErrorIs(t, LoadIssue{Err: fs.ErrPermission}, fs.ErrPermission)
-	assert.False(t, errors.Is(LoadIssue{Err: fs.ErrPermission}, fs.ErrNotExist))
 }

@@ -161,6 +161,8 @@ versions and plugin versions are independent. The first core release in this per
   and v1 JSON format are preserved. Exported `AttemptState` and its lifecycle constants for loaded snapshots.
 - Reorganized the plugin documentation into a short README and task-specific guides with Go examples, JSON files,
   lifecycle tables, and CI commands that preserve the test exit code.
+- Separated JSON validation, attempt validation, and file loading. Added regression tests for malformed artifacts,
+  default error logging, path resolution, and file failures that must preserve existing snapshots.
 
 ### testtimeout v0.14.0 — 2026-10-05
 

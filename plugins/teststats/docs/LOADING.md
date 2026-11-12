@@ -119,8 +119,8 @@ Summed attempt durations are not CI wall time: parallel cases can overlap. Keep 
 ```
 
 The loader reads this layout, checks version 1, required fields, states, outcomes, and identity against the path.
-Malformed JSON, unknown fields or versions, and null values are rejected as issues. Temporary files and unrelated
-files are ignored. Symbolic links below the supplied root are not followed.
+Malformed JSON, duplicate keys, unknown fields or versions, and null values are rejected as issues. Temporary files
+and unrelated files are ignored. Symbolic links below the supplied root are not followed.
 
 `run.json` is ignored, including missing, stale, or malformed snapshots. Runs and counts are rebuilt from attempts.
 Gaps before the highest observed attempt number are reported without discarding the remaining attempts.

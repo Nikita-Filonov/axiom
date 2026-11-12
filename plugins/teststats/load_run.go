@@ -38,11 +38,7 @@ func (l *resultLoader) loadRun(processID, runKey string) {
 			continue
 		}
 		numbers = append(numbers, number)
-		if !entry.Type().IsRegular() {
-			l.issue(filePath, errors.New("expected a regular attempt file"))
-			continue
-		}
-		record, err := l.readAttempt(filePath)
+		record, err := l.readAttempt(runPath, entry)
 		if err != nil {
 			l.issue(filePath, err)
 			continue
@@ -77,8 +73,11 @@ func parseAttemptNumber(name string) (int, error) {
 	return number, nil
 }
 
-func (l *resultLoader) readAttempt(name string) (attemptArtifact, error) {
-	data, err := fs.ReadFile(l.files, name)
+func (l *resultLoader) readAttempt(dir string, entry fs.DirEntry) (attemptArtifact, error) {
+	if !entry.Type().IsRegular() {
+		return attemptArtifact{}, errors.New("expected a regular attempt file")
+	}
+	data, err := fs.ReadFile(l.files, path.Join(dir, entry.Name()))
 	if err != nil {
 		return attemptArtifact{}, err
 	}

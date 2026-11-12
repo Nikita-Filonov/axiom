@@ -4,12 +4,11 @@
 
 - [Install](#install)
 - [Connect the plugin](#connect-the-plugin)
-- [Load saved results](#load-saved-results)
 - [Guides](#guides)
 
 ---
 
-Collects Axiom test results in memory and optionally saves them as JSON files.
+Collects Axiom test results in memory, saves them as JSON, and loads saved results in another process.
 One `RunCase` call produces a run; each retry produces an attempt.
 
 ## Install
@@ -39,22 +38,6 @@ runner := axiom.NewRunner(
 `WithStats` gives you a collector to query. `WithOutputDir` enables JSON files. Both options are optional.
 
 **Migration:** replace `teststats.Plugin(stats)` with `teststats.Plugin(teststats.WithStats(stats))`.
-
-## Load saved results
-
-After test processes exit:
-
-```go
-result, err := teststats.Load("./axiom-results")
-if err != nil {
-	return err
-}
-
-summary := result.Stats.Summary()
-incomplete := result.Incomplete()
-```
-
-Check `incomplete` alongside counts. `result.Unfinished` and `result.Issues` explain partial results.
 
 ## Guides
 
