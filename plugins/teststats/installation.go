@@ -2,18 +2,17 @@ package teststats
 
 import "github.com/Nikita-Filonov/axiom"
 
-var installedKey = axiom.NewLocalKey[map[*Stats]bool]("github.com/Nikita-Filonov/axiom/plugins/teststats.installed")
+var installedKey = axiom.NewLocalKey[*recorder]("github.com/Nikita-Filonov/axiom/plugins/teststats.installed")
 
-// markInstalled reports whether stats was not yet installed on cfg.
-func markInstalled(cfg *axiom.Config, stats *Stats) bool {
-	installed, _ := axiom.GetLocal(cfg, installedKey)
-	if installed[stats] {
-		return false
+func installRecorder(cfg *axiom.Config) *recorder {
+	if r, ok := axiom.GetLocal(cfg, installedKey); ok {
+		return r
 	}
-	if installed == nil {
-		installed = make(map[*Stats]bool)
-		axiom.SetLocal(cfg, installedKey, installed)
+	r := &recorder{
+		cfg:        cfg,
+		collectors: make(map[*Stats]*Attempt),
 	}
-	installed[stats] = true
-	return true
+	axiom.SetLocal(cfg, installedKey, r)
+	cfg.Runtime.EmitEventSink(r.observe)
+	return r
 }

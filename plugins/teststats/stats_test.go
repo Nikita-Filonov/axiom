@@ -21,7 +21,11 @@ func TestStats_ZeroValueIsEmpty(t *testing.T) {
 
 func TestStats_AddAndQueriesCopyAttempts(t *testing.T) {
 	s := NewStats()
-	a := Attempt{RunID: "run", Status: StatusFailed, Meta: axiom.Meta{Tags: []string{"smoke"}}}
+	a := Attempt{
+		RunID:  "run",
+		Status: StatusFailed,
+		Meta:   axiom.Meta{Tags: []string{"smoke"}},
+	}
 	s.add(a)
 	a.Meta.Tags[0] = "changed by caller"
 
@@ -36,10 +40,26 @@ func TestStats_AttemptsAreOrderedByStartRunAndNumber(t *testing.T) {
 	start := time.Now()
 	s := NewStats()
 	for _, a := range []Attempt{
-		{RunID: "b", Number: 1, Start: start},
-		{RunID: "a", Number: 2, Start: start},
-		{RunID: "a", Number: 1, Start: start},
-		{RunID: "c", Number: 1, Start: start.Add(-time.Second)},
+		{
+			RunID:  "b",
+			Number: 1,
+			Start:  start,
+		},
+		{
+			RunID:  "a",
+			Number: 2,
+			Start:  start,
+		},
+		{
+			RunID:  "a",
+			Number: 1,
+			Start:  start,
+		},
+		{
+			RunID:  "c",
+			Number: 1,
+			Start:  start.Add(-time.Second),
+		},
 	} {
 		s.add(a)
 	}
@@ -53,9 +73,19 @@ func TestStats_AttemptsAreOrderedByStartRunAndNumber(t *testing.T) {
 
 func TestStats_FilterSelectsCopiesAndMayReenter(t *testing.T) {
 	s := NewStats()
-	s.add(Attempt{RunID: "1", Status: StatusFailed, Meta: axiom.Meta{Tags: []string{"smoke"}}})
-	s.add(Attempt{RunID: "2", Status: StatusPassed})
-	s.add(Attempt{RunID: "3", Status: StatusSkipped})
+	s.add(Attempt{
+		RunID:  "1",
+		Status: StatusFailed,
+		Meta:   axiom.Meta{Tags: []string{"smoke"}},
+	})
+	s.add(Attempt{
+		RunID:  "2",
+		Status: StatusPassed,
+	})
+	s.add(Attempt{
+		RunID:  "3",
+		Status: StatusSkipped,
+	})
 
 	failed := s.Filter(func(a Attempt) bool {
 		_ = s.Attempts()

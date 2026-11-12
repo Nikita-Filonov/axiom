@@ -144,6 +144,19 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### teststats v0.36.0 — 2026-11-12
+
+- **Breaking:** `Plugin` now accepts options only. Replace `Plugin(stats)` with `Plugin(WithStats(stats))`.
+  Omitting `WithStats` creates one collector per plugin instance; in-memory queries and retry classification are unchanged.
+- Added `WithOutputDir` for incremental, versioned JSON attempt and run snapshots, isolated by process and run.
+  Attempts are published at start, after cleanup, and after parent cleanup reconciles late failures. Publication
+  uses a synced temporary file and rename; completed snapshots survive later test-process termination.
+- Added `WithErrorHandler` for export failures, which default to stderr logging and do not fail tests. Documented
+  the v1 JSON Schema, partial results, derived run snapshots, and filesystem guarantees. Launch/package/process
+  manifests, an external loader, and notification adapters are outside this export; no core changes are required.
+- Reorganized the plugin documentation into a short README and task-specific guides with Go examples, JSON files,
+  lifecycle tables, and CI commands that preserve the test exit code.
+
 ### testtimeout v0.14.0 — 2026-10-05
 
 - Added `WithContextDeadline()` to give `Raw`, `DB`, `MQ`, and `RPC` contexts the same deadline as the case timeout.
@@ -220,10 +233,10 @@ versions and plugin versions are independent. The first core release in this per
 
 ### Plugin release index
 
-The table shows the first plugin version since 2026-03-26 and the versions for the
-2026-10-31 release. Plugin versions are independent of the core version.
+The table shows the first plugin version since 2026-03-26 and the latest version
+documented here as of 2026-11-12. Plugin versions are independent of the core version.
 
-| Plugin           | First version in period | 2026-10-31 release |
+| Plugin           | First version in period | Latest version     |
 |------------------|-------------------------|--------------------|
 | `testallure`     | `v0.13.0`               | `v0.41.0`          |
 | `testassert`     | `v0.10.0`               | `v0.32.0`          |
@@ -235,7 +248,7 @@ The table shows the first plugin version since 2026-03-26 and the versions for t
 | `testlogger`     | `v0.12.0`               | `v0.34.0`          |
 | `testotel`       | `v0.1.0`                | `v0.4.0`           |
 | `testquarantine` | `v0.1.0`                | `v0.14.0`          |
-| `teststats`      | `v0.13.0`               | `v0.35.0`          |
+| `teststats`      | `v0.13.0`               | `v0.36.0`          |
 | `testtags`       | `v0.13.0`               | `v0.35.0`          |
 | `testtimeout`    | `v0.1.0`                | `v0.15.0`          |
 | `testtracing`    | `v0.1.0`                | `v0.20.0`          |

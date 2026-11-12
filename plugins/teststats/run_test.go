@@ -24,7 +24,11 @@ func TestRuns_ClassifyAttemptHistory(t *testing.T) {
 	} {
 		s := NewStats()
 		for i, status := range tc.statuses {
-			s.add(Attempt{RunID: "run", Number: i + 1, Status: status})
+			s.add(Attempt{
+				RunID:  "run",
+				Number: i + 1,
+				Status: status,
+			})
 		}
 
 		runs := s.Runs()
@@ -40,15 +44,32 @@ func TestRuns_OrderTimingAndIdentity(t *testing.T) {
 	// Numbers and timestamps are deliberately out of order: status follows the
 	// attempt number, while the bounds use the actual earliest and latest times.
 	s.add(Attempt{
-		RunID: "run", CaseID: "C-1", Name: "latest", Number: 2, Status: StatusPassed,
-		Start: start, End: start.Add(time.Second), Duration: time.Second,
-		Meta: axiom.Meta{Tags: []string{"latest"}},
+		RunID:    "run",
+		CaseID:   "C-1",
+		Name:     "latest",
+		Number:   2,
+		Status:   StatusPassed,
+		Start:    start,
+		End:      start.Add(time.Second),
+		Duration: time.Second,
+		Meta:     axiom.Meta{Tags: []string{"latest"}},
 	})
 	s.add(Attempt{
-		RunID: "run", CaseID: "C-1", Name: "first", Number: 1, Status: StatusFailed,
-		Start: start.Add(2 * time.Second), End: start.Add(3 * time.Second), Duration: time.Second,
+		RunID:    "run",
+		CaseID:   "C-1",
+		Name:     "first",
+		Number:   1,
+		Status:   StatusFailed,
+		Start:    start.Add(2 * time.Second),
+		End:      start.Add(3 * time.Second),
+		Duration: time.Second,
 	})
-	s.add(Attempt{RunID: "other", Number: 1, Status: StatusPassed, Start: start.Add(4 * time.Second)})
+	s.add(Attempt{
+		RunID:  "other",
+		Number: 1,
+		Status: StatusPassed,
+		Start:  start.Add(4 * time.Second),
+	})
 
 	runs := s.Runs()
 	require.Len(t, runs, 2)
@@ -73,12 +94,20 @@ func TestRuns_ElapsedIncludesTimeBetweenAttempts(t *testing.T) {
 	start := time.Date(2026, time.October, 1, 10, 0, 0, 0, time.UTC)
 	s := NewStats()
 	s.add(Attempt{
-		RunID: "run", Number: 1, Status: StatusFailed,
-		Start: start, End: start.Add(time.Second), Duration: time.Second,
+		RunID:    "run",
+		Number:   1,
+		Status:   StatusFailed,
+		Start:    start,
+		End:      start.Add(time.Second),
+		Duration: time.Second,
 	})
 	s.add(Attempt{
-		RunID: "run", Number: 2, Status: StatusPassed,
-		Start: start.Add(3 * time.Second), End: start.Add(4 * time.Second), Duration: time.Second,
+		RunID:    "run",
+		Number:   2,
+		Status:   StatusPassed,
+		Start:    start.Add(3 * time.Second),
+		End:      start.Add(4 * time.Second),
+		Duration: time.Second,
 	})
 
 	runs := s.Runs()

@@ -2,22 +2,19 @@ package teststats
 
 import "github.com/Nikita-Filonov/axiom"
 
-// Plugin records an [Attempt] in stats for every attempt that starts or is
+// Plugin records an [Attempt] for every attempt that starts or is
 // skipped by policy. The attempt is recorded when its testing.T finishes:
 // after hooks, fixture cleanup, child subtests, and t.Cleanup callbacks.
-// Installing the same stats more than once on a Config, for example on both
-// the Runner and the Case, records each attempt once. Plugin panics if stats
-// is nil.
-func Plugin(stats *Stats) axiom.Plugin {
-	if stats == nil {
-		panic("teststats: nil stats")
-	}
+// WithStats supplies a queryable collector; otherwise Plugin creates its own.
+// WithOutputDir additionally saves incremental JSON artifacts. Reinstalling
+// a collector or output directory on a Config records each attempt once.
+func Plugin(options ...ConfigOption) axiom.Plugin {
+	settings := newConfig(options...)
+	output := newOutputWriter(settings.OutputDir, settings.ErrorHandler)
 
 	return func(cfg *axiom.Config) {
-		if !markInstalled(cfg, stats) {
-			return
-		}
-		r := &recorder{cfg: cfg, stats: stats}
-		cfg.Runtime.EmitEventSink(r.observe)
+		r := installRecorder(cfg)
+		r.addCollector(settings.Stats)
+		r.addOutput(output)
 	}
 }

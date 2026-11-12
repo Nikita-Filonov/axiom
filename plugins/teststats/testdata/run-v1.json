@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "kind": "run",
+  "process_id": "process-1",
+  "run_id": "run-1",
+  "attempts": [
+    {
+      "number": 1,
+      "revision": 3,
+      "state": "finalized"
+    }
+  ],
+  "summary": {
+    "case_id": "C-1",
+    "name": "login",
+    "meta": {
+      "owner": "qa",
+      "tags": [
+        "smoke"
+      ],
+      "labels": {
+        "component": "login"
+      }
+    },
+    "status": "passed",
+    "started_at": "2026-11-11T10:00:00Z",
+    "finished_at": "2026-11-11T10:00:01Z",
+    "duration_ns": 1000000000,
+    "elapsed_ns": 1000000000
+  }
+}

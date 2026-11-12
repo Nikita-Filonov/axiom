@@ -1,6 +1,7 @@
 package teststats
 
 import (
+	"crypto/rand"
 	"sync"
 	"testing"
 	"time"
@@ -10,11 +11,33 @@ import (
 
 // recorder turns the events of one Config into at most one Attempt.
 type recorder struct {
-	cfg   *axiom.Config
-	stats *Stats
+	cfg *axiom.Config
+	// Values are nil until finish stores an attempt in the owning collector.
+	collectors map[*Stats]*Attempt
+	outputs    []*outputWriter
 
-	mu      sync.Mutex
-	attempt *Attempt
+	mu            sync.Mutex
+	attempt       *Attempt
+	artifactRunID string
+	revision      uint64
+}
+
+func (r *recorder) addCollector(stats *Stats) {
+	if _, exists := r.collectors[stats]; !exists {
+		r.collectors[stats] = nil
+	}
+}
+
+func (r *recorder) addOutput(output *outputWriter) {
+	if output == nil {
+		return
+	}
+	for _, existing := range r.outputs {
+		if existing.dir == output.dir {
+			return
+		}
+	}
+	r.outputs = append(r.outputs, output)
 }
 
 func (r *recorder) observe(event axiom.Event) {
@@ -37,15 +60,21 @@ func (r *recorder) begin(skipReason string) {
 	t := r.cfg.T()
 
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if t == nil || r.attempt != nil {
+		r.mu.Unlock()
 		return
 	}
 
 	r.attempt = newAttempt(r.cfg, t, skipReason)
+	r.artifactRunID = r.attempt.RunID
+	if r.artifactRunID == "" && len(r.outputs) > 0 {
+		r.artifactRunID = rand.Text()
+	}
 	// Axiom registers no cleanup on the attempt's T before case.start or
 	// case.skip, so this one runs after everything the attempt registers.
 	t.Cleanup(func() { r.finish(t) })
+	r.mu.Unlock()
+	r.publish(stateRunning)
 }
 
 func (r *recorder) fail(message string) {
@@ -58,21 +87,49 @@ func (r *recorder) fail(message string) {
 
 func (r *recorder) finish(t *testing.T) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 
 	r.attempt.End = time.Now()
 	r.attempt.Duration = r.attempt.End.Sub(r.attempt.Start)
 	r.attempt.Status = status(t, r.attempt.Error)
-	stored := r.stats.add(*r.attempt)
+	for stats := range r.collectors {
+		r.collectors[stats] = stats.add(*r.attempt)
+	}
 
 	if parent := r.cfg.RootT; parent != nil && parent != t {
 		// Go marks a panicking t.Cleanup callback or a detected data race as
 		// a failure only after the attempt's cleanups have run.
-		parent.Cleanup(func() {
-			if t.Failed() {
-				r.stats.markFailed(stored)
-			}
-		})
+		parent.Cleanup(func() { r.finalize(t) })
+	}
+	r.mu.Unlock()
+	// Without a parent there is no later observation point. In that case the
+	// artifact remains finished, rather than claiming an unobserved final status.
+	r.publish(stateFinished)
+}
+
+func (r *recorder) finalize(t *testing.T) {
+	r.mu.Lock()
+	if t.Failed() {
+		r.attempt.Status = StatusFailed
+		for stats, stored := range r.collectors {
+			stats.markFailed(stored)
+		}
+	}
+	r.mu.Unlock()
+	r.publish(stateFinalized)
+}
+
+func (r *recorder) publish(state attemptState) {
+	if len(r.outputs) == 0 {
+		return
+	}
+	r.mu.Lock()
+	r.revision++
+	record := newAttemptArtifact(r.artifactRunID, *r.attempt, state, r.revision)
+	r.mu.Unlock()
+	// Lifecycle callbacks publish in order. I/O and user error handlers run
+	// without the recorder lock, so handlers can query stats or emit events.
+	for _, output := range r.outputs {
+		output.publish(record)
 	}
 }
 

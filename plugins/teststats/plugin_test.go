@@ -13,7 +13,7 @@ import (
 func TestPlugin_RecordsAttemptAfterItsCleanups(t *testing.T) {
 	stats := teststats.NewStats()
 	var start, fixtureEnd, cleanupEnd time.Time
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(stats)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))))
 	c := axiom.NewCase(
 		axiom.WithCaseID("C-1"),
 		axiom.WithCaseName("case"),
@@ -53,7 +53,7 @@ func TestPlugin_ParallelTimingAndRepeatedNames(t *testing.T) {
 	t.Run("group", func(t *testing.T) {
 		runner := axiom.NewRunner(
 			axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
-			axiom.WithRunnerPlugins(teststats.Plugin(stats)),
+			axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))),
 		)
 		for range 3 {
 			runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("same")), func(*axiom.Config) {})
@@ -77,7 +77,7 @@ func TestPlugin_PolicySkipIsOneSkippedAttempt(t *testing.T) {
 			t.Run("scope", func(t *testing.T) {
 				runner := axiom.NewRunner(
 					axiom.WithRunnerRetry(axiom.WithRetryTimes(retries)),
-					axiom.WithRunnerPlugins(teststats.Plugin(stats)),
+					axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))),
 				)
 				if parallel {
 					runner.Parallel = axiom.NewParallel(axiom.WithParallelEnabled())
@@ -99,7 +99,7 @@ func TestPlugin_PolicySkipIsOneSkippedAttempt(t *testing.T) {
 
 func TestPlugin_RuntimeSkip(t *testing.T) {
 	stats := teststats.NewStats()
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(stats)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))))
 
 	runner.RunCase(t, axiom.NewCase(), func(cfg *axiom.Config) { cfg.T().Skip("runtime skip") })
 
@@ -111,7 +111,7 @@ func TestPlugin_RuntimeSkip(t *testing.T) {
 
 func TestPlugin_PlanningConfigRecordsNothingAndMetaIncludesLaterPlugins(t *testing.T) {
 	stats := teststats.NewStats()
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(stats)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))))
 	c := axiom.NewCase(axiom.WithCasePlugins(func(cfg *axiom.Config) { cfg.Meta.Owner = "team" }))
 
 	runner.RunCase(t, c, func(*axiom.Config) {})
@@ -126,8 +126,11 @@ func TestPlugin_ConfigsOutsideRunCaseAreSeparateRuns(t *testing.T) {
 	stats := teststats.NewStats()
 	for recorded := range 2 {
 		t.Run("direct", func(t *testing.T) {
-			cfg := &axiom.Config{RootT: t, Case: &axiom.Case{}}
-			teststats.Plugin(stats)(cfg)
+			cfg := &axiom.Config{
+				RootT: t,
+				Case:  &axiom.Case{},
+			}
+			teststats.Plugin(teststats.WithStats(stats))(cfg)
 			cfg.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
 			assert.Len(t, stats.Attempts(), recorded, "recorded when the test finishes")
 		})
@@ -144,8 +147,11 @@ func TestPlugin_ConfigsOutsideRunCaseAreSeparateRuns(t *testing.T) {
 func TestPlugin_FirstLifecycleFailureFailsTheAttempt(t *testing.T) {
 	stats := teststats.NewStats()
 	t.Run("attempt", func(t *testing.T) {
-		cfg := &axiom.Config{RootT: t, Case: &axiom.Case{}}
-		teststats.Plugin(stats)(cfg)
+		cfg := &axiom.Config{
+			RootT: t,
+			Case:  &axiom.Case{},
+		}
+		teststats.Plugin(teststats.WithStats(stats))(cfg)
 		cfg.Event(axiom.NewEvent(axiom.EventTypeFixtureSetupFailed, axiom.WithEventMessage("before start")))
 		cfg.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
 		cfg.Event(axiom.NewEvent(axiom.EventTypeCaseStart))
@@ -161,8 +167,8 @@ func TestPlugin_FirstLifecycleFailureFailsTheAttempt(t *testing.T) {
 
 func TestPlugin_DuplicateInstallationAndIndependentCollectors(t *testing.T) {
 	one, two := teststats.NewStats(), teststats.NewStats()
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(one), teststats.Plugin(two)))
-	c := axiom.NewCase(axiom.WithCasePlugins(teststats.Plugin(one)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(one)), teststats.Plugin(teststats.WithStats(two))))
+	c := axiom.NewCase(axiom.WithCasePlugins(teststats.Plugin(teststats.WithStats(one))))
 
 	runner.RunCase(t, c, func(*axiom.Config) {})
 

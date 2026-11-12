@@ -1,11 +1,13 @@
 package teststats_test
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -23,26 +25,99 @@ func TestPlugin_RealFailureLifecycles(t *testing.T) {
 		status   teststats.Status
 		err      string
 	}{
-		{mode: "retry", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "parallel-retry", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "fail-skip", statuses: []teststats.Status{"failed", "skipped"}, status: "failed"},
-		{mode: "exhausted", statuses: []teststats.Status{"failed", "failed", "failed"}, status: "failed"},
-		{mode: "fatal", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "before-panic", statuses: []teststats.Status{"failed", "passed"}, status: "flaky", err: "before test panic"},
-		{mode: "failure-and-skip", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "cleanup-fatal", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "late-cleanup", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "panic", statuses: []teststats.Status{"failed", "passed"}, status: "flaky", err: "body panic"},
-		{mode: "fixture-error", statuses: []teststats.Status{"failed", "passed"}, status: "flaky", err: "fixture setup"},
-		{mode: "fixture-cleanup", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "testing-cleanup", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "child-failure", statuses: []teststats.Status{"failed", "passed"}, status: "flaky"},
-		{mode: "after-panic", statuses: []teststats.Status{"failed"}, status: "failed"},
-		{mode: "fixture-panic", statuses: []teststats.Status{"failed"}, status: "failed", err: "fixture cleanup panic"},
-		{mode: "native-cleanup-panic", statuses: []teststats.Status{"failed"}, status: "failed"},
+		{
+			mode:     "retry",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "parallel-retry",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "fail-skip",
+			statuses: []teststats.Status{"failed", "skipped"},
+			status:   "failed",
+		},
+		{
+			mode:     "exhausted",
+			statuses: []teststats.Status{"failed", "failed", "failed"},
+			status:   "failed",
+		},
+		{
+			mode:     "fatal",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "before-panic",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+			err:      "before test panic",
+		},
+		{
+			mode:     "failure-and-skip",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "cleanup-fatal",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "late-cleanup",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "panic",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+			err:      "body panic",
+		},
+		{
+			mode:     "fixture-error",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+			err:      "fixture setup",
+		},
+		{
+			mode:     "fixture-cleanup",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "testing-cleanup",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "child-failure",
+			statuses: []teststats.Status{"failed", "passed"},
+			status:   "flaky",
+		},
+		{
+			mode:     "after-panic",
+			statuses: []teststats.Status{"failed"},
+			status:   "failed",
+		},
+		{
+			mode:     "fixture-panic",
+			statuses: []teststats.Status{"failed"},
+			status:   "failed",
+			err:      "fixture cleanup panic",
+		},
+		{
+			mode:     "native-cleanup-panic",
+			statuses: []teststats.Status{"failed"},
+			status:   "failed",
+		},
 	} {
 		t.Run(tc.mode, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "runs.json")
+			artifactDir := t.TempDir()
 			exe, err := os.Executable()
 			require.NoError(t, err)
 			cmd := exec.Command(exe, "-test.run=^TestStatsLifecycleProbe$")
@@ -53,7 +128,11 @@ func TestPlugin_RealFailureLifecycles(t *testing.T) {
 					break
 				}
 			}
-			cmd.Env = append(os.Environ(), "AXIOM_STATS_PROBE="+tc.mode, "AXIOM_STATS_OUTPUT="+path)
+			cmd.Env = append(os.Environ(),
+				"AXIOM_STATS_PROBE="+tc.mode,
+				"AXIOM_STATS_OUTPUT="+path,
+				"AXIOM_STATS_ARTIFACTS="+artifactDir,
+			)
 			output, err := cmd.CombinedOutput()
 			require.Error(t, err, "an earlier Go test failure must remain a failure: %s", output)
 			require.NotContains(t, string(output), "WARNING: DATA RACE", "data race in lifecycle probe")
@@ -83,6 +162,27 @@ func TestPlugin_RealFailureLifecycles(t *testing.T) {
 			}
 			assert.Equal(t, sum, run.Duration)
 			assert.GreaterOrEqual(t, run.Elapsed, sum)
+
+			attempts := readSnapshots[exportedAttempt](t, artifactDir, "attempt-")
+			slices.SortFunc(attempts, func(a, b exportedAttempt) int { return cmp.Compare(a.Number, b.Number) })
+			require.Len(t, attempts, len(run.Attempts))
+			for i, a := range attempts {
+				assert.Equal(t, run.Attempts[i].Status, a.Status)
+				assert.Equal(t, run.Attempts[i].Error, a.Error)
+				assert.Equal(t, run.Attempts[i].Duration, a.Duration)
+				assert.Equal(t, "finalized", a.State)
+				assert.Equal(t, uint64(3), a.Revision)
+			}
+			snapshots := readSnapshots[exportedRun](t, artifactDir, "run.json")
+			require.Len(t, snapshots, 1)
+			require.NotNil(t, snapshots[0].Summary)
+			assert.Equal(t, run.Status, snapshots[0].Summary.Status)
+			assert.Equal(t, run.Duration, snapshots[0].Summary.Duration)
+			require.Len(t, snapshots[0].Attempts, len(attempts))
+			for i, ref := range snapshots[0].Attempts {
+				assert.Equal(t, attempts[i].Number, ref.Number)
+				assert.Equal(t, attempts[i].Revision, ref.Revision)
+			}
 		})
 	}
 }
@@ -118,7 +218,13 @@ func TestStatsLifecycleProbe(t *testing.T) {
 					cfg.T().Cleanup(func() { cfg.T().Error("late cleanup") })
 				}
 			})
-		}, teststats.Plugin(stats)),
+		}, func(cfg *axiom.Config) {
+			// Separate plugin instances must retain earlier retries in run.json.
+			teststats.Plugin(
+				teststats.WithStats(stats),
+				teststats.WithOutputDir(os.Getenv("AXIOM_STATS_ARTIFACTS")),
+			)(cfg)
+		}),
 		axiom.WithRunnerHooks(axiom.WithBeforeTest(func(cfg *axiom.Config) {
 			if mode == "before-panic" && cfg.Execution.Attempt == 1 {
 				panic("before test panic")
@@ -191,7 +297,7 @@ func TestStatsSelectionProbe(t *testing.T) {
 	}
 
 	stats := teststats.NewStats()
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(stats)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))))
 	for _, name := range []string{"included", "excluded"} {
 		runner.RunCase(t, axiom.NewCase(axiom.WithCaseName(name)), func(*axiom.Config) {})
 	}
