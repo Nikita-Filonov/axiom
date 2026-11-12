@@ -19,6 +19,8 @@ const (
 
 // Attempt is the outcome of one case attempt.
 type Attempt struct {
+	// ProcessID identifies the test process that recorded the attempt.
+	ProcessID string
 	// RunID groups the attempts of one RunCase invocation. An attempt without
 	// a RunID is a run of its own.
 	RunID string

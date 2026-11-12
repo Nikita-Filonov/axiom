@@ -101,6 +101,12 @@ func TestPlugin_ExportsLifecycleAndDeduplicatesInstallations(t *testing.T) {
 			runs := readSnapshots[exportedRun](t, dir, "run.json")
 			require.Len(t, runs, 1)
 			assert.Nil(t, runs[0].Summary)
+			loaded, err := teststats.Load(dir)
+			require.NoError(t, err)
+			assert.True(t, loaded.Incomplete())
+			assert.Empty(t, loaded.Stats.Attempts())
+			require.Len(t, loaded.Unfinished, 1)
+			assert.Equal(t, teststats.StateRunning, loaded.Unfinished[0].State)
 			cfg.T().Cleanup(func() {
 				assert.Equal(t, "running", readSnapshots[exportedAttempt](t, dir, "attempt-")[0].State)
 			})
@@ -131,6 +137,12 @@ func TestPlugin_ExportsLifecycleAndDeduplicatesInstallations(t *testing.T) {
 	assert.Equal(t, a.Revision, runs[0].Attempts[0].Revision)
 	require.NotNil(t, runs[0].Summary)
 	assert.Equal(t, teststats.StatusPassed, runs[0].Summary.Status)
+	loaded, err := teststats.Load(dir)
+	require.NoError(t, err)
+	assert.False(t, loaded.Incomplete())
+	assert.Equal(t, one.Summary(), loaded.Stats.Summary())
+	assert.Equal(t, one.Attempts()[0].ProcessID, loaded.Stats.Attempts()[0].ProcessID)
+	assert.True(t, one.Attempts()[0].Start.Equal(loaded.Stats.Attempts()[0].Start))
 }
 
 func TestPlugin_ExportsParallelRunsWithRepeatedNames(t *testing.T) {
@@ -278,6 +290,12 @@ func TestPlugin_ArtifactsSurviveInterruptedProcess(t *testing.T) {
 					assert.Empty(t, a.Status)
 				}
 			}
+			loaded, err := teststats.Load(dir)
+			require.NoError(t, err)
+			assert.True(t, loaded.Incomplete())
+			assert.Empty(t, loaded.Issues)
+			assert.Len(t, loaded.Unfinished, 2)
+			assert.Equal(t, 1, loaded.Stats.Summary().Attempts.Passed)
 		})
 	}
 }

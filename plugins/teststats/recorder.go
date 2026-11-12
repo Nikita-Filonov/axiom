@@ -74,7 +74,7 @@ func (r *recorder) begin(skipReason string) {
 	// case.skip, so this one runs after everything the attempt registers.
 	t.Cleanup(func() { r.finish(t) })
 	r.mu.Unlock()
-	r.publish(stateRunning)
+	r.publish(StateRunning)
 }
 
 func (r *recorder) fail(message string) {
@@ -103,7 +103,7 @@ func (r *recorder) finish(t *testing.T) {
 	r.mu.Unlock()
 	// Without a parent there is no later observation point. In that case the
 	// artifact remains finished, rather than claiming an unobserved final status.
-	r.publish(stateFinished)
+	r.publish(StateFinished)
 }
 
 func (r *recorder) finalize(t *testing.T) {
@@ -115,10 +115,10 @@ func (r *recorder) finalize(t *testing.T) {
 		}
 	}
 	r.mu.Unlock()
-	r.publish(stateFinalized)
+	r.publish(StateFinalized)
 }
 
-func (r *recorder) publish(state attemptState) {
+func (r *recorder) publish(state AttemptState) {
 	if len(r.outputs) == 0 {
 		return
 	}
@@ -135,7 +135,8 @@ func (r *recorder) publish(state attemptState) {
 
 func newAttempt(cfg *axiom.Config, t *testing.T, skipReason string) *Attempt {
 	return &Attempt{
-		RunID: cfg.Execution.ID,
+		ProcessID: processID,
+		RunID:     cfg.Execution.ID,
 		// A planning Config, which observes a skip applied before parallel
 		// retries start, and a Config constructed outside RunCase have attempt zero.
 		Number:     max(cfg.Execution.Attempt, 1),

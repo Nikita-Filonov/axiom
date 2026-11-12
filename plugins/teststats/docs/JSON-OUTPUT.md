@@ -105,5 +105,5 @@ go test -count=1 ./... || test_exit_code=$?
 exit "$test_exit_code"
 ```
 
-There is no built-in publisher or public JSON loading API yet. If you consume the files directly, follow the
-[partial-results rules](LIFECYCLE.md#partial-results).
+Read the saved files with [teststats.Load](LOADING.md). Publishing remains the caller's responsibility;
+the loader does not send notifications or change the original test exit code.

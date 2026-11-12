@@ -3,4 +3,5 @@
 // whose derived status distinguishes flaky cases from failed ones.
 // Plugin accepts options: WithStats supplies a queryable collector, and
 // WithOutputDir enables versioned JSON snapshots during test execution.
+// Load restores saved attempts in another process, with diagnostics for partial results.
 package teststats

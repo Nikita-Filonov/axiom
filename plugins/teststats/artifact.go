@@ -13,12 +13,17 @@ const schemaVersion = 1
 // reused, including by different containers writing to the same directory.
 var processID = rand.Text()
 
-type attemptState string
+// AttemptState describes how far an exported attempt reached in its lifecycle.
+// It is separate from Status, which describes the test outcome.
+type AttemptState string
 
 const (
-	stateRunning   attemptState = "running"
-	stateFinished  attemptState = "finished"
-	stateFinalized attemptState = "finalized"
+	// StateRunning has no completed outcome yet.
+	StateRunning AttemptState = "running"
+	// StateFinished has an outcome that has not been rechecked during parent cleanup.
+	StateFinished AttemptState = "finished"
+	// StateFinalized has been rechecked during parent cleanup.
+	StateFinalized AttemptState = "finalized"
 )
 
 // Artifact types deliberately separate the versioned wire format from the
@@ -30,7 +35,7 @@ type attemptArtifact struct {
 	RunID         string        `json:"run_id"`
 	Number        int           `json:"number"`
 	Revision      uint64        `json:"revision"`
-	State         attemptState  `json:"state"`
+	State         AttemptState  `json:"state"`
 	CaseID        string        `json:"case_id,omitempty"`
 	Name          string        `json:"name"`
 	TestName      string        `json:"test_name"`
@@ -55,7 +60,7 @@ type runArtifact struct {
 type attemptReference struct {
 	Number   int          `json:"number"`
 	Revision uint64       `json:"revision"`
-	State    attemptState `json:"state"`
+	State    AttemptState `json:"state"`
 }
 
 type runSummary struct {
@@ -69,7 +74,7 @@ type runSummary struct {
 	Elapsed  time.Duration `json:"elapsed_ns"`
 }
 
-func newAttemptArtifact(runID string, attempt Attempt, state attemptState, revision uint64) attemptArtifact {
+func newAttemptArtifact(runID string, attempt Attempt, state AttemptState, revision uint64) attemptArtifact {
 	return attemptArtifact{
 		SchemaVersion: schemaVersion,
 		Kind:          "attempt",
@@ -93,6 +98,7 @@ func newAttemptArtifact(runID string, attempt Attempt, state attemptState, revis
 
 func (a attemptArtifact) toAttempt() Attempt {
 	return Attempt{
+		ProcessID:  a.ProcessID,
 		RunID:      a.RunID,
 		Number:     a.Number,
 		CaseID:     a.CaseID,
@@ -117,7 +123,7 @@ func newRunArtifact(runID string, records []attemptArtifact) runArtifact {
 			Revision: record.Revision,
 			State:    record.State,
 		})
-		if record.State != stateRunning {
+		if record.State != StateRunning {
 			completed = append(completed, record.toAttempt())
 		}
 	}

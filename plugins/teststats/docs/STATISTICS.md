@@ -61,12 +61,13 @@ empty or partial results. See [when results are recorded](LIFECYCLE.md#when-file
 
 | Method | Result | Order |
 |--------|--------|-------|
-| `stats.Attempts()` | One [Attempt](../attempt.go) per completed execution or policy skip | Start time, then RunID and attempt number |
-| `stats.Runs()` | [Runs](../run.go) grouping retries by RunID | Earliest start of each run; attempts ordered by number |
+| `stats.Attempts()` | One [Attempt](../attempt.go) per completed execution or policy skip | Start time, then ProcessID, RunID, and attempt number |
+| `stats.Runs()` | [Runs](../run.go) grouping retries by ProcessID and RunID | Earliest start of each run; attempts ordered by number |
 | `stats.Summary()` | [Counts](../summary.go) for runs and attempts | `Total`, `Passed`, `Failed`, `Skipped`, `Flaky` |
 
 Methods are safe for concurrent use and return copies. Two `RunCase` calls create different runs even when the
 Case ID and name are the same. Metadata is captured when the attempt starts.
+`ProcessID` also keeps runs from different test binaries separate when [loading saved results](LOADING.md).
 
 ## A failed attempt followed by a pass
 

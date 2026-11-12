@@ -33,7 +33,7 @@ func (s *Stats) markFailed(a *Attempt) {
 	a.Status = StatusFailed
 }
 
-// Attempts returns all attempts ordered by start time, then run ID and number.
+// Attempts returns all attempts ordered by start time, then process ID, run ID, and number.
 func (s *Stats) Attempts() []Attempt {
 	s.mu.Lock()
 	attempts := make([]Attempt, len(s.attempts))
@@ -45,6 +45,7 @@ func (s *Stats) Attempts() []Attempt {
 	slices.SortStableFunc(attempts, func(a, b Attempt) int {
 		return cmp.Or(
 			a.Start.Compare(b.Start),
+			cmp.Compare(a.ProcessID, b.ProcessID),
 			cmp.Compare(a.RunID, b.RunID),
 			cmp.Compare(a.Number, b.Number),
 		)

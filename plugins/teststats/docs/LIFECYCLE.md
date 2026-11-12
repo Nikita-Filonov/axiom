@@ -67,7 +67,7 @@ attempt-1.json: revision=3, status=failed
 run.json:      attempts[0].revision=2, summary.status=passed
 ```
 
-For an external reader:
+Use [teststats.Load](LOADING.md) for an external reader. It implements the file checks and reconstruction below:
 
 1. Read after test processes exit; ignore `.teststats-*.tmp` files.
 2. Check schema versions and validate attempt files. Keep malformed or missing data visible as incomplete.

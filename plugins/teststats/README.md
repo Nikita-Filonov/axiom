@@ -4,6 +4,7 @@
 
 - [Install](#install)
 - [Connect the plugin](#connect-the-plugin)
+- [Load saved results](#load-saved-results)
 - [Guides](#guides)
 
 ---
@@ -39,6 +40,22 @@ runner := axiom.NewRunner(
 
 **Migration:** replace `teststats.Plugin(stats)` with `teststats.Plugin(teststats.WithStats(stats))`.
 
+## Load saved results
+
+After test processes exit:
+
+```go
+result, err := teststats.Load("./axiom-results")
+if err != nil {
+	return err
+}
+
+summary := result.Stats.Summary()
+incomplete := result.Incomplete()
+```
+
+Check `incomplete` alongside counts. `result.Unfinished` and `result.Issues` explain partial results.
+
 ## Guides
 
 | Task | Guide |
@@ -46,8 +63,9 @@ runner := axiom.NewRunner(
 | Choose options and defaults | [Configuration](docs/CONFIGURATION.md) |
 | Read attempts, runs, counts, and filtered results | [Statistics in memory](docs/STATISTICS.md) |
 | Save JSON from one or several test packages | [JSON output](docs/JSON-OUTPUT.md) |
+| Load files in a notifier or another process | [Loading results](docs/LOADING.md) |
 | Inspect `attempt-1.json` and `run.json` | [JSON format](docs/JSON-FORMAT.md) |
 | Understand cleanup failures, timeouts, and partial results | [Lifecycle](docs/LIFECYCLE.md) |
 
-The plugin exports observed cases. Launch/package/process manifests, a public JSON loader, and notification
-adapters are not implemented yet.
+The plugin exports and loads observed cases. Launch/package/process manifests and notification adapters
+are not implemented yet.

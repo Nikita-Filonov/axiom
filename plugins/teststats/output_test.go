@@ -21,7 +21,7 @@ func completedArtifact(number int, status Status) attemptArtifact {
 		Start:    start,
 		End:      start.Add(time.Millisecond),
 		Duration: time.Millisecond,
-	}, stateFinished, 2)
+	}, StateFinished, 2)
 }
 
 func TestOutput_RunWriteFailureRetainsAttemptAndCanRecover(t *testing.T) {
@@ -93,7 +93,7 @@ func TestOutput_CorruptAttemptCannotProduceSuccessfulSummary(t *testing.T) {
 		},
 		{
 			name:   "running-with-result",
-			change: func(a *attemptArtifact) { a.State = stateRunning },
+			change: func(a *attemptArtifact) { a.State = StateRunning },
 		},
 		{
 			name:   "invalid-json",

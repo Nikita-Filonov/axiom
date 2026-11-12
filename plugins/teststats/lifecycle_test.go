@@ -183,6 +183,18 @@ func TestPlugin_RealFailureLifecycles(t *testing.T) {
 				assert.Equal(t, attempts[i].Number, ref.Number)
 				assert.Equal(t, attempts[i].Revision, ref.Revision)
 			}
+
+			loaded, err := teststats.Load(artifactDir)
+			require.NoError(t, err)
+			assert.False(t, loaded.Incomplete())
+			loadedRuns := loaded.Stats.Runs()
+			require.Len(t, loadedRuns, 1)
+			assert.Equal(t, run.ID, loadedRuns[0].ID)
+			assert.Equal(t, snapshots[0].ProcessID, loadedRuns[0].ProcessID)
+			assert.Equal(t, run.Status, loadedRuns[0].Status)
+			assert.Equal(t, run.Duration, loadedRuns[0].Duration)
+			assert.Equal(t, run.Meta, loadedRuns[0].Meta)
+			assert.Len(t, loadedRuns[0].Attempts, len(run.Attempts))
 		})
 	}
 }
@@ -252,7 +264,16 @@ func TestStatsLifecycleProbe(t *testing.T) {
 		runner.Parallel = axiom.NewParallel(axiom.WithParallelEnabled())
 	}
 
-	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("case")), func(cfg *axiom.Config) {
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("case"),
+		axiom.WithCaseMeta(
+			axiom.WithMetaTags("probe"),
+			axiom.WithMetaIssues("ISSUE-1"),
+			axiom.WithMetaLabels(map[string]string{"component": "lifecycle"}),
+			axiom.WithMetaTestCases([]string{"C-1"}),
+		),
+	)
+	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
 		axiom.GetFixture[int](cfg, "fixture")
 		if cfg.Execution.Attempt > 1 && mode != "exhausted" {
 			if mode == "fail-skip" {

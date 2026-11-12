@@ -28,7 +28,7 @@ func TestArtifact_V1Contract(t *testing.T) {
 		Start:    start,
 		End:      start.Add(time.Second),
 		Duration: time.Second,
-	}, stateFinalized, 3)
+	}, StateFinalized, 3)
 	run := newRunArtifact(a.RunID, []attemptArtifact{a})
 	// Process identity varies per binary; the rest of the format is stable.
 	a.ProcessID, run.ProcessID = "process-1", "process-1"
@@ -47,7 +47,7 @@ func TestArtifact_RunningAttemptDoesNotInventOutcome(t *testing.T) {
 	a := newAttemptArtifact("run-1", Attempt{
 		Number: 1,
 		Start:  time.Now(),
-	}, stateRunning, 1)
+	}, StateRunning, 1)
 	data, err := json.Marshal(a)
 	require.NoError(t, err)
 	var fields map[string]json.RawMessage
@@ -61,7 +61,7 @@ func TestArtifact_RunningAttemptDoesNotInventOutcome(t *testing.T) {
 	require.NotNil(t, run.Summary)
 	assert.Equal(t, StatusFailed, run.Summary.Status)
 	assert.Equal(t, prior.Duration, run.Summary.Duration)
-	assert.Equal(t, stateRunning, run.Attempts[1].State)
+	assert.Equal(t, StateRunning, run.Attempts[1].State)
 }
 
 func TestArtifact_MetaIsSnapshot(t *testing.T) {
@@ -69,7 +69,7 @@ func TestArtifact_MetaIsSnapshot(t *testing.T) {
 		Tags:   []string{"original"},
 		Labels: map[string]string{"key": "original"},
 	}
-	a := newAttemptArtifact("run", Attempt{Meta: meta}, stateRunning, 1)
+	a := newAttemptArtifact("run", Attempt{Meta: meta}, StateRunning, 1)
 	meta.Tags[0], meta.Labels["key"] = "changed", "changed"
 	assert.Equal(t, []string{"original"}, a.Meta.Tags)
 	assert.Equal(t, "original", a.Meta.Labels["key"])
@@ -98,7 +98,7 @@ func TestArtifact_RunSummaryUsesLastCompletedAttempt(t *testing.T) {
 	running := newAttemptArtifact("run-1", Attempt{
 		Number: 3,
 		Start:  time.Now(),
-	}, stateRunning, 1)
+	}, StateRunning, 1)
 
 	run := newRunArtifact("run-1", []attemptArtifact{first, second, running})
 

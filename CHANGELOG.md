@@ -153,7 +153,12 @@ versions and plugin versions are independent. The first core release in this per
   uses a synced temporary file and rename; completed snapshots survive later test-process termination.
 - Added `WithErrorHandler` for export failures, which default to stderr logging and do not fail tests. Documented
   the v1 JSON Schema, partial results, derived run snapshots, and filesystem guarantees. Launch/package/process
-  manifests, an external loader, and notification adapters are outside this export; no core changes are required.
+  manifests and notification adapters are outside this export; no core changes are required.
+- Added `Load(dir)` to restore statistics from attempt files in another process. `LoadResult` returns usable Stats,
+  unfinalized attempts, per-file diagnostics, and an `Incomplete()` check. Stale run snapshots are ignored; malformed
+  attempts and numbering gaps remain visible without discarding other results.
+- Added `ProcessID` to Attempt and Run so equal run IDs from different processes stay separate. The original run IDs
+  and v1 JSON format are preserved. Exported `AttemptState` and its lifecycle constants for loaded snapshots.
 - Reorganized the plugin documentation into a short README and task-specific guides with Go examples, JSON files,
   lifecycle tables, and CI commands that preserve the test exit code.
 

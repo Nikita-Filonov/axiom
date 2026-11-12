@@ -13,11 +13,12 @@ import (
 // a pass after a failure is flaky and a skip after a failure stays failed.
 // A flaky run is still a failed Go test; the plugin never changes that.
 type Run struct {
-	ID     string
-	CaseID string
-	Name   string
-	Meta   axiom.Meta
-	Status Status
+	ID        string
+	ProcessID string
+	CaseID    string
+	Name      string
+	Meta      axiom.Meta
+	Status    Status
 
 	// Start and End span all attempts. Duration sums the attempt durations,
 	// while Elapsed, End minus Start, also includes retry delays.
@@ -30,16 +31,24 @@ type Run struct {
 	Attempts []Attempt
 }
 
-// Runs groups attempts by RunID, ordered by each run's earliest start.
+// Runs groups attempts by ProcessID and RunID, ordered by each run's earliest start.
 // Attempts without a RunID are runs of their own.
 func (s *Stats) Runs() []Run {
+	type runKey struct {
+		processID string
+		runID     string
+	}
 	var groups [][]Attempt
-	index := make(map[string]int)
+	index := make(map[runKey]int)
 	for _, a := range s.Attempts() {
-		i, ok := index[a.RunID]
+		key := runKey{
+			processID: a.ProcessID,
+			runID:     a.RunID,
+		}
+		i, ok := index[key]
 		if !ok || a.RunID == "" {
 			i = len(groups)
-			index[a.RunID] = i
+			index[key] = i
 			groups = append(groups, nil)
 		}
 		groups[i] = append(groups[i], a)
@@ -58,14 +67,15 @@ func newRun(attempts []Attempt) Run {
 	last := attempts[len(attempts)-1]
 
 	run := Run{
-		ID:       last.RunID,
-		CaseID:   last.CaseID,
-		Name:     last.Name,
-		Meta:     last.Meta.Copy(),
-		Status:   classify(attempts),
-		Start:    attempts[0].Start,
-		End:      attempts[0].End,
-		Attempts: attempts,
+		ID:        last.RunID,
+		ProcessID: last.ProcessID,
+		CaseID:    last.CaseID,
+		Name:      last.Name,
+		Meta:      last.Meta.Copy(),
+		Status:    classify(attempts),
+		Start:     attempts[0].Start,
+		End:       attempts[0].End,
+		Attempts:  attempts,
 	}
 	for _, a := range attempts {
 		run.Duration += a.Duration

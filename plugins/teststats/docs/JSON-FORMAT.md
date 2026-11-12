@@ -112,7 +112,7 @@ Lists observed attempts and summarizes the completed ones:
 A running retry appears in `attempts` but adds no outcome or duration to `summary` yet. Decoded timestamp
 subtraction need not exactly match the monotonic `duration_ns` measurement.
 
-`run.json` can be stale after a crash. Attempt files are the source for rebuilding it; see
+`run.json` can be stale after a crash. [Load](LOADING.md) rebuilds statistics from attempt files; see
 [partial results](LIFECYCLE.md#partial-results). Neither a run summary nor a finalized attempt proves that the
 whole test invocation completed.
 
