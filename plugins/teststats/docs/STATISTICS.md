@@ -59,11 +59,11 @@ empty or partial results. See [when results are recorded](LIFECYCLE.md#when-file
 
 ## What each method returns
 
-| Method | Result | Order |
-|--------|--------|-------|
-| `stats.Attempts()` | One [Attempt](../attempt.go) per completed execution or policy skip | Start time, then ProcessID, RunID, and attempt number |
-| `stats.Runs()` | [Runs](../run.go) grouping retries by ProcessID and RunID | Earliest start of each run; attempts ordered by number |
-| `stats.Summary()` | [Counts](../summary.go) for runs and attempts | `Total`, `Passed`, `Failed`, `Skipped`, `Flaky` |
+| Method             | Result                                                              | Order                                                  |
+|--------------------|---------------------------------------------------------------------|--------------------------------------------------------|
+| `stats.Attempts()` | One [Attempt](../attempt.go) per completed execution or policy skip | Start time, then ProcessID, RunID, and attempt number  |
+| `stats.Runs()`     | [Runs](../run.go) grouping retries by ProcessID and RunID           | Earliest start of each run; attempts ordered by number |
+| `stats.Summary()`  | [Counts](../summary.go) for runs and attempts                       | `Total`, `Passed`, `Failed`, `Skipped`, `Flaky`        |
 
 Methods are safe for concurrent use and return copies. Two `RunCase` calls create different runs even when the
 Case ID and name are the same. Metadata is captured when the attempt starts.
@@ -71,10 +71,10 @@ Case ID and name are the same. Metadata is captured when the attempt starts.
 
 ## A failed attempt followed by a pass
 
-| Attempt | Status | Start | End | Duration |
-|---------|--------|-------|-----|----------|
-| 1 | failed | 10:00:00 | 10:00:02 | 2s |
-| 2 | passed | 10:00:03 | 10:00:04 | 1s |
+| Attempt | Status | Start    | End      | Duration |
+|---------|--------|----------|----------|----------|
+| 1       | failed | 10:00:00 | 10:00:02 | 2s       |
+| 2       | passed | 10:00:03 | 10:00:04 | 1s       |
 
 ```text
 Run:      Status=flaky  Duration=3s  Elapsed=4s
@@ -86,11 +86,11 @@ Attempts: Total=2  Failed=1  Passed=1  Flaky=0
 
 | Attempt outcomes | Run status |
 |------------------|------------|
-| passed | passed |
-| skipped | skipped |
-| failed → passed | flaky |
-| failed → failed | failed |
-| failed → skipped | failed |
+| passed           | passed     |
+| skipped          | skipped    |
+| failed → passed  | flaky      |
+| failed → failed  | failed     |
+| failed → skipped | failed     |
 
 A flaky run still leaves the Go test failed. The plugin does not change the test exit code.
 

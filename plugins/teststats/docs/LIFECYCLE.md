@@ -30,10 +30,10 @@ case.start / case.skip
 
 After each attempt write, the plugin rebuilds `run.json` from the saved attempts. Writes are synchronous.
 
-| State | Available data |
-|-------|----------------|
-| `running` | Start and metadata; no outcome or finish time |
-| `finished` | Outcome and duration after the plugin's attempt cleanup |
+| State       | Available data                                                |
+|-------------|---------------------------------------------------------------|
+| `running`   | Start and metadata; no outcome or finish time                 |
+| `finished`  | Outcome and duration after the plugin's attempt cleanup       |
 | `finalized` | Outcome rechecked during parent cleanup; no further revisions |
 
 The attempt cleanup runs after cleanups registered later. A cleanup registered earlier by another plugin runs
@@ -41,10 +41,10 @@ after it. Go can also mark cleanup panics and data races failed after attempt cl
 
 Example: a late cleanup fails an attempt that was initially recorded as passed:
 
-| Snapshot of the same file | `state` | `status` | `revision` |
-|---------------------------|---------|----------|------------|
-| After attempt cleanup | finished | passed | 2 |
-| After parent cleanup | finalized | failed | 3 |
+| Snapshot of the same file | `state`   | `status` | `revision` |
+|---------------------------|-----------|----------|------------|
+| After attempt cleanup     | finished  | passed   | 2          |
+| After parent cleanup      | finalized | failed   | 3          |
 
 For a bare Config whose active test is its RootT, there is no later parent check: the file remains `finished`.
 Runner resource cleanup is outside every attempt and does not affect its status or duration.
@@ -53,12 +53,12 @@ Runner resource cleanup is outside every attempt and does not affect its status 
 
 Assuming earlier writes succeeded:
 
-| Interruption | Files left on disk |
-|--------------|--------------------|
-| Timeout or process kill during attempt 2 | Attempt 1's saved snapshot; attempt 2 still `running` |
-| Exit before parent cleanup | Completed attempts can remain `finished` |
-| Exit after writing an attempt, before updating the run | New attempt file; missing or older `run.json` |
-| Crash during a temporary-file write | Previous destination, if any; possibly `.teststats-*.tmp` |
+| Interruption                                           | Files left on disk                                        |
+|--------------------------------------------------------|-----------------------------------------------------------|
+| Timeout or process kill during attempt 2               | Attempt 1's saved snapshot; attempt 2 still `running`     |
+| Exit before parent cleanup                             | Completed attempts can remain `finished`                  |
+| Exit after writing an attempt, before updating the run | New attempt file; missing or older `run.json`             |
+| Crash during a temporary-file write                    | Previous destination, if any; possibly `.teststats-*.tmp` |
 
 A stale run snapshot can look like this:
 
@@ -84,12 +84,12 @@ unchanged. A newly saved attempt is retained even if the run update fails.
 serialize JSON → create temporary file in target directory → write → sync → close → rename
 ```
 
-| Guarantee | Scope |
-|-----------|-------|
-| Old or new whole file | Local Unix filesystems with atomic rename; other platforms follow `os.Rename` guarantees |
-| Failed replacement preserves the previous destination | Until rename succeeds; temporary files are removed on ordinary errors |
-| Completed writes survive later test-process termination | No guarantee against machine power loss; the directory is not synced |
-| Attempt and run updated together | Not guaranteed: these are two separate file replacements |
+| Guarantee                                               | Scope                                                                                    |
+|---------------------------------------------------------|------------------------------------------------------------------------------------------|
+| Old or new whole file                                   | Local Unix filesystems with atomic rename; other platforms follow `os.Rename` guarantees |
+| Failed replacement preserves the previous destination   | Until rename succeeds; temporary files are removed on ordinary errors                    |
+| Completed writes survive later test-process termination | No guarantee against machine power loss; the directory is not synced                     |
+| Attempt and run updated together                        | Not guaranteed: these are two separate file replacements                                 |
 
 ## What no files can mean
 

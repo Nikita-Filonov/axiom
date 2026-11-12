@@ -54,11 +54,11 @@ AXIOM_RESULTS_DIR="$(mktemp -d "$PWD/axiom-results.XXXXXX")"
 go test -count=1 ./...
 ```
 
-| Setting | Reason |
-|---------|--------|
+| Setting                                   | Reason                                                           |
+|-------------------------------------------|------------------------------------------------------------------|
 | Same absolute directory for every package | Go test binaries normally run from different package directories |
-| Fresh directory per invocation | The plugin does not remove old files |
-| `-count=1` | Cached tests do not execute the plugin or produce fresh files |
+| Fresh directory per invocation            | The plugin does not remove old files                             |
+| `-count=1`                                | Cached tests do not execute the plugin or produce fresh files    |
 
 After a case with two attempts:
 

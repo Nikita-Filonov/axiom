@@ -14,11 +14,11 @@
 
 ## Options
 
-| Option | Default | Invalid argument |
-|--------|---------|------------------|
-| `WithStats(stats)` | One new collector per `Plugin()` call | `nil` panics |
-| `WithOutputDir(dir)` | File output disabled | Empty or whitespace-only path panics |
-| `WithErrorHandler(handler)` | Log output errors to stderr | `nil` panics |
+| Option                      | Default                               | Invalid argument                     |
+|-----------------------------|---------------------------------------|--------------------------------------|
+| `WithStats(stats)`          | One new collector per `Plugin()` call | `nil` panics                         |
+| `WithOutputDir(dir)`        | File output disabled                  | Empty or whitespace-only path panics |
+| `WithErrorHandler(handler)` | Log output errors to stderr           | `nil` panics                         |
 
 Passing a nil option to `Plugin` also panics. Creating or installing the plugin does not write files.
 
@@ -46,12 +46,12 @@ Relative paths are resolved when `Plugin` is created. For multiple test packages
 
 ## Repeated installation
 
-| On the same Config | Result |
-|--------------------|--------|
-| Same `Stats` on Runner and Case | One stored attempt in that collector |
-| Different collectors | Each receives its own copy |
+| On the same Config                       | Result                                                    |
+|------------------------------------------|-----------------------------------------------------------|
+| Same `Stats` on Runner and Case          | One stored attempt in that collector                      |
+| Different collectors                     | Each receives its own copy                                |
 | Same output directory on Runner and Case | One set of files; first installation's error handler wins |
-| Different output directories | Each receives the snapshots |
+| Different output directories             | Each receives the snapshots                               |
 
 Directories are compared as absolute, cleaned paths. Symlink aliases are not resolved.
 

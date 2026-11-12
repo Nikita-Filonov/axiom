@@ -41,14 +41,14 @@ runner := axiom.NewRunner(
 
 ## Guides
 
-| Task | Guide |
-|------|-------|
-| Choose options and defaults | [Configuration](docs/CONFIGURATION.md) |
-| Read attempts, runs, counts, and filtered results | [Statistics in memory](docs/STATISTICS.md) |
-| Save JSON from one or several test packages | [JSON output](docs/JSON-OUTPUT.md) |
-| Load files in a notifier or another process | [Loading results](docs/LOADING.md) |
-| Inspect `attempt-1.json` and `run.json` | [JSON format](docs/JSON-FORMAT.md) |
-| Understand cleanup failures, timeouts, and partial results | [Lifecycle](docs/LIFECYCLE.md) |
+| Task                                                       | Guide                                      |
+|------------------------------------------------------------|--------------------------------------------|
+| Choose options and defaults                                | [Configuration](docs/CONFIGURATION.md)     |
+| Read attempts, runs, counts, and filtered results          | [Statistics in memory](docs/STATISTICS.md) |
+| Save JSON from one or several test packages                | [JSON output](docs/JSON-OUTPUT.md)         |
+| Load files in a notifier or another process                | [Loading results](docs/LOADING.md)         |
+| Inspect `attempt-1.json` and `run.json`                    | [JSON format](docs/JSON-FORMAT.md)         |
+| Understand cleanup failures, timeouts, and partial results | [Lifecycle](docs/LIFECYCLE.md)             |
 
 The plugin exports and loads observed cases. Launch/package/process manifests and notification adapters
 are not implemented yet.

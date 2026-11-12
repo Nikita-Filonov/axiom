@@ -68,22 +68,22 @@ runs=1 passed=1 failed=0 skipped=0 flaky=0 incomplete=false
 
 `Load(dir)` returns `(*LoadResult, error)`. When `err == nil`, `result.Stats` is always available.
 
-| Result | Contents |
-|--------|----------|
-| `Stats` | Completed outcomes: `finished` and `finalized` attempts; queries use the existing `Stats` API |
-| `Unfinished` | Valid `running` and `finished` snapshots, with relative path, `AttemptState`, and `Attempt` |
-| `Issues` | Per-file/directory errors and missing attempt ranges; each has `Path` and `Err` |
-| `Incomplete()` | True when there are issues, unfinalized attempts, or no usable attempts |
+| Result         | Contents                                                                                      |
+|----------------|-----------------------------------------------------------------------------------------------|
+| `Stats`        | Completed outcomes: `finished` and `finalized` attempts; queries use the existing `Stats` API |
+| `Unfinished`   | Valid `running` and `finished` snapshots, with relative path, `AttemptState`, and `Attempt`   |
+| `Issues`       | Per-file/directory errors and missing attempt ranges; each has `Path` and `Err`               |
+| `Incomplete()` | True when there are issues, unfinalized attempts, or no usable attempts                       |
 
-| Files on disk | Stats | Other result |
-|---------------|-------|--------------|
-| Attempt 1 finalized/failed, attempt 2 finalized/passed | One flaky run, two attempts | `Incomplete() == false` |
-| Attempt 1 finished/passed | One passed run | One `Unfinished` entry; incomplete |
-| Attempt 1 running | No completed attempts | One `Unfinished` entry; incomplete |
-| Attempt 1 malformed, attempt 2 finalized/passed | Only attempt 2 | Issue for attempt 1; incomplete |
-| Attempts 1 and 3 present | Both valid outcomes | Issue for missing attempt 2; incomplete |
-| Existing empty directory | Empty Stats | No issues; incomplete |
-| Missing/unreadable root or unreadable process index | No result | Non-nil `err` |
+| Files on disk                                          | Stats                       | Other result                            |
+|--------------------------------------------------------|-----------------------------|-----------------------------------------|
+| Attempt 1 finalized/failed, attempt 2 finalized/passed | One flaky run, two attempts | `Incomplete() == false`                 |
+| Attempt 1 finished/passed                              | One passed run              | One `Unfinished` entry; incomplete      |
+| Attempt 1 running                                      | No completed attempts       | One `Unfinished` entry; incomplete      |
+| Attempt 1 malformed, attempt 2 finalized/passed        | Only attempt 2              | Issue for attempt 1; incomplete         |
+| Attempts 1 and 3 present                               | Both valid outcomes         | Issue for missing attempt 2; incomplete |
+| Existing empty directory                               | Empty Stats                 | No issues; incomplete                   |
+| Missing/unreadable root or unreadable process index    | No result                   | Non-nil `err`                           |
 
 `LoadIssue` implements `error` and `Unwrap`, so `errors.Is(issue, fs.ErrPermission)` works.
 Issues do not stop the rest of the directory from loading. No files are written or repaired.
@@ -92,15 +92,15 @@ Issues do not stop the rest of the directory from loading. No files are written 
 
 Use `result.Stats.Summary().Runs` to count cases, or `.Attempts` to count every retry.
 
-| Notification field | Source |
-|--------------------|--------|
-| Passed | `counts.Passed` |
-| Failed | `counts.Failed` |
-| Skipped | `counts.Skipped` |
-| Flaky | `counts.Flaky` — separate from Passed and Failed |
-| Partial data | `result.Incomplete()`; show even when all observed counts are passed |
-| Test-process outcome | Original `go test` exit code from CI |
-| CI run time, environment, report links | CI/application configuration |
+| Notification field                     | Source                                                               |
+|----------------------------------------|----------------------------------------------------------------------|
+| Passed                                 | `counts.Passed`                                                      |
+| Failed                                 | `counts.Failed`                                                      |
+| Skipped                                | `counts.Skipped`                                                     |
+| Flaky                                  | `counts.Flaky` — separate from Passed and Failed                     |
+| Partial data                           | `result.Incomplete()`; show even when all observed counts are passed |
+| Test-process outcome                   | Original `go test` exit code from CI                                 |
+| CI run time, environment, report links | CI/application configuration                                         |
 
 For a notifier that currently reads `TEST_PASSED`, `TEST_FAILED`, `TEST_SKIPPED`, and `TEST_BROKEN`, replace those
 count inputs with one results directory. Axiom has no `broken` status: lifecycle failures count as failed attempts.
