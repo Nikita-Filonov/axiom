@@ -33,8 +33,8 @@ type reportXML struct {
 func TestReporterPlugin(t *testing.T) {
 	reporter := testjunit.NewReporter()
 	runner := axiom.NewRunner(axiom.WithRunnerPlugins(
-		testjunit.Plugin(reporter, testjunit.WithSuiteName("example/package")),
-		testjunit.Plugin(reporter, testjunit.WithSuiteName("ignored duplicate")),
+		testjunit.Plugin(testjunit.WithReporter(reporter), testjunit.WithSuiteName("example/package")),
+		testjunit.Plugin(testjunit.WithReporter(reporter), testjunit.WithSuiteName("ignored duplicate")),
 	))
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("passes")), func(*axiom.Config) {})
 	runner.RunCase(t, axiom.NewCase(

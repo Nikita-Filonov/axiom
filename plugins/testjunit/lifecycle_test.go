@@ -74,9 +74,6 @@ func TestFailureProbe(t *testing.T) {
 		return
 	}
 	reporter := testjunit.NewReporter()
-	t.Cleanup(func() {
-		assert.NoError(t, reporter.WriteFile(os.Getenv("AXIOM_JUNIT_PATH")))
-	})
 	// Direct testing.T failures below are deliberate inputs to the recorder.
 	// TestFailureReports verifies the resulting XML in the parent process.
 	attempts := 1
@@ -93,7 +90,10 @@ func TestFailureProbe(t *testing.T) {
 					}
 				})
 			}
-		}, testjunit.Plugin(reporter)),
+		}, testjunit.Plugin(
+			testjunit.WithReporter(reporter),
+			testjunit.WithOutputFile(os.Getenv("AXIOM_JUNIT_PATH")),
+		)),
 		axiom.WithRunnerRetry(axiom.WithRetryTimes(attempts)),
 		axiom.WithRunnerHooks(
 			axiom.WithBeforeTest(func(*axiom.Config) {

@@ -9,13 +9,13 @@ import (
 
 // recorder owns the lifecycle of one Config, including a planning policy skip.
 type recorder struct {
-	cfg      *axiom.Config
-	reporter *Reporter
-	config   Config
-	mu       sync.Mutex
-	attempt  *attempt
-	failed   bool
-	finished bool
+	cfg       *axiom.Config
+	reporter  *Reporter
+	suiteName string
+	mu        sync.Mutex
+	attempt   *attempt
+	failed    bool
+	finished  bool
 }
 
 func (r *recorder) observe(event axiom.Event) {
@@ -42,8 +42,10 @@ func (r *recorder) begin(skipReason string) {
 		return
 	}
 	r.attempt = &attempt{
-		SuiteName: r.config.SuiteName,
-		TestName:  t.Name(), SkipReason: skipReason, Start: time.Now(),
+		SuiteName:  r.suiteName,
+		TestName:   t.Name(),
+		SkipReason: skipReason,
+		Start:      time.Now(),
 	}
 	// Register before the body, so its hooks, fixtures, subtests and cleanups
 	// finish first. The parent cleanup rechecks failures from later cleanups.
@@ -61,24 +63,26 @@ func (r *recorder) fail(message string) {
 
 func (r *recorder) finish(t testOutcome) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.attempt == nil || r.finished {
+		r.mu.Unlock()
 		return
 	}
 	r.finished = true
 	result := *r.attempt
 	result.Duration = time.Since(result.Start)
 	result.Status = outcome(t, r.failed)
+	r.mu.Unlock()
 	stored := r.reporter.add(result)
 	if parent := r.cfg.RootT; parent != nil && parent != t {
 		// Checking another T while it finishes can race with testing's own
 		// finalization. Its parent's cleanup runs after the child has finished.
 		parent.Cleanup(func() { r.reconcile(t, stored) })
 	}
+	r.reporter.publish()
 }
 
 func (r *recorder) reconcile(t testOutcome, result *attempt) {
-	if t.Failed() {
-		r.reporter.markFailed(result)
+	if t.Failed() && r.reporter.markFailed(result) {
+		r.reporter.publish()
 	}
 }

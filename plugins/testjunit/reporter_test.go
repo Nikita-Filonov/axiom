@@ -43,9 +43,9 @@ func TestReporterZeroValueAndIndependentInstallation(t *testing.T) {
 	assert.Empty(t, doc.Suites)
 	t.Run("attempt", func(t *testing.T) {
 		cfg := &axiom.Config{SubT: t}
-		Plugin(&first)(cfg)
-		Plugin(&first)(cfg)
-		Plugin(&second, WithSuiteName("second"))(cfg)
+		Plugin(WithReporter(&first))(cfg)
+		Plugin(WithReporter(&first))(cfg)
+		Plugin(WithReporter(&second), WithSuiteName("second"))(cfg)
 		assert.Len(t, cfg.Runtime.EventSinks, 2)
 		cfg.Event(axiom.Event{Type: axiom.EventTypeCaseStart})
 	})

@@ -10,9 +10,17 @@ import (
 
 // WriteFile writes a JUnit XML snapshot through a temporary file in the same
 // directory, then renames it to path. Parent directories are created as needed.
-// Call it after tests finish. Replacement of an existing path depends on the
-// platform's os.Rename behavior.
+// Calls on the same Reporter are serialized, including automatic output.
+// Export after tests finish to include all late corrections. Replacement of an
+// existing path depends on the platform's os.Rename behavior.
 func (r *Reporter) WriteFile(path string) error {
+	if r == nil {
+		return errors.New("testjunit: nil reporter")
+	}
+	// Serialize the complete export, including snapshot creation, across all
+	// plugins and manual exports using this Reporter.
+	r.fileMu.Lock()
+	defer r.fileMu.Unlock()
 	return r.writeFile(path, fileOperations{
 		mkdirAll:   os.MkdirAll,
 		createTemp: func(dir, pattern string) (reportFile, error) { return os.CreateTemp(dir, pattern) },
@@ -36,9 +44,6 @@ type reportFile interface {
 }
 
 func (r *Reporter) writeFile(path string, files fileOperations) (err error) {
-	if r == nil {
-		return errors.New("testjunit: nil reporter")
-	}
 	if path == "" {
 		return errors.New("testjunit: empty report path")
 	}

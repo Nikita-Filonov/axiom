@@ -27,7 +27,7 @@ func TestParallelCasesAndPolicySkip(t *testing.T) {
 	reporter := testjunit.NewReporter()
 	t.Run("suite", func(t *testing.T) {
 		runner := axiom.NewRunner(
-			axiom.WithRunnerPlugins(testjunit.Plugin(reporter)),
+			axiom.WithRunnerPlugins(testjunit.Plugin(testjunit.WithReporter(reporter))),
 			axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
 			axiom.WithRunnerRetry(axiom.WithRetryTimes(2)),
 		)
@@ -55,7 +55,7 @@ func TestParallelCasesAndPolicySkip(t *testing.T) {
 
 func TestDirectSkip(t *testing.T) {
 	reporter := testjunit.NewReporter()
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testjunit.Plugin(reporter)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testjunit.Plugin(testjunit.WithReporter(reporter))))
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("direct skip")), func(cfg *axiom.Config) { cfg.T().Skip("not exposed by Go") })
 	report := readReport(t, reporter)
 	assert.Equal(t, 1, report.Tests)
@@ -72,9 +72,9 @@ func TestSharedReporterAndPluginOptions(t *testing.T) {
 		name   string
 		plugin axiom.Plugin
 	}{
-		{"axiom", testjunit.Plugin(reporter)},
-		{"service-a", testjunit.Plugin(reporter, testjunit.WithSuiteName("service-a"))},
-		{"service-b", testjunit.Plugin(reporter, testjunit.WithSuiteName("service-b"))},
+		{"axiom", testjunit.Plugin(testjunit.WithReporter(reporter))},
+		{"service-a", testjunit.Plugin(testjunit.WithReporter(reporter), testjunit.WithSuiteName("service-a"))},
+		{"service-b", testjunit.Plugin(testjunit.WithReporter(reporter), testjunit.WithSuiteName("service-b"))},
 	}
 	t.Run("runners", func(t *testing.T) {
 		for i := range 6 {
@@ -87,7 +87,7 @@ func TestSharedReporterAndPluginOptions(t *testing.T) {
 					runner.RunCase(t, axiom.NewCase(
 						axiom.WithCaseName(name),
 						// Reinstalling at case level must neither duplicate nor rename results.
-						axiom.WithCasePlugins(testjunit.Plugin(reporter, testjunit.WithSuiteName("ignored"))),
+						axiom.WithCasePlugins(testjunit.Plugin(testjunit.WithReporter(reporter), testjunit.WithSuiteName("ignored"))),
 					), func(*axiom.Config) {})
 				}
 			})
@@ -127,7 +127,7 @@ func TestSelectionProbe(t *testing.T) {
 		return
 	}
 	reporter := testjunit.NewReporter()
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testjunit.Plugin(reporter)))
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testjunit.Plugin(testjunit.WithReporter(reporter))))
 	for _, name := range []string{"included", "excluded"} {
 		runner.RunCase(t, axiom.NewCase(axiom.WithCaseName(name)), func(*axiom.Config) {})
 	}

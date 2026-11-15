@@ -144,6 +144,19 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Independently versioned plugins
 
+### testjunit v0.4.0 — 2026-11-15
+
+- **Breaking:** `Plugin` now accepts options only. Replace `Plugin(reporter, options...)` with
+  `Plugin(WithReporter(reporter), options...)`. Without `WithReporter`, each plugin creates its own collector.
+- Added `WithOutputFile` for synchronous XML snapshots after completed attempts and late status corrections.
+  Output registration happens on plugin installation; constructing a plugin does not modify a shared reporter.
+  Shared reporters update all registered output files, including changes from plugins without an output option.
+  Automatic and manual file exports share a lock; snapshots use temporary-file replacement.
+- Added `WithErrorHandler`; automatic export errors default to stderr logging and do not change test results.
+  Existing `Reporter.Write` and `WriteFile` remain available for explicit export and error handling.
+- Documented per-process output paths, partial reports, migration, and incremental export costs. Added coverage for
+  concurrent shared reporters, retries, late cleanup failures, output errors, and recovery.
+
 ### teststats v0.37.0 — 2026-11-12
 
 - Added `Stats.Elapsed()` to measure the span from the earliest completed attempt start to the latest end.
@@ -248,7 +261,7 @@ versions and plugin versions are independent. The first core release in this per
 ### Plugin release index
 
 The table shows the first plugin version since 2026-03-26 and the latest version
-documented here as of 2026-11-12. Plugin versions are independent of the core version.
+documented here as of 2026-11-15. Plugin versions are independent of the core version.
 
 | Plugin           | First version in period | Latest version     |
 |------------------|-------------------------|--------------------|
@@ -257,7 +270,7 @@ documented here as of 2026-11-12. Plugin versions are independent of the core ve
 | `testenv`        | `v0.1.0`                | `v0.5.0`           |
 | `testexplain`    | `v0.1.0`                | `v0.20.0`          |
 | `testflags`      | `v0.1.0`                | `v0.7.0`           |
-| `testjunit`      | `v0.1.0`                | `v0.3.0`           |
+| `testjunit`      | `v0.1.0`                | `v0.4.0`           |
 | `testleaks`      | `v0.1.0`                | `v0.3.0`           |
 | `testlogger`     | `v0.12.0`               | `v0.34.0`          |
 | `testotel`       | `v0.1.0`                | `v0.4.0`           |

@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// Reporter collects attempts and exports a snapshot after the tests finish.
+// Reporter collects attempts and exports snapshots of completed attempts.
 // Its collection and export methods are safe to call concurrently, but an
 // export made while tests are running contains the results collected so far.
 // Its zero value is ready to use.
@@ -14,6 +14,8 @@ import (
 type Reporter struct {
 	mu       sync.Mutex
 	attempts []*attempt
+	outputs  []*outputWriter
+	fileMu   sync.Mutex
 }
 
 // NewReporter creates a JUnit reporter with an empty result set.
@@ -28,10 +30,14 @@ func (r *Reporter) add(result attempt) *attempt {
 	return &result
 }
 
-func (r *Reporter) markFailed(result *attempt) {
+func (r *Reporter) markFailed(result *attempt) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if result.Status == statusFailed {
+		return false
+	}
 	result.Status = statusFailed
+	return true
 }
 
 func (r *Reporter) snapshot() reportSnapshot {

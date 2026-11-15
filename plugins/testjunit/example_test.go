@@ -17,7 +17,10 @@ func TestJUnitReportExample(t *testing.T) {
 	reporter := testjunit.NewReporter()
 	runner := axiom.NewRunner(
 		axiom.WithRunnerPlugins(
-			testjunit.Plugin(reporter, testjunit.WithSuiteName("example/package")),
+			testjunit.Plugin(
+				testjunit.WithReporter(reporter),
+				testjunit.WithSuiteName("example/package"),
+			),
 		),
 	)
 
