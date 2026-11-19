@@ -33,21 +33,21 @@ func Plugin(options ...allure.Option) axiom.Plugin {
 			}
 		})
 
-		cfg.Runtime.EmitStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+		cfg.Runtime.EmitStepWrap(func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 			return func() {
-				runAllureStep(state, name, next)
+				runAllureStep(state, operation.Name(), next)
 			}
 		})
 
-		cfg.Runtime.EmitSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction {
+		cfg.Runtime.EmitSetupWrap(func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 			return func() {
-				runAllureStep(state, name, next)
+				runAllureStep(state, operation.Name(), next)
 			}
 		})
 
-		cfg.Runtime.EmitTeardownWrap(func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+		cfg.Runtime.EmitTeardownWrap(func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 			return func() {
-				runAllureStep(state, name, next)
+				runAllureStep(state, operation.Name(), next)
 			}
 		})
 

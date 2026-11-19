@@ -236,3 +236,36 @@ func newAllureRunner(memoryWriter *writer.InMemoryWriter, options ...axiom.Runne
 	plugin := axiom.WithRunnerPlugins(testallure.Plugin(allure.WithWriter(memoryWriter)))
 	return axiom.NewRunner(append(options, plugin)...)
 }
+
+func TestPlugin_OperationValuesReachInstalledPluginInsideAllureStep(t *testing.T) {
+	role := axiom.NewOperationKey[string]("example/assertions.role")
+	memoryWriter := writer.NewInMemoryWriter()
+	observer := axiom.Plugin(func(cfg *axiom.Config) {
+		cfg.Runtime.EmitStepWrap(func(step axiom.Operation, next axiom.StepAction) axiom.StepAction {
+			return func() {
+				if value, ok := role.TryGet(step); ok && value == "check" {
+					cfg.Artefact(axiom.NewTextArtefact("role", value))
+				}
+				next()
+			}
+		})
+	})
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(
+		testallure.Plugin(allure.WithWriter(memoryWriter)), observer,
+	))
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("operation values")), func(cfg *axiom.Config) {
+		cfg.Step("same name", func() {
+			cfg.Step("same name", func() {}, role.Value("check"))
+		}, role.Value("group"))
+	})
+	snapshot := memoryWriter.Snapshot()
+	require.Len(t, snapshot.Results, 1)
+	require.Len(t, snapshot.Results[0].Steps, 1)
+	group := snapshot.Results[0].Steps[0]
+	assert.Empty(t, group.Attachments)
+	require.Len(t, group.Steps, 1)
+	check := group.Steps[0]
+	assert.Equal(t, group.Name, check.Name)
+	require.Len(t, check.Attachments, 1)
+	assert.Equal(t, "check", string(snapshot.Attachments[check.Attachments[0].Source]))
+}
