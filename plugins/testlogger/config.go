@@ -14,9 +14,14 @@ type Config struct {
 type Option func(*Config)
 
 func newConfig(options ...Option) Config {
-	c := Config{Logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))}
+	c := Config{
+		Logger: slog.New(
+			slog.NewTextHandler(
+				os.Stdout,
+				&slog.HandlerOptions{Level: slog.LevelDebug},
+			),
+		),
+	}
 	for _, option := range options {
 		if option == nil {
 			panic("testlogger: nil option")

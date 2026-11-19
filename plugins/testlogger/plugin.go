@@ -8,11 +8,12 @@ import "github.com/Nikita-Filonov/axiom"
 // nil configured logger panic. The logger is shared across installations and
 // attempts. Each installation appends one log sink.
 func Plugin(options ...Option) axiom.Plugin {
-	logger := newConfig(options...).Logger
+	c := newConfig(options...)
+
 	return func(cfg *axiom.Config) {
 		cfg.Runtime.EmitLogSink(func(l axiom.Log) {
 			level := MapLevel(l.Level)
-			logger.Log(cfg.Context.Raw, level, l.Text)
+			c.Logger.Log(cfg.Context.Raw, level, l.Text)
 		})
 	}
 }
