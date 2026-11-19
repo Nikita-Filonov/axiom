@@ -53,7 +53,7 @@ func TestConfig_Step_WrapsCalled(t *testing.T) {
 
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeStepWrap(
-			func(name string, next axiom.StepAction) axiom.StepAction {
+			func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 				return func() {
 					order = append(order, "wrap1")
 					next()
@@ -61,7 +61,7 @@ func TestConfig_Step_WrapsCalled(t *testing.T) {
 			},
 		),
 		axiom.WithRuntimeStepWrap(
-			func(name string, next axiom.StepAction) axiom.StepAction {
+			func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 				return func() {
 					order = append(order, "wrap2")
 					next()
@@ -263,7 +263,7 @@ func TestConfig_Setup_WrapsCalled(t *testing.T) {
 
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeSetupWrap(
-			func(name string, next axiom.SetupAction) axiom.SetupAction {
+			func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 				return func() {
 					order = append(order, "wrap1")
 					next()
@@ -271,7 +271,7 @@ func TestConfig_Setup_WrapsCalled(t *testing.T) {
 			},
 		),
 		axiom.WithRuntimeSetupWrap(
-			func(name string, next axiom.SetupAction) axiom.SetupAction {
+			func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 				return func() {
 					order = append(order, "wrap2")
 					next()
@@ -300,7 +300,7 @@ func TestConfig_Teardown_WrapsCalled(t *testing.T) {
 
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeTeardownWrap(
-			func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+			func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 				return func() {
 					order = append(order, "wrap1")
 					next()
@@ -308,7 +308,7 @@ func TestConfig_Teardown_WrapsCalled(t *testing.T) {
 			},
 		),
 		axiom.WithRuntimeTeardownWrap(
-			func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+			func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 				return func() {
 					order = append(order, "wrap2")
 					next()

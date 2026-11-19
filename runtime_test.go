@@ -34,7 +34,7 @@ func TestWithRuntimeTestWrap(t *testing.T) {
 }
 
 func TestWithRuntimeStepWrap(t *testing.T) {
-	wrap := func(name string, next axiom.StepAction) axiom.StepAction {
+	wrap := func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 		return next
 	}
 
@@ -46,7 +46,7 @@ func TestWithRuntimeStepWrap(t *testing.T) {
 }
 
 func TestWithRuntimeSetupWrap(t *testing.T) {
-	wrap := func(name string, next axiom.SetupAction) axiom.SetupAction {
+	wrap := func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 		return next
 	}
 
@@ -58,7 +58,7 @@ func TestWithRuntimeSetupWrap(t *testing.T) {
 }
 
 func TestWithRuntimeTeardownWrap(t *testing.T) {
-	wrap := func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+	wrap := func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 		return next
 	}
 
@@ -188,7 +188,7 @@ func TestRuntime_ArtefactCallsAllSinks(t *testing.T) {
 func TestRuntime_StepWrapOrder(t *testing.T) {
 	var order []string
 
-	w1 := func(name string, next axiom.StepAction) axiom.StepAction {
+	w1 := func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 		return func() {
 			order = append(order, "w1-before")
 			next()
@@ -196,7 +196,7 @@ func TestRuntime_StepWrapOrder(t *testing.T) {
 		}
 	}
 
-	w2 := func(name string, next axiom.StepAction) axiom.StepAction {
+	w2 := func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 		return func() {
 			order = append(order, "w2-before")
 			next()
@@ -262,7 +262,7 @@ func TestRuntime_TestWrapOrder(t *testing.T) {
 func TestRuntime_SetupWrapOrder(t *testing.T) {
 	var order []string
 
-	w1 := func(name string, next axiom.SetupAction) axiom.SetupAction {
+	w1 := func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 		return func() {
 			order = append(order, "w1-before")
 			next()
@@ -270,7 +270,7 @@ func TestRuntime_SetupWrapOrder(t *testing.T) {
 		}
 	}
 
-	w2 := func(name string, next axiom.SetupAction) axiom.SetupAction {
+	w2 := func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 		return func() {
 			order = append(order, "w2-before")
 			next()
@@ -299,7 +299,7 @@ func TestRuntime_SetupWrapOrder(t *testing.T) {
 func TestRuntime_TeardownWrapOrder(t *testing.T) {
 	var order []string
 
-	w1 := func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+	w1 := func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 		return func() {
 			order = append(order, "w1-before")
 			next()
@@ -307,7 +307,7 @@ func TestRuntime_TeardownWrapOrder(t *testing.T) {
 		}
 	}
 
-	w2 := func(name string, next axiom.TeardownAction) axiom.TeardownAction {
+	w2 := func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 		return func() {
 			order = append(order, "w2-before")
 			next()
@@ -339,16 +339,16 @@ func TestRuntimeJoin(t *testing.T) {
 		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
 		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
-		axiom.WithRuntimeSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction { return next }),
+		axiom.WithRuntimeSetupWrap(func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction { return next }),
 	)
 
 	rt2 := axiom.NewRuntime(
 		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
 		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
 		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) {}),
-		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
-		axiom.WithRuntimeSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction { return next }),
-		axiom.WithRuntimeTeardownWrap(func(name string, next axiom.TeardownAction) axiom.TeardownAction { return next }),
+		axiom.WithRuntimeStepWrap(func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction { return next }),
+		axiom.WithRuntimeSetupWrap(func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction { return next }),
+		axiom.WithRuntimeTeardownWrap(func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction { return next }),
 	)
 
 	joined := rt1.Join(rt2)
@@ -381,9 +381,9 @@ func TestRuntime_Emitters_DoNotMutateRuntime(t *testing.T) {
 func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
 	rt := axiom.NewRuntime(
 		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction { return next }),
-		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction { return next }),
-		axiom.WithRuntimeSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction { return next }),
-		axiom.WithRuntimeTeardownWrap(func(name string, next axiom.TeardownAction) axiom.TeardownAction { return next }),
+		axiom.WithRuntimeStepWrap(func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction { return next }),
+		axiom.WithRuntimeSetupWrap(func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction { return next }),
+		axiom.WithRuntimeTeardownWrap(func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction { return next }),
 		axiom.WithRuntimeLogSink(func(l axiom.Log) {}),
 		axiom.WithRuntimeEventSink(func(e axiom.Event) {}),
 		axiom.WithRuntimeAssertSink(func(a axiom.Assert) {}),
@@ -392,9 +392,9 @@ func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
 
 	cp := rt.Copy()
 	cp.TestWraps = append(cp.TestWraps, func(next axiom.TestAction) axiom.TestAction { return next })
-	cp.StepWraps = append(cp.StepWraps, func(name string, next axiom.StepAction) axiom.StepAction { return next })
-	cp.SetupWraps = append(cp.SetupWraps, func(name string, next axiom.SetupAction) axiom.SetupAction { return next })
-	cp.TeardownWraps = append(cp.TeardownWraps, func(name string, next axiom.TeardownAction) axiom.TeardownAction { return next })
+	cp.StepWraps = append(cp.StepWraps, func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction { return next })
+	cp.SetupWraps = append(cp.SetupWraps, func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction { return next })
+	cp.TeardownWraps = append(cp.TeardownWraps, func(operation axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction { return next })
 	cp.LogSinks = append(cp.LogSinks, func(l axiom.Log) {})
 	cp.EventSinks = append(cp.EventSinks, func(e axiom.Event) {})
 	cp.AssertSinks = append(cp.AssertSinks, func(a axiom.Assert) {})

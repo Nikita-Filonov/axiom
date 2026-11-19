@@ -228,11 +228,11 @@ func TestSuite_UsesFullRunnerConfiguration(t *testing.T) {
 					seen = append(seen, "wrap-test-after")
 				}
 			}),
-			axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+			axiom.WithRuntimeStepWrap(func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 				return func() {
-					seen = append(seen, "wrap-step-before:"+name)
+					seen = append(seen, "wrap-step-before:"+operation.Name())
 					next()
-					seen = append(seen, "wrap-step-after:"+name)
+					seen = append(seen, "wrap-step-after:"+operation.Name())
 				}
 			}),
 		),

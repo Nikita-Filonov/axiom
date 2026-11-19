@@ -16,13 +16,16 @@ type TeardownAction func()
 type WrapTestAction func(next TestAction) TestAction
 
 // WrapStepAction wraps a named step action before it executes.
-type WrapStepAction func(name string, next StepAction) StepAction
+// The operation carries immutable values supplied by this invocation only.
+type WrapStepAction func(operation Operation, next StepAction) StepAction
 
 // WrapSetupAction wraps a named setup action before it executes.
-type WrapSetupAction func(name string, next SetupAction) SetupAction
+// The operation carries immutable values supplied by this invocation only.
+type WrapSetupAction func(operation Operation, next SetupAction) SetupAction
 
 // WrapTeardownAction wraps a named teardown action before it executes.
-type WrapTeardownAction func(name string, next TeardownAction) TeardownAction
+// The operation carries immutable values supplied by this invocation only.
+type WrapTeardownAction func(operation Operation, next TeardownAction) TeardownAction
 
 // SinkLogAction receives a structured Log.
 type SinkLogAction func(l Log)
@@ -170,10 +173,10 @@ func (r *Runtime) EmitArtefactSink(s SinkArtefactAction) {
 }
 
 // step runs a named action through registered step wrappers.
-func (r *Runtime) step(name string, fn func()) {
+func (r *Runtime) step(operation Operation, fn func()) {
 	wrapped := fn
 	for i := len(r.StepWraps) - 1; i >= 0; i-- {
-		wrapped = r.StepWraps[i](name, wrapped)
+		wrapped = r.StepWraps[i](operation, wrapped)
 	}
 
 	wrapped()
@@ -190,19 +193,19 @@ func (r *Runtime) test(c *Config, action TestAction) {
 }
 
 // setup runs a named action through registered setup wrappers.
-func (r *Runtime) setup(name string, fn func()) {
+func (r *Runtime) setup(operation Operation, fn func()) {
 	wrapped := fn
 	for i := len(r.SetupWraps) - 1; i >= 0; i-- {
-		wrapped = r.SetupWraps[i](name, wrapped)
+		wrapped = r.SetupWraps[i](operation, wrapped)
 	}
 	wrapped()
 }
 
 // teardown runs a named action through registered teardown wrappers.
-func (r *Runtime) teardown(name string, fn func()) {
+func (r *Runtime) teardown(operation Operation, fn func()) {
 	wrapped := fn
 	for i := len(r.TeardownWraps) - 1; i >= 0; i-- {
-		wrapped = r.TeardownWraps[i](name, wrapped)
+		wrapped = r.TeardownWraps[i](operation, wrapped)
 	}
 	wrapped()
 }

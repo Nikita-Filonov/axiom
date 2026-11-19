@@ -423,9 +423,9 @@ func TestCache_ResourceAndOrdinaryFixture_PreserveSuiteLifecycle(t *testing.T) {
 		axiom.WithRunnerResources(cacheResource),
 		axiom.WithRunnerFixtures(factory, fixture),
 		axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
-			cfg.Runtime.EmitSetupWrap(func(name string, next axiom.SetupAction) axiom.SetupAction {
+			cfg.Runtime.EmitSetupWrap(func(operation axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 				return func() {
-					setups = append(setups, cfg.Case.Name+":"+name)
+					setups = append(setups, cfg.Case.Name+":"+operation.Name())
 					next()
 				}
 			})

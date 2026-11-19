@@ -423,9 +423,9 @@ var UsersRunner = axiom.NewRunner(
 			}
 		}),
 
-		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+		axiom.WithRuntimeStepWrap(func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 			return func() {
-				fmt.Println("[runner] step:", name)
+				fmt.Println("[runner] step:", operation.Name())
 				next()
 			}
 		}),

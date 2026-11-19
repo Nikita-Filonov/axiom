@@ -1,189 +1,164 @@
 # 📘 Runtime
 
-A `Runtime` defines how tests, steps, logs, artefacts, and raw events are executed and intercepted at runtime.
-
-Unlike `Runner` and `Case`, which are declarative, a `Runtime` is purely behavioral. It contains execution middleware (
-wraps) and sinks that observe or instrument test execution.
-
-A `Runtime` is not executed directly. It is merged from `Runner` and `Case`, then invoked indirectly via `Config` during
-test execution.
+`Runtime` connects test execution to wrappers and sinks. Wrappers surround an action; sinks receive logs, assertions,
+artefacts, or events. Use them to add reporting, logging, or instrumentation to a test.
 
 ## 📑 Table of Contents
 
-- [What Runtime Controls](#what-runtime-controls)
-- [Lifecycle Placement](#lifecycle-placement)
-- [Per-attempt lifecycle](#per-attempt-lifecycle)
-- [Defining Runtime Behavior](#defining-runtime-behavior)
-- [Example](#example)
+- [Configuring runtime](#configuring-runtime)
+- [Wrappers and sinks](#wrappers-and-sinks)
+- [Execution order](#execution-order)
+- [Operation values](#operation-values)
+- [Scope and ownership](#scope-and-ownership)
 
----
+## Configuring runtime
 
-## What Runtime Controls
-
-A `Runtime` provides these extension points:
-
-| Capability         | Description                                                        |
-|--------------------|--------------------------------------------------------------------|
-| **TestWraps**      | Middleware around the full per-attempt test lifecycle               |
-| **StepWraps**      | Middleware around each `cfg.Step(...)`                              |
-| **SetupWraps**     | Middleware around each immediate `cfg.Setup(...)` operation         |
-| **TeardownWraps**  | Middleware around each immediate `cfg.Teardown(...)` operation      |
-| **LogSinks**       | Receivers of structured logs emitted via `cfg.Log(...)`             |
-| **EventSinks**     | Receivers of raw events emitted via `cfg.Event(...)`                |
-| **AssertSinks**    | Receivers of structured assertions emitted via `cfg.Assert(...)`    |
-| **ArtefactSinks**  | Receivers of artefacts emitted via `cfg.Artefact(...)`              |
-
-All runtime behavior is **additive and ordered**. Multiple runtimes (`Runner` + `Case`) are merged deterministically.
-
-## Lifecycle Placement
-
-```text
-Runner Runtime
-      ↓
-Case Runtime
-      ↓
-Merged Runtime
-      ↓
-Config
-      ↓
-cfg.Test / cfg.Step / cfg.Log / cfg.Event / cfg.Artefact
-```
-
-- `Runner` runtime is applied first
-- `Case` runtime is applied after
-- wraps are executed outer → inner
-- sinks are invoked in registration order
-
-## Per-attempt lifecycle
-
-`TestWraps` enclose the whole executable lifecycle of one attempt, not only the user action:
-
-```text
-case.start event
-TestWrap enter
-  BeforeTest hooks
-  test action
-  AfterTest hooks
-  fixture cleanups (LIFO)
-TestWrap exit
-case.finish event
-```
-
-This boundary allows a runtime plugin to keep attempt-scoped state active while hooks and fixture cleanups emit logs,
-steps, assertions, or artefacts. Reporting plugins can therefore accept final attachments from a fixture cleanup before
-they close the test result.
-
-`cfg.Setup(name, fn)` and `cfg.Teardown(name, fn)` are execution primitives, not schedulers. Both run `fn` immediately.
-To schedule teardown automatically, return a cleanup from a fixture and optionally decorate that cleanup with
-`cfg.Teardown`:
+Register shared behavior on a `Runner` and case-specific behavior on a `Case`:
 
 ```go
-func ReportFixture(cfg *axiom.Config) (any, func(), error) {
-	report := NewReport()
-
-	return report, func() {
-		cfg.Teardown("finalize report", func() {
-			report.Finalize(cfg)
-		})
-	}, nil
-}
-```
-
-If the test action or a `BeforeTest` hook panics, Axiom still runs `AfterTest` and fixture cleanups inside the active
-wrap, then records the panic as a case failure. Panics raised by `AfterTest` or fixture cleanup also unwind through the
-active wraps, but retain their historical behavior and propagate to the caller unchanged. `SkipNow` and `FailNow`
-still execute the deferred lifecycle before the attempt goroutine exits.
-
-## Defining Runtime Behavior
-
-`Runtime` behavior is configured using `RuntimeOptions`:
-
-```go
-type RuntimeOption func(*Runtime)
-```
-
-These options are applied via:
-
-- `axiom.WithRunnerRuntime(...)`
-- `axiom.WithCaseRuntime(...)`
-
-## Example
-
-```go
-package example_test
-
-import (
-	"fmt"
-	"testing"
-
-	"github.com/Nikita-Filonov/axiom"
-)
-
-var runner = axiom.NewRunner(
-
-	// -------------------------------------------------------------------------
-	// Runtime configuration
-	// -------------------------------------------------------------------------
-
-	// Runner runtime is copied into every Config built by this runner.
-	// Case runtime is merged after it, so case-level behavior can add more wraps
-	// and sinks without replacing runner-level behavior.
+runner := axiom.NewRunner(
 	axiom.WithRunnerRuntime(
-
-		// Register middleware around every test action.
-		// The wrapper runs around each attempt, not when the runner is built.
-		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
-			return func(c *axiom.Config) {
-				fmt.Println("[runtime] before test")
-				next(c)
-				fmt.Println("[runtime] after test")
-			}
-		}),
-
-		// Register middleware around every cfg.Step(name, ...).
-		// The step name is passed to the wrapper so reporters can preserve structure.
-		axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+		axiom.WithRuntimeStepWrap(func(step axiom.Operation, next axiom.StepAction) axiom.StepAction {
 			return func() {
-				fmt.Println("[runtime] step:", name)
+				fmt.Println("step:", step.Name())
 				next()
 			}
 		}),
-
-		// Log sinks observe structured logs emitted via cfg.Log(...).
-		axiom.WithRuntimeLogSink(func(l axiom.Log) {
-			fmt.Println("[log]", l.Level, l.Text)
-		}),
-
-		// Event sinks observe raw facts emitted via cfg.Event(...), by the attempt
-		// lifecycle, and by helpers such as cfg.Step(...).
-		axiom.WithRuntimeEventSink(func(e axiom.Event) {
-			fmt.Println("[event]", e.Type, e.Name, e.Message)
-		}),
-
-		// Artefact sinks receive structured test outputs emitted via cfg.Artefact(...).
-		axiom.WithRuntimeArtefactSink(func(a axiom.Artefact) {
-			fmt.Println("[artefact]", a.Type, a.Name)
+		axiom.WithRuntimeLogSink(func(log axiom.Log) {
+			fmt.Println(log.Level, log.Text)
 		}),
 	),
 )
 
-func TestRuntimeExample(t *testing.T) {
-	// Case options are merged with runner options into a Config for this test.
-	c := axiom.NewCase(
-		axiom.WithCaseName("runtime demo"),
-	)
-
-	runner.RunCase(t, c, func(cfg *axiom.Config) {
-		// This log reaches the log sink above and also emits a raw "log" event.
-		cfg.Log(axiom.NewInfoLog("starting test"))
-
-		cfg.Step("do work", func() {
-			// This artefact reaches the artefact sink above and also emits a raw
-			// "artefact" event.
-			cfg.Artefact(
-				axiom.NewTextArtefact("payload", "hello world"),
-			)
-		})
+runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("create user")), func(cfg *axiom.Config) {
+	cfg.Step("Send request", func() {
+		cfg.Log(axiom.NewInfoLog("request sent"))
 	})
+})
+```
+
+`WithCaseRuntime` accepts the same options. A plugin registers callbacks on the attempt's `cfg.Runtime` using methods
+such as `EmitStepWrap` and `EmitLogSink`.
+
+## Wrappers and sinks
+
+| Registration              | Receives                           | Purpose                                     |
+|---------------------------|------------------------------------|---------------------------------------------|
+| `WithRuntimeTestWrap`     | `next TestAction`                  | Surround the attempt's executable lifecycle |
+| `WithRuntimeStepWrap`     | `Operation`, `next StepAction`     | Surround a `cfg.Step` action                |
+| `WithRuntimeSetupWrap`    | `Operation`, `next SetupAction`    | Surround a `cfg.Setup` action               |
+| `WithRuntimeTeardownWrap` | `Operation`, `next TeardownAction` | Surround a `cfg.Teardown` action            |
+| `WithRuntimeLogSink`      | `Log`                              | Receive structured messages                 |
+| `WithRuntimeAssertSink`   | `Assert`                           | Receive assertion facts                     |
+| `WithRuntimeArtefactSink` | `Artefact`                         | Receive attachments and other outputs       |
+| `WithRuntimeEventSink`    | `Event`                            | Receive raw execution facts                 |
+
+A wrapper returns an action and calls `next` inside it. Use `defer` for work that must run when the action exits,
+including during panic or `FailNow`:
+
+```go
+axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
+	return func(cfg *axiom.Config) {
+		started := time.Now()
+		defer func() { fmt.Println("elapsed:", time.Since(started)) }()
+		next(cfg)
+	}
+})
+```
+
+`Setup` and `Teardown` execute immediately at the call site. To schedule work before or after a test, use
+[hooks](../hooks) or [fixture cleanup](../fixture).
+
+## Execution order
+
+Each attempt receives runtime callbacks merged from the Runner and Case, followed by callbacks registered by plugins.
+Earlier wrappers are outermost; sinks receive values in registration order.
+
+Test wrappers enclose test hooks and fixture cleanup:
+
+```text
+case.start event
+  TestWrap enter
+    BeforeTest hooks
+    test action
+    AfterTest hooks
+    fixture cleanups (LIFO)
+  TestWrap exit
+case.finish event
+```
+
+This keeps attempt-level instrumentation active while hooks and cleanups emit steps or artefacts. `AfterTest` and
+fixture cleanup run even if the body or `BeforeTest` panics. Axiom records a recovered body or `BeforeTest` panic as a
+case failure. Panics from `AfterTest` or fixture cleanup propagate to the caller. Deferred cleanup also runs on
+`SkipNow` and `FailNow`.
+
+Step wrappers surround the step action, inside its hooks:
+
+```text
+step.start event
+  BeforeStep hooks
+    StepWrap enter
+      step action
+    StepWrap exit
+  AfterStep hooks
+step.finish event
+```
+
+Setup and teardown have their own wrappers and lifecycle events, without step hooks.
+See [events](../events) for the event stream and [hooks](../hooks) for lifecycle callbacks.
+
+## Operation values
+
+`Operation` describes one `Step`, `Setup`, or `Teardown` call. It contains a human-readable name and optional typed
+values. A library can use these values to describe an operation's purpose independently of its display text.
+
+Define a key in the library that owns its meaning, using a package-qualified name:
+
+```go
+var roleKey = axiom.NewOperationKey[string]("example/validation.role")
+
+cfg.Step("Verify response", check, roleKey.Value("check"))
+cfg.Setup("Prepare data", prepare, roleKey.Value("prepare"))
+cfg.Teardown("Remove data", cleanup, roleKey.Value("cleanup"))
+```
+
+Values are optional: `cfg.Step(name, action)` is sufficient for an ordinary named step.
+An installed plugin reads values from the operation supplied to its wrapper:
+
+```go
+func LoggingPlugin() axiom.Plugin {
+	return func(cfg *axiom.Config) {
+		cfg.Runtime.EmitStepWrap(func(step axiom.Operation, next axiom.StepAction) axiom.StepAction {
+			return func() {
+				if role, ok := roleKey.TryGet(step); ok && role == "check" {
+					cfg.Log(axiom.NewInfoLog(step.Name()))
+				}
+				next()
+			}
+		})
+	}
 }
 ```
+
+Keys with the same name and Go type identify the same value. Use `TryGet` for optional values and `Get` when a value
+is required:
+
+| Key method              | Free function                        | Result                      |
+|-------------------------|--------------------------------------|-----------------------------|
+| `key.Value(value)`      | `WithOperationValue(key, value)`     | Option for one operation    |
+| `key.TryGet(operation)` | `GetOperationValue(operation, key)`  | Value and presence flag     |
+| `key.Get(operation)`    | `MustOperationValue(operation, key)` | Value, or panic when absent |
+
+## Scope and ownership
+
+Operation values belong to one call. Nested operations receive their own values without inheritance. Options are
+applied in order before lifecycle events and hooks; the last value for a key wins. All wrappers for that call receive
+the resulting operation.
+
+An operation's name and value entries are immutable, so wrappers can retain the operation after execution. Payloads
+are stored without deep copying: shared maps, slices, and pointers remain the caller's responsibility. Concurrent calls
+have independent operation storage; shared payloads and callbacks still need appropriate synchronization.
+
+Use operation values for per-call information and `Config.Local` or `Config.Context` for attempt-level state.
+A plugin can capture its installation `cfg` when it needs that state. Operation values are delivered to wrappers;
+hooks, logs, and events do not automatically receive them.

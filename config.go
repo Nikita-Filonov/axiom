@@ -55,7 +55,10 @@ func (c *Config) Log(l Log) {
 
 // Step executes fn as a named step through hooks and runtime wrappers, emitting
 // start, finish, and panic facts as appropriate.
-func (c *Config) Step(name string, fn func()) {
+// Options supply invocation-local values to runtime wrappers; nested operations
+// do not inherit them. Hooks and events continue to receive the name only.
+func (c *Config) Step(name string, fn func(), options ...OperationOption) {
+	operation := newOperation(name, options...)
 	c.Event(NewEvent(EventTypeStepStart, WithEventName(name)))
 	defer func() {
 		if r := recover(); r != nil {
@@ -71,7 +74,7 @@ func (c *Config) Step(name string, fn func()) {
 	}()
 
 	c.Hooks.applyBeforeStep(c, name)
-	c.Runtime.step(name, fn)
+	c.Runtime.step(operation, fn)
 }
 
 // test runs one attempt through runtime test wraps, hooks, and fixture cleanup.
@@ -115,7 +118,9 @@ func (c *Config) Event(e Event) { c.Runtime.event(e) }
 
 // Setup executes fn immediately as a named setup operation through runtime
 // wrappers. It does not schedule fn for later execution.
-func (c *Config) Setup(name string, fn func()) {
+// Options supply invocation-local values to runtime wrappers without inheritance.
+func (c *Config) Setup(name string, fn func(), options ...OperationOption) {
+	operation := newOperation(name, options...)
 	c.Event(NewEvent(EventTypeSetupStart, WithEventName(name)))
 	defer func() {
 		if r := recover(); r != nil {
@@ -129,12 +134,14 @@ func (c *Config) Setup(name string, fn func()) {
 		c.Event(NewEvent(EventTypeSetupFinish, WithEventName(name)))
 	}()
 
-	c.Runtime.setup(name, fn)
+	c.Runtime.setup(operation, fn)
 }
 
 // Teardown executes fn immediately as a named teardown operation through
 // runtime wrappers. It does not schedule fn for end-of-attempt cleanup.
-func (c *Config) Teardown(name string, fn func()) {
+// Options supply invocation-local values to runtime wrappers without inheritance.
+func (c *Config) Teardown(name string, fn func(), options ...OperationOption) {
+	operation := newOperation(name, options...)
 	c.Event(NewEvent(EventTypeTeardownStart, WithEventName(name)))
 	defer func() {
 		if r := recover(); r != nil {
@@ -148,7 +155,7 @@ func (c *Config) Teardown(name string, fn func()) {
 		c.Event(NewEvent(EventTypeTeardownFinish, WithEventName(name)))
 	}()
 
-	c.Runtime.teardown(name, fn)
+	c.Runtime.teardown(operation, fn)
 }
 
 // Assert emits a as an Event and dispatches it to runtime assert sinks. Axiom

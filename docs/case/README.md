@@ -105,9 +105,9 @@ func TestCaseExample(t *testing.T) {
 			}),
 
 			// Wrap steps
-			axiom.WithRuntimeStepWrap(func(name string, next axiom.StepAction) axiom.StepAction {
+			axiom.WithRuntimeStepWrap(func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction {
 				return func() {
-					fmt.Println(">> step:", name)
+					fmt.Println(">> step:", operation.Name())
 					next()
 				}
 			}),

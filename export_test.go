@@ -78,11 +78,11 @@ func (r *Resources) SetCleanups(cleanups ...func(*Runner)) { r.cleanups = cleanu
 
 func (r *Runtime) Test(c *Config, action TestAction) { r.test(c, action) }
 
-func (r *Runtime) Step(name string, fn func()) { r.step(name, fn) }
+func (r *Runtime) Step(name string, fn func()) { r.step(newOperation(name), fn) }
 
-func (r *Runtime) Setup(name string, fn func()) { r.setup(name, fn) }
+func (r *Runtime) Setup(name string, fn func()) { r.setup(newOperation(name), fn) }
 
-func (r *Runtime) Teardown(name string, fn func()) { r.teardown(name, fn) }
+func (r *Runtime) Teardown(name string, fn func()) { r.teardown(newOperation(name), fn) }
 
 func (r *Runtime) Log(l Log) { r.log(l) }
 

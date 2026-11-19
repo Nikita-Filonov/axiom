@@ -5,6 +5,32 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Core versions
 
+### v1.21.0 — 2026-11-19
+
+- Added immutable invocation-local `Operation` values for `Step`, `Setup`, and `Teardown`, with typed `OperationKey`
+  handles and optional `WithOperationValue` arguments. Nested operations do not inherit values.
+- **Breaking:** step, setup, and teardown runtime wrappers now receive `Operation` instead of a name string. Use
+  `operation.Name()` to read the name. Ordinary two-argument operation calls still work, but interfaces and method-value
+  assignments must account for the new variadic `...OperationOption` parameter.
+- Updated `testallure` to the new wrapper signatures. Hook order, event payloads, and action signatures are unchanged.
+
+#### Wrapper migration
+
+Replace the first `string` parameter with `axiom.Operation` in step, setup, and teardown wrappers, then use
+`operation.Name()` wherever the name is needed:
+
+```go
+// Before:
+func(name string, next axiom.StepAction) axiom.StepAction
+// After:
+func(operation axiom.Operation, next axiom.StepAction) axiom.StepAction
+```
+
+Calls such as `cfg.Step(name, action)` still compile. Update interfaces and method-value assignments that declare the
+old exact method signature to include `...axiom.OperationOption`, or adapt with
+`func(name string, fn func()) { cfg.Step(name, fn) }`. The same applies to `Setup` and `Teardown`.
+Plugin releases using these wrappers must depend on a core release with the Operation API.
+
 ### v1.20.0 — 2026-10-31
 
 - Clarified that a failed retry attempt keeps the Go test run failed even if a later attempt passes, and documented

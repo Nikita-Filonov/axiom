@@ -80,6 +80,8 @@ end-of-attempt scheduling comes from the cleanup returned by a fixture.
 ## Named operations vs lifecycle
 
 `cfg.Setup(name, fn)` and `cfg.Teardown(name, fn)` run `fn` at the point where they are called, just like `cfg.Step`.
+All three accept optional `OperationOption` arguments for invocation-local values read by runtime wrappers.
+See [operation values](../runtime#operation-values) for typed keys and their scope.
 They emit setup/teardown events and pass the action through the corresponding runtime wrappers, so reporters can show
 named setup and teardown operations. Calling `cfg.Teardown` in the test body runs its callback **before** the rest of
 that body, not after it.

@@ -706,14 +706,14 @@ func TestConfig_Test_RuntimeWrapKeepsSetupAndTeardownMiddlewareActiveForFixtureL
 					next(current)
 				}
 			}),
-			axiom.WithRuntimeSetupWrap(func(_ string, next axiom.SetupAction) axiom.SetupAction {
+			axiom.WithRuntimeSetupWrap(func(_ axiom.Operation, next axiom.SetupAction) axiom.SetupAction {
 				return func() {
 					order = append(order, "setup-wrap-before")
 					defer func() { order = append(order, "setup-wrap-after") }()
 					next()
 				}
 			}),
-			axiom.WithRuntimeTeardownWrap(func(_ string, next axiom.TeardownAction) axiom.TeardownAction {
+			axiom.WithRuntimeTeardownWrap(func(_ axiom.Operation, next axiom.TeardownAction) axiom.TeardownAction {
 				return func() {
 					order = append(order, "teardown-wrap-before")
 					defer func() { order = append(order, "teardown-wrap-after") }()
