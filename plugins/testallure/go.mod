@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/Nikita-Filonov/axiom v1.21.0
-	github.com/allure-framework/allure-go/commons v1.2.1
+	github.com/allure-framework/allure-go/commons v1.3.1
 	github.com/stretchr/testify v1.11.1
 )
 

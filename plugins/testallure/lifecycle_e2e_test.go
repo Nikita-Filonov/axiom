@@ -81,6 +81,26 @@ func TestPlugin_FailedCaseWritesFailedResult(t *testing.T) {
 	assertResultAttachment(t, result, "failed-case-cleanup.txt")
 }
 
+func TestPlugin_LaterFailureMarksNestedStepAndParentAsFailed(t *testing.T) {
+	results := runLifecycleProbe(t, "successive-step-failures", true)
+	require.Len(t, results, 1)
+
+	result := results[0]
+	assert.Equal(t, model.StatusFailed, result.Status)
+	require.Len(t, result.Steps, 2)
+
+	firstFailure := result.Steps[0]
+	assert.Equal(t, "first failure", firstFailure.Name)
+	assert.Equal(t, model.StatusFailed, firstFailure.Status)
+
+	parent := result.Steps[1]
+	assert.Equal(t, "parent after earlier failure", parent.Name)
+	assert.Equal(t, model.StatusFailed, parent.Status)
+	require.Len(t, parent.Steps, 1)
+	assert.Equal(t, "nested failure", parent.Steps[0].Name)
+	assert.Equal(t, model.StatusFailed, parent.Steps[0].Status)
+}
+
 func TestPlugin_FixtureSetupFailureRecordsMessage(t *testing.T) {
 	results := runLifecycleProbe(t, "fixture-setup-fail", true)
 	require.Len(t, results, 1)
@@ -187,6 +207,8 @@ func TestPlugin_LifecycleProbe(t *testing.T) {
 		runParallelRetryProbe(t)
 	case "failed":
 		runFailedProbe(t)
+	case "successive-step-failures":
+		runSuccessiveStepFailuresProbe(t)
 	case "fixture-setup-fail":
 		runFixtureSetupFailProbe(t)
 	case "assert-fail":
@@ -309,6 +331,26 @@ func runFailedProbe(t *testing.T) {
 				"actual":   8,
 			}))
 			cfg.SubT.Error("inventory mismatch: expected 7, got 8")
+		})
+	})
+}
+
+func runSuccessiveStepFailuresProbe(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(testallure.Plugin()),
+	)
+	testCase := axiom.NewCase(
+		axiom.WithCaseName("successive step failures are reported"),
+	)
+
+	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
+		cfg.Step("first failure", func() {
+			testallure.T(cfg).Errorf("first intentional failure")
+		})
+		cfg.Step("parent after earlier failure", func() {
+			cfg.Step("nested failure", func() {
+				testallure.T(cfg).Errorf("second intentional failure")
+			})
 		})
 	})
 }

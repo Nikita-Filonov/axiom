@@ -372,7 +372,7 @@ func writeShowcaseMetadata(t *testing.T, resultsDir string) {
 		"Application=Axiom demo shop\n" +
 			"Environment=showcase\n" +
 			"Go=1.25.5\n" +
-			"Allure.Adapter=allure-framework/allure-go v1.2.1\n",
+			"Allure.Adapter=allure-framework/allure-go v1.3.1\n",
 	)
 	require.NoError(
 		t,

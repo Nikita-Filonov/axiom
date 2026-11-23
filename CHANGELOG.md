@@ -170,6 +170,11 @@ Plugin releases using these wrappers must depend on a core release with the Oper
 
 ## Independently versioned plugins
 
+### testallure v0.43.0 — 2026-11-23
+
+- Updated `allure-go/commons` from `v1.2.1` to `v1.3.1`. Failures reported through `testallure.T(cfg)` now mark
+  the active nested step and its parent steps as failed even when the test had already failed earlier.
+
 ### testjunit v0.4.0 — 2026-11-15
 
 - **Breaking:** `Plugin` now accepts options only. Replace `Plugin(reporter, options...)` with
@@ -287,11 +292,11 @@ Plugin releases using these wrappers must depend on a core release with the Oper
 ### Plugin release index
 
 The table shows the first plugin version since 2026-03-26 and the latest version
-documented here as of 2026-11-15. Plugin versions are independent of the core version.
+documented here as of 2026-11-23. Plugin versions are independent of the core version.
 
 | Plugin           | First version in period | Latest version     |
 |------------------|-------------------------|--------------------|
-| `testallure`     | `v0.13.0`               | `v0.41.0`          |
+| `testallure`     | `v0.13.0`               | `v0.43.0`          |
 | `testassert`     | `v0.10.0`               | `v0.32.0`          |
 | `testenv`        | `v0.1.0`                | `v0.5.0`           |
 | `testexplain`    | `v0.1.0`                | `v0.20.0`          |
