@@ -20,9 +20,9 @@ type AttemptState string
 const (
 	// StateRunning has no completed outcome yet.
 	StateRunning AttemptState = "running"
-	// StateFinished has an outcome that has not been rechecked during parent cleanup.
+	// StateFinished has a provisional outcome not yet confirmed by the terminal sink.
 	StateFinished AttemptState = "finished"
-	// StateFinalized has been rechecked during parent cleanup.
+	// StateFinalized has been confirmed by the terminal sink.
 	StateFinalized AttemptState = "finalized"
 )
 

@@ -51,7 +51,7 @@ One file per attempt. The same path is replaced as its [state changes](LIFECYCLE
 |-----------------------------|--------------------------------------------------------------------------------------------|
 | `schema_version`            | Format version; check before reading fields                                                |
 | `process_id`                | Random namespace shared by plugin instances in one process; not an OS PID                  |
-| `run_id`                    | `Config.Execution.ID`; shared by retries of one `RunCase` call                             |
+| `run_id`                    | `Config.Attempt.RunID`; shared by retries of one `RunCase` call                            |
 | `number`                    | One-based attempt number; a policy skip is attempt 1                                       |
 | `revision`                  | Increases on each snapshot; failed writes can leave gaps                                   |
 | `state`                     | `running`, `finished`, or `finalized`; independent of pass/fail outcome                    |

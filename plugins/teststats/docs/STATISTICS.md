@@ -33,7 +33,7 @@ func TestLogin(t *testing.T) {
 		),
 	)
 
-	// Register before RunCase: this runs after the plugin's parent cleanups.
+	// Register before RunCase: this runs after Axiom's later completion cleanup.
 	t.Cleanup(func() {
 		summary := stats.Summary()
 		fmt.Println("runs:", summary.Runs.Total, "passed:", summary.Runs.Passed)

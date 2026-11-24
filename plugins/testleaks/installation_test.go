@@ -40,12 +40,12 @@ func TestPlugin_ReinstallationPreservesTrackedResources(t *testing.T) {
 
 func TestPlugin_PlanningConfigDoesNotInstallState(t *testing.T) {
 	plugin := Plugin(WithoutGoroutines())
-	cfg := &axiom.Config{Execution: axiom.Execution{ID: "run"}}
+	cfg := &axiom.Config{Attempt: axiom.Attempt{RunID: "run"}}
 	plugin(cfg)
 	assert.Empty(t, cfg.Runtime.TestWraps)
 	assert.PanicsWithValue(t, "testleaks: plugin not installed", func() { Track(cfg, "resource") })
 
-	cfg.Execution.Attempt = 1
+	cfg.Attempt.Number = 1
 	plugin(cfg)
 	plugin(cfg)
 	assert.Len(t, cfg.Runtime.TestWraps, 1)

@@ -224,7 +224,7 @@ func TestStatsLifecycleProbe(t *testing.T) {
 				return
 			}
 			cfg.Runtime.EmitEventSink(func(event axiom.Event) {
-				if event.Type == axiom.EventTypeCaseStart && cfg.Execution.Attempt == 1 {
+				if event.Type == axiom.EventTypeCaseStart && cfg.Attempt.Number == 1 {
 					// Registered before teststats' cleanup, so it fails the attempt
 					// after the attempt has already been recorded.
 					cfg.T().Cleanup(func() { cfg.T().Error("late cleanup") })
@@ -238,7 +238,7 @@ func TestStatsLifecycleProbe(t *testing.T) {
 			)(cfg)
 		}),
 		axiom.WithRunnerHooks(axiom.WithBeforeTest(func(cfg *axiom.Config) {
-			if mode == "before-panic" && cfg.Execution.Attempt == 1 {
+			if mode == "before-panic" && cfg.Attempt.Number == 1 {
 				panic("before test panic")
 			}
 		}), axiom.WithAfterTest(func(*axiom.Config) {
@@ -247,11 +247,11 @@ func TestStatsLifecycleProbe(t *testing.T) {
 			}
 		})),
 		axiom.WithRunnerFixture("fixture", func(cfg *axiom.Config) (any, func(), error) {
-			if cfg.Execution.Attempt == 1 && mode == "fixture-error" {
+			if cfg.Attempt.Number == 1 && mode == "fixture-error" {
 				return nil, nil, errors.New("fixture setup")
 			}
 			return 1, func() {
-				if cfg.Execution.Attempt == 1 && mode == "fixture-cleanup" {
+				if cfg.Attempt.Number == 1 && mode == "fixture-cleanup" {
 					cfg.T().Error("fixture cleanup")
 				}
 				if mode == "fixture-panic" {
@@ -275,7 +275,7 @@ func TestStatsLifecycleProbe(t *testing.T) {
 	)
 	runner.RunCase(t, testCase, func(cfg *axiom.Config) {
 		axiom.GetFixture[int](cfg, "fixture")
-		if cfg.Execution.Attempt > 1 && mode != "exhausted" {
+		if cfg.Attempt.Number > 1 && mode != "exhausted" {
 			if mode == "fail-skip" {
 				cfg.T().Skip("second attempt skipped")
 			}

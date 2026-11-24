@@ -70,8 +70,8 @@ func (r *recorder) begin(skipReason string) {
 	if r.artifactRunID == "" && len(r.outputs) > 0 {
 		r.artifactRunID = rand.Text()
 	}
-	// Axiom registers no cleanup on the attempt's T before case.start or
-	// case.skip, so this one runs after everything the attempt registers.
+	// Register before wrappers and test actions, so their cleanups run first.
+	// The engine's earlier cleanup only records a timestamp.
 	t.Cleanup(func() { r.finish(t) })
 	r.mu.Unlock()
 	r.publish(StateRunning)
@@ -136,10 +136,9 @@ func (r *recorder) publish(state AttemptState) {
 func newAttempt(cfg *axiom.Config, t *testing.T, skipReason string) *Attempt {
 	return &Attempt{
 		ProcessID: processID,
-		RunID:     cfg.Execution.ID,
-		// A planning Config, which observes a skip applied before parallel
-		// retries start, and a Config constructed outside RunCase have attempt zero.
-		Number:     max(cfg.Execution.Attempt, 1),
+		RunID:     cfg.Attempt.RunID,
+		// Configs constructed outside RunCase can still have attempt zero.
+		Number:     max(cfg.Attempt.Number, 1),
 		CaseID:     cfg.Case.ID,
 		Name:       cfg.Case.Name,
 		TestName:   t.Name(),

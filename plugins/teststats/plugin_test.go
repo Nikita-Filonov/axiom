@@ -176,3 +176,19 @@ func TestPlugin_DuplicateInstallationAndIndependentCollectors(t *testing.T) {
 	require.Len(t, two.Attempts(), 1)
 	assert.Equal(t, one.Attempts()[0].RunID, two.Attempts()[0].RunID)
 }
+
+func TestPluginExclusionIsNotASkippedResult(t *testing.T) {
+	stats := teststats.NewStats()
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(teststats.Plugin(teststats.WithStats(stats))))
+	runner.RunCase(t, axiom.NewCase(axiom.WithCasePlugins(func(c *axiom.Config) { c.Attempt.Exclude("CO") })), func(c *axiom.Config) {
+		c.T().Error("excluded body ran")
+	})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseSkip(axiom.SkipBecause("feature disabled"))), func(c *axiom.Config) {
+		c.T().Error("skipped body ran")
+	})
+	runner.RunCase(t, axiom.NewCase(), func(*axiom.Config) {})
+	attempts := stats.Attempts()
+	require.Len(t, attempts, 2)
+	assert.Equal(t, teststats.StatusSkipped, attempts[0].Status)
+	assert.Equal(t, teststats.StatusPassed, attempts[1].Status)
+}
