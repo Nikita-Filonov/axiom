@@ -12,6 +12,12 @@ func (a *attempt) recordCleanupTime() {
 // cleanup. Native cleanup alone is too early: testing may still mark cleanup
 // panics or data races as failures.
 func (a *attempt) finalize() {
+	// A sibling cleanup panic can run parent cleanup while this callback is
+	// still active. That is process teardown, not native completion of this T.
+	if a.t != nil && !a.callbackReturned.Load() {
+		return
+	}
+
 	a.mu.Lock()
 	if a.finalResult != nil {
 		a.mu.Unlock()

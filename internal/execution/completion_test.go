@@ -6,6 +6,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAttemptFinalizeIgnoresActiveCallback(t *testing.T) {
+	completed := false
+	a := &attempt{
+		t: &testing.T{},
+		spec: Spec{Complete: func(Result) {
+			completed = true
+		}},
+	}
+
+	a.finalize()
+
+	_, ready := a.result()
+	assert.False(t, ready)
+	assert.False(t, completed)
+}
+
 func TestAttemptShouldRetry(t *testing.T) {
 	for _, tc := range []struct {
 		name     string

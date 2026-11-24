@@ -8,7 +8,7 @@ import (
 // Run schedules a logical run and preserves ordinary Go subtest names. Only
 // parallel retries need a container: parallelize it once and await its attempts.
 // Run can return while a parallel test is suspended. Final results are delivered
-// to Spec.Observe after native completion, never inferred from an early return.
+// to Spec.Complete after native completion, never inferred from an early return.
 func Run(parent *testing.T, plan Plan) {
 	r := runner{plan: plan}
 	r.run(parent)
@@ -53,7 +53,7 @@ func (r runner) runAttempts(parent *testing.T, spec Spec, sequential bool) {
 		a := &attempt{spec: spec}
 		a.run(parent)
 
-		if number == r.plan.MaxAttempts || !a.shouldRetry() {
+		if number >= r.plan.MaxAttempts || !a.shouldRetry() {
 			return
 		}
 
