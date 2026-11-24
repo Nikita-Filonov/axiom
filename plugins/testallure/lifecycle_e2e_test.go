@@ -192,15 +192,30 @@ func TestPlugin_FixtureCleanupPanicStillWritesEarlierArtefact(t *testing.T) {
 	assertResultAttachment(t, result, "before-cleanup-panic.txt")
 }
 
-func TestPlugin_PreExecutionCaseSkipDoesNotEnterAllureLifecycle(t *testing.T) {
+func TestPlugin_PreExecutionCaseSkipWritesSkippedResult(t *testing.T) {
 	results := runLifecycleProbe(t, "case-skip", false)
-	assert.Empty(t, results)
+	require.Len(t, results, 1)
+	assert.Equal(t, model.StatusSkipped, results[0].Status)
+}
+
+func TestPlugin_SelectionReportsOnlySelectedCases(t *testing.T) {
+	results := runLifecycleProbe(t, "selection", false)
+	require.Len(t, results, 2)
+	byName := make(map[string]model.TestResult)
+	for _, result := range results {
+		byName[result.Name] = result
+	}
+	assert.Equal(t, model.StatusSkipped, byName["MX disabled"].Status)
+	assert.Equal(t, model.StatusPassed, byName["MX normal"].Status)
+	assert.NotContains(t, byName, "CO excluded")
 }
 
 func TestPlugin_LifecycleProbe(t *testing.T) {
 	switch os.Getenv(lifecycleProbeEnv) {
 	case "":
 		t.Skip("lifecycle helper process")
+	case "selection":
+		runSelectionProbe(t)
 	case "retry":
 		runRetryProbe(t)
 	case "parallel-retry":
@@ -646,4 +661,24 @@ func mustLifecycleJSONArtefact(
 	artefact, err := axiom.NewJSONArtefact(name, value)
 	require.NoError(cfg.SubT, err)
 	return artefact
+}
+
+func runSelectionProbe(t *testing.T) {
+	runner := axiom.NewRunner(
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerRetry(axiom.WithRetryTimes(3)),
+		axiom.WithRunnerPlugins(testallure.Plugin()),
+		axiom.WithRunnerHooks(axiom.WithBeforeTest(func(c *axiom.Config) {
+			assert.Equal(c.T(), "MX normal", c.Case.Name, "disabled cases must not enter hooks")
+		})),
+	)
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("CO excluded"),
+		axiom.WithCasePlugins(func(c *axiom.Config) { c.Attempt.Exclude("country filter") })), func(c *axiom.Config) {
+		c.T().Error("excluded body ran")
+	})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("MX disabled"),
+		axiom.WithCaseSkip(axiom.SkipBecause("feature disabled"))), func(c *axiom.Config) {
+		c.T().Error("disabled body ran")
+	})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("MX normal")), func(*axiom.Config) {})
 }

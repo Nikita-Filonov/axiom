@@ -63,8 +63,10 @@ the same Allure test case and history IDs, allowing Allure to group them as retr
 - **Fixtures:** `commons/gotest` does not expose high-level before/after fixture helpers. Calls to
   `cfg.Setup(...)` and `cfg.Teardown(...)`, including calls made by fixture setup or cleanup, therefore
   appear as regular Steps.
-- **Pre-execution skips:** a runtime skip is reported as an Allure `skipped` result, but
-  `axiom.WithCaseSkip(...)` runs before the Allure lifecycle and produces no result.
+- **Skips and exclusions:** both a runtime skip and `axiom.WithCaseSkip(...)` enter the Allure lifecycle and produce
+  a `skipped` result. Filter exclusions (`cfg.Attempt.Exclude`, including `testtags`) never enter it and produce no result.
+  A declarative skip executes no test hooks or body. Remove any separate `case.skip` result-creation workaround to
+  avoid duplicates. See the core [execution contract](../../docs/execution).
 - **Issue and TMS links:** `Meta.Issues` and `Meta.TestCases` are emitted with the standard `issue`
   and `tms` types. Their identifiers are stored as raw URLs because `allure-go` does not implement
   link-pattern expansion; vanilla Allure reports therefore do not turn them into full links.
