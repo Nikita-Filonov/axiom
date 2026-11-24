@@ -1,42 +1,26 @@
 package axiom
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Nikita-Filonov/axiom/internal/execution"
+)
 
 // This file exposes unexported internals to the axiom_test package.
 
 // Runner lifecycle.
 
-func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config { return r.buildConfig(t, c, Execution{}) }
+func (r *Runner) BuildConfig(t *testing.T, c *Case) *Config { return r.buildConfig(t, c, Attempt{}) }
 
 func (r *Runner) ApplyStart() { r.applyStart() }
 
 func (r *Runner) ApplyFinish() { r.applyFinish() }
 
-// Execution.
-
-var NewExecution = newExecution
-
-func (e Execution) NextAttempt() Execution { return e.nextAttempt() }
-
-var NewCaseExecution = newCaseExecution
-
-func (e *caseExecution) BaseConfig() *Config { return e.baseConfig }
-
-func (e *caseExecution) CaseTemplate() Case { return e.caseTemplate }
-
-func (e *caseExecution) NewConfig(execution Execution) *Config { return e.newConfig(execution) }
-
-func (e *caseExecution) RunAttempts(t *testing.T, policies ...executionPolicy) {
-	e.runAttempts(t, policies...)
-}
-
-func (e *caseExecution) WaitBeforeAttempt(attempt int) { e.waitBeforeAttempt(attempt) }
-
 // Config and hooks.
 
 func (c *Config) ApplyPlugins() { c.applyPlugins() }
 
-func (c *Config) Test(action TestAction) { c.test(action) }
+func (c *Config) Spec(action TestAction) execution.Spec { return c.spec(action) }
 
 func (h *Hooks) ApplyBeforeAll(r *Runner) { h.applyBeforeAll(r) }
 
