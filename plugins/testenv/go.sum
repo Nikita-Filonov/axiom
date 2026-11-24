@@ -1,5 +1,5 @@
-github.com/Nikita-Filonov/axiom v1.21.0 h1:tKfXhUBiPDLd9raf4UJ6Ba5IiHKWRI7+vjvKk4fFWUk=
-github.com/Nikita-Filonov/axiom v1.21.0/go.mod h1:RUo4ZI6z1WaiX8M3pz7ZLjQVQqiid5FGpmRPE/efqTE=
+github.com/Nikita-Filonov/axiom v1.22.0 h1:s9jp84n/y1oi8tpALTgluJPY7bH3zEN03Nhtfn6Zk6w=
+github.com/Nikita-Filonov/axiom v1.22.0/go.mod h1:RUo4ZI6z1WaiX8M3pz7ZLjQVQqiid5FGpmRPE/efqTE=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
