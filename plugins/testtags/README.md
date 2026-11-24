@@ -17,8 +17,8 @@
 
 Filters test execution based on metadata tags using include and exclude rules.
 
-The plugin evaluates test metadata at runtime and decides whether a test should be executed or skipped. It does not
-affect test logic and does not modify execution flow directly.
+The plugin evaluates test metadata during installation and excludes cases that do not match the filter. Explicit
+test disabling remains a separate Axiom skip decision.
 
 ---
 
@@ -29,16 +29,19 @@ At runtime, the plugin:
 - reads tags from test metadata (`cfg.Meta.Tags`)
 - normalizes tags (trimmed, lowercased)
 - applies include and exclude rules
-- marks tests as skipped when rules do not match
+- excludes tests when rules do not match
 
 If a rule fails, the plugin sets:
 
 ```go
-cfg.Skip = axiom.NewSkip(axiom.SkipBecause("..."))
+cfg.Attempt.Exclude("...")
 
 ```
 
-Skipped tests are still visible to other plugins (stats, reporting, etc.).
+Excluded tests remain visible as native Go skips, but produce no Allure, JUnit, or teststats test results. Lifecycle
+consumers can observe `Attempt.Decision.Kind == DecisionExclude` or `EventTypeCaseExcluded`; they need not inspect
+reason strings. A matching case with `WithCaseSkip` remains selected and is reported as skipped. See
+[execution](../../docs/execution).
 
 ---
 
@@ -49,7 +52,7 @@ The plugin can be configured via code, environment variables, or both.
 ### Include / exclude rules
 
 - `Include` — only tests with at least one matching tag are executed
-- `Exclude` — tests with any matching tag are skipped
+- `Exclude` — tests with any matching tag are excluded
 
 Rules are evaluated in the following order:
 
@@ -137,7 +140,7 @@ func TestTagsExample(t *testing.T) {
 	runner.RunCase(t, c, func(cfg *axiom.Config) {
 
 		// If the tag filter does not match,
-		// this test will be skipped before execution.
+		// this test will be excluded before execution.
 		cfg.Step("run", func() {
 			// Test logic goes here
 		})

@@ -19,8 +19,8 @@ func TestPlugin_ExcludeMatch(t *testing.T) {
 
 	p(cfg)
 
-	assert.True(t, cfg.Skip.Enabled)
-	assert.Equal(t, "excluded by tag filter", cfg.Skip.Reason)
+	assert.Equal(t, axiom.DecisionExclude, cfg.Attempt.Decision.Kind)
+	assert.Equal(t, "excluded by tag filter", cfg.Attempt.Decision.Reason)
 }
 
 func TestPlugin_ExcludeNoMatch(t *testing.T) {
@@ -62,8 +62,8 @@ func TestPlugin_IncludeNoMatch(t *testing.T) {
 
 	p(cfg)
 
-	assert.True(t, cfg.Skip.Enabled)
-	assert.Equal(t, "not included by tag filter", cfg.Skip.Reason)
+	assert.Equal(t, axiom.DecisionExclude, cfg.Attempt.Decision.Kind)
+	assert.Equal(t, "not included by tag filter", cfg.Attempt.Decision.Reason)
 }
 
 func TestPlugin_IncludeAndExclude_PriorityExclude(t *testing.T) {
@@ -79,8 +79,8 @@ func TestPlugin_IncludeAndExclude_PriorityExclude(t *testing.T) {
 	p(cfg)
 
 	// Exclude wins
-	assert.True(t, cfg.Skip.Enabled)
-	assert.Equal(t, "excluded by tag filter", cfg.Skip.Reason)
+	assert.Equal(t, axiom.DecisionExclude, cfg.Attempt.Decision.Kind)
+	assert.Equal(t, "excluded by tag filter", cfg.Attempt.Decision.Reason)
 }
 
 func TestPlugin_NoFilters_NoSkip(t *testing.T) {
