@@ -110,16 +110,21 @@ func (c *Config) complete(attempt Attempt, result execution.Result) {
 		c.Event(NewEvent(EventTypeCaseExcluded, WithEventMessage(attempt.Decision.Reason)))
 	}
 
+	attempt.Outcome = newAttemptOutcome(result.Outcome)
+
 	c.Attempt = attempt
-	c.Attempt.Outcome = nil
-	if outcome := result.Outcome; outcome != nil {
-		c.Attempt.Outcome = &AttemptOutcome{
-			Status:    AttemptStatus(outcome.Status),
-			TestName:  outcome.TestName,
-			StartedAt: outcome.StartedAt,
-			CleanupAt: outcome.CleanupAt,
-		}
+	c.Runtime.attempt(attempt)
+}
+
+func newAttemptOutcome(outcome *execution.Outcome) *AttemptOutcome {
+	if outcome == nil {
+		return nil
 	}
 
-	c.Runtime.attempt(c.Attempt)
+	return &AttemptOutcome{
+		Status:    AttemptStatus(outcome.Status),
+		TestName:  outcome.TestName,
+		StartedAt: outcome.StartedAt,
+		CleanupAt: outcome.CleanupAt,
+	}
 }
