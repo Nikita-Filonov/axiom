@@ -5,6 +5,31 @@ versions and plugin versions are independent. The first core release in this per
 
 ## Core versions
 
+### v1.22.0 — 2026-11-24
+
+- Added `Attempt.Exclude(reason)` and typed Run, Skip, and Exclude decisions. Exclusion wins over inherited or
+  case-level skip settings, and the first exclusion reason wins. Reasons remain diagnostic text rather than part of
+  the decision contract.
+- **Breaking:** replaced `Config.Execution` and the separate `AttemptResult` model with `Config.Attempt`.
+  `RunID`, `Number`, and `Decision` are available before execution. The prepared Config remains immutable at
+  completion; `Runtime.EmitAttemptSink` and `WithRuntimeAttemptSink` receive a separate terminal `Attempt` whose
+  `Outcome` is populated after native cleanup and child tests finish.
+- **Lifecycle change:** declaratively skipped cases now enter test wrappers so reporting integrations can create a
+  skipped result. Test hooks, the body, and fixture setup or teardown do not run. Each selected skip receives a fresh,
+  one-based attempt Config, including with Parallel and Retry.
+- Added `DecisionExclude` and `case.excluded` for filters. Excluded cases remain visible as skipped native Go subtests,
+  but do not enter test wrappers or contribute test results. Consumers can distinguish filtering without inspecting
+  reason strings.
+- Moved native subtest scheduling, retries, skip gates, parallel coordination, and terminal observation into the
+  private `internal/execution` engine behind one Axiom adapter. The public Runner, Case, and `testing.T` entry points
+  remain unchanged.
+- Hardened abnormal completion: an unfinished parallel sibling is no longer reported as passed when another cleanup
+  panics, timeout completion no longer mutates a Config still read by the body, and an invalid retry limit supplied by
+  a plugin can no longer cause an unbounded retry loop.
+- Final attempt sinks are observational and may run at a safe parent boundary after `RunCase` returns. Fatal process
+  termination can still prevent delivery, so incremental reporters should retain earlier provisional persistence.
+  See the [execution contract](docs/execution/README.md) and [JUnit lifecycle](plugins/testjunit/docs/LIFECYCLE.md).
+
 ### v1.21.0 — 2026-11-19
 
 - Added immutable invocation-local `Operation` values for `Step`, `Setup`, and `Teardown`, with typed `OperationKey`
@@ -170,6 +195,81 @@ Plugin releases using these wrappers must depend on a core release with the Oper
 
 ## Independently versioned plugins
 
+The following 2026-11-24 releases require Axiom core `v1.22.0` and should be published after the core module.
+
+### testallure v0.44.0 — 2026-11-24
+
+- Declarative `WithCaseSkip` now enters the existing Allure wrapper and produces a `skipped` result without running
+  hooks, fixtures, or the test body. Runtime skips continue to produce `skipped` results.
+- Filter exclusions never enter the Allure lifecycle and produce no result. Added end-to-end coverage for selected,
+  skipped, and excluded cases and removed the need for a separate `case.skip` reporting workaround.
+
+### testassert v0.34.0 — 2026-11-24
+
+- Updated the minimum Axiom core dependency to `v1.22.0`. The plugin API and assertion behavior are unchanged.
+
+### testenv v0.7.0 — 2026-11-24
+
+- Updated the minimum Axiom core dependency to `v1.22.0`. The plugin API and environment loading behavior are
+  unchanged.
+
+### testexplain v0.22.0 — 2026-11-24
+
+- Updated the minimum Axiom core dependency to `v1.22.0`. The plugin API and explanation model are unchanged.
+
+### testflags v0.9.0 — 2026-11-24
+
+- Updated the minimum Axiom core dependency to `v1.22.0`. The plugin API and flag resolution behavior are unchanged.
+
+### testjunit v0.6.0 — 2026-11-24
+
+- Replaced parent-cleanup status rechecks with the core terminal attempt sink. JUnit continues to publish an
+  incremental cleanup-time record, then updates its status and duration in place after confirmed native completion.
+- Preserved error details and skip reasons during reconciliation, including parallel attempts and failures reported by
+  late native cleanup.
+
+### testleaks v0.5.0 — 2026-11-24
+
+- Migrated retry correlation from `Config.Execution` to `Config.Attempt`.
+- Execution-only leak detection now bypasses declarative skips and exclusions instead of starting instrumentation for
+  a case whose hooks and body will not run.
+
+### testlogger v0.36.0 — 2026-11-24
+
+- Updated the minimum Axiom core dependency to `v1.22.0`. The plugin API and log formatting behavior are unchanged.
+
+### testotel v0.6.0 — 2026-11-24
+
+- Migrated span correlation attributes from `Config.Execution` to the immutable `Config.Attempt` identity.
+- Updated policy-skip lifecycle handling for fresh, one-based attempt Configs.
+
+### testquarantine v0.16.0 — 2026-11-24
+
+- Updated the minimum Axiom core dependency to `v1.22.0`. The plugin API and quarantine matching behavior are
+  unchanged.
+
+### teststats v0.39.0 — 2026-11-24
+
+- Migrated run IDs and attempt numbers from `Config.Execution` to `Config.Attempt`.
+- Updated lifecycle documentation and persisted-state descriptions for the new prepared and terminal attempt model.
+
+### testtags v0.37.0 — 2026-11-24
+
+- Tag mismatches now call `Attempt.Exclude` instead of assigning `Skip`. Filtered cases remain visible in native Go
+  output but do not create Allure, JUnit, or teststats results.
+- Consumers no longer need to recognize tag filtering by comparing skip reason strings.
+
+### testtimeout v0.17.0 — 2026-11-24
+
+- Timeout instrumentation now bypasses non-Run decisions. Declarative skips still reach reporting wrappers but do not
+  start a timeout worker.
+- Added coverage for skipped cases and timeout bodies that keep reading immutable attempt identity after completion.
+
+### testtracing v0.22.0 — 2026-11-24
+
+- Updated policy-skip tracing for the fresh one-based attempt lifecycle. A skipped case produces one trace record with
+  one `case.skip` event and does not execute its body.
+
 ### testallure v0.43.0 — 2026-11-23
 
 - Updated `allure-go/commons` from `v1.2.1` to `v1.3.1`. Failures reported through `testallure.T(cfg)` now mark
@@ -292,24 +392,24 @@ Plugin releases using these wrappers must depend on a core release with the Oper
 ### Plugin release index
 
 The table shows the first plugin version since 2026-03-26 and the latest version
-documented here as of 2026-11-23. Plugin versions are independent of the core version.
+documented here as of 2026-11-24. Plugin versions are independent of the core version.
 
 | Plugin           | First version in period | Latest version     |
 |------------------|-------------------------|--------------------|
-| `testallure`     | `v0.13.0`               | `v0.43.0`          |
-| `testassert`     | `v0.10.0`               | `v0.32.0`          |
-| `testenv`        | `v0.1.0`                | `v0.5.0`           |
-| `testexplain`    | `v0.1.0`                | `v0.20.0`          |
-| `testflags`      | `v0.1.0`                | `v0.7.0`           |
-| `testjunit`      | `v0.1.0`                | `v0.4.0`           |
-| `testleaks`      | `v0.1.0`                | `v0.3.0`           |
-| `testlogger`     | `v0.12.0`               | `v0.34.0`          |
-| `testotel`       | `v0.1.0`                | `v0.4.0`           |
-| `testquarantine` | `v0.1.0`                | `v0.14.0`          |
-| `teststats`      | `v0.13.0`               | `v0.37.0`          |
-| `testtags`       | `v0.13.0`               | `v0.35.0`          |
-| `testtimeout`    | `v0.1.0`                | `v0.15.0`          |
-| `testtracing`    | `v0.1.0`                | `v0.20.0`          |
+| `testallure`     | `v0.13.0`               | `v0.44.0`          |
+| `testassert`     | `v0.10.0`               | `v0.34.0`          |
+| `testenv`        | `v0.1.0`                | `v0.7.0`           |
+| `testexplain`    | `v0.1.0`                | `v0.22.0`          |
+| `testflags`      | `v0.1.0`                | `v0.9.0`           |
+| `testjunit`      | `v0.1.0`                | `v0.6.0`           |
+| `testleaks`      | `v0.1.0`                | `v0.5.0`           |
+| `testlogger`     | `v0.12.0`               | `v0.36.0`          |
+| `testotel`       | `v0.1.0`                | `v0.6.0`           |
+| `testquarantine` | `v0.1.0`                | `v0.16.0`          |
+| `teststats`      | `v0.13.0`               | `v0.39.0`          |
+| `testtags`       | `v0.13.0`               | `v0.37.0`          |
+| `testtimeout`    | `v0.1.0`                | `v0.17.0`          |
+| `testtracing`    | `v0.1.0`                | `v0.22.0`          |
 
 Notable plugin changes in this period:
 
