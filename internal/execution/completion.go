@@ -24,6 +24,13 @@ func (a *attempt) finalize() {
 		return
 	}
 
+	// Callback return can precede parallel children and native cleanup. A
+	// sibling panic must not finalize this attempt while either is pending.
+	if a.t != nil && a.cleanupAt.IsZero() {
+		a.mu.Unlock()
+		return
+	}
+
 	result := a.observeResult()
 
 	a.finalResult = &result

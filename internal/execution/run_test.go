@@ -189,6 +189,7 @@ func TestEngineOutcomePrecedenceAndContinuationGuard(t *testing.T) {
 		spec: Spec{Decision: Decision{Kind: DecisionRun}},
 	}
 	a.callbackReturned.Store(true)
+	a.recordCleanupTime()
 	a.finalize()
 
 	result, ready := a.result()
@@ -263,9 +264,10 @@ func TestEngineNativeOutcomes(t *testing.T) {
 			}
 			assert.Equal(t, ResultCompleted, last.Kind)
 			status := AttemptFailed
-			if mode == "runtime-skip" || mode == "retry" {
+			switch mode {
+			case "runtime-skip", "retry":
 				status = AttemptSkipped
-			} else if mode == "concurrent" {
+			case "concurrent":
 				status = AttemptPassed
 			}
 			assert.Equal(t, status, last.Outcome.Status)
@@ -282,31 +284,38 @@ func TestEngineNativeOutcomes(t *testing.T) {
 }
 
 func TestEngineParallelCleanupPanicDoesNotCompleteRunningSibling(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "events.json")
-	args := []string{"-test.run=^TestEngineProbe$"}
-	if f := flag.Lookup("test.gocoverdir"); f != nil && f.Value.String() != "" {
-		args = append(args, "-test.gocoverdir="+f.Value.String())
+	for _, pending := range []string{"body", "cleanup", "child"} {
+		t.Run(pending, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "events.json")
+			args := []string{"-test.run=^TestEngineProbe$", "-test.parallel=2", "-test.timeout=10s"}
+			if f := flag.Lookup("test.gocoverdir"); f != nil && f.Value.String() != "" {
+				args = append(args, "-test.gocoverdir="+f.Value.String())
+			}
+
+			cmd := exec.Command(os.Args[0], args...)
+			cmd.Env = append(
+				os.Environ(),
+				"AXIOM_ENGINE_PROBE=parallel-cleanup-panic",
+				"AXIOM_ENGINE_PENDING="+pending,
+				"AXIOM_ENGINE_OUTPUT="+path,
+			)
+
+			output, err := cmd.CombinedOutput()
+			require.Error(t, err, "%s", output)
+			require.Contains(t, string(output), "panic: cleanup panic")
+			require.NotContains(t, string(output), "WARNING: DATA RACE")
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err, "%s", output)
+			var snapshot engineProbeSnapshot
+			require.NoError(t, json.Unmarshal(data, &snapshot))
+			require.Len(t, snapshot.Results, 1, "the running sibling has no terminal result")
+			require.NotNil(t, snapshot.Results[0].Outcome)
+			assert.Equal(t, AttemptFailed, snapshot.Results[0].Outcome.Status)
+			assert.Contains(t, snapshot.Results[0].Outcome.TestName, "/crash")
+			assert.False(t, snapshot.Results[0].Outcome.CleanupAt.IsZero())
+		})
 	}
-
-	cmd := exec.Command(os.Args[0], args...)
-	cmd.Env = append(
-		os.Environ(),
-		"AXIOM_ENGINE_PROBE=parallel-cleanup-panic",
-		"AXIOM_ENGINE_OUTPUT="+path,
-	)
-
-	output, err := cmd.CombinedOutput()
-	require.Error(t, err, "%s", output)
-
-	data, err := os.ReadFile(path)
-	require.NoError(t, err, "%s", output)
-	var snapshot engineProbeSnapshot
-	require.NoError(t, json.Unmarshal(data, &snapshot))
-	require.Len(t, snapshot.Results, 1, "the running sibling has no terminal result")
-	require.NotNil(t, snapshot.Results[0].Outcome)
-	assert.Equal(t, AttemptFailed, snapshot.Results[0].Outcome.Status)
-	assert.Contains(t, snapshot.Results[0].Outcome.TestName, "/crash")
-	assert.False(t, snapshot.Results[0].Outcome.CleanupAt.IsZero())
 }
 
 type engineProbeSnapshot struct {
@@ -413,19 +422,34 @@ func TestEngineProbe(t *testing.T) {
 
 func runParallelCleanupPanicProbe(t *testing.T, mu *sync.Mutex, snapshot *engineProbeSnapshot) {
 	started := make(chan struct{})
+	block := func() {
+		close(started)
+		select {}
+	}
 	complete := func(result Result) {
 		mu.Lock()
 		snapshot.Results = append(snapshot.Results, result)
 		mu.Unlock()
 	}
 
+	var runningT *testing.T
 	stillRunning := &attempt{spec: Spec{
 		Name:     "still-running",
 		Parallel: true,
 		Decision: Decision{Kind: DecisionRun},
+		Bind:     func(t *testing.T) { runningT = t },
 		Body: func() {
-			close(started)
-			select {}
+			switch os.Getenv("AXIOM_ENGINE_PENDING") {
+			case "cleanup":
+				runningT.Cleanup(block)
+			case "child":
+				runningT.Run("child", func(child *testing.T) {
+					child.Parallel()
+					block()
+				})
+			default:
+				block()
+			}
 		},
 		Complete: complete,
 	}}

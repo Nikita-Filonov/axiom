@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAttemptFinalizeIgnoresActiveCallback(t *testing.T) {
@@ -20,6 +21,33 @@ func TestAttemptFinalizeIgnoresActiveCallback(t *testing.T) {
 	_, ready := a.result()
 	assert.False(t, ready)
 	assert.False(t, completed)
+}
+
+func TestAttemptFinalizeWaitsForCleanup(t *testing.T) {
+	var completed []Result
+	t.Run("parent", func(parent *testing.T) {
+		var native *testing.T
+		a := &attempt{spec: Spec{
+			Name:     "attempt",
+			Decision: Decision{Kind: DecisionRun},
+			Bind:     func(t *testing.T) { native = t },
+			Complete: func(result Result) { completed = append(completed, result) },
+		}}
+		a.spec.Body = func() {
+			native.Cleanup(func() {
+				a.finalize()
+				_, ready := a.result()
+				assert.False(native, ready, "cleanup is still running")
+				assert.Empty(native, completed)
+			})
+		}
+		a.run(parent)
+	})
+
+	require.Len(t, completed, 1, "deferred completion must still be delivered once")
+	require.NotNil(t, completed[0].Outcome)
+	assert.Equal(t, AttemptPassed, completed[0].Outcome.Status)
+	assert.False(t, completed[0].Outcome.CleanupAt.IsZero())
 }
 
 func TestAttemptShouldRetry(t *testing.T) {

@@ -41,11 +41,11 @@ func (a *attempt) run(parent *testing.T) {
 			a.spec.Bind(t)
 		}
 
+		t.Cleanup(a.recordCleanupTime)
+
 		if a.spec.Decision.Kind == DecisionExclude {
 			t.Skip(a.spec.Decision.Reason)
 		}
-
-		t.Cleanup(a.recordCleanupTime)
 
 		if a.spec.Parallel && a.spec.Decision.Kind == DecisionRun {
 			t.Parallel()

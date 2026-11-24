@@ -184,8 +184,8 @@ not Axiom policy, omitted the callback.
 - Once execution enters the body gate, deferred `AfterTest` and fixture teardown run on panic, `FailNow`, and runtime
   `SkipNow`.
 - Final status is observed only after native children and cleanup can contribute failures.
-- A sibling cleanup panic may start parent cleanup while another parallel callback is still active. That active
-  attempt is not finalized and receives no false `passed` result.
+- A sibling cleanup panic may start parent cleanup while another parallel attempt still has an active body,
+  child subtest, or native cleanup. That unfinished attempt receives no terminal result.
 
 ## Events and terminal attempts
 
