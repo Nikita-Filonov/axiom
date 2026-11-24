@@ -29,9 +29,13 @@ const (
 	EventTypeCaseFinish EventType = "case.finish"
 	// EventTypeCasePanic records a panic recovered while running a case attempt.
 	EventTypeCasePanic EventType = "case.panic"
-	// EventTypeCaseSkip records a policy skip, which happens instead of the
-	// attempt and therefore without case.start or case.finish.
+	// EventTypeCaseSkip records a policy skip before reporting wrappers run,
+	// without case.start or case.finish. Test hooks and the body do not run.
 	EventTypeCaseSkip EventType = "case.skip"
+	// EventTypeCaseExcluded records a filter exclusion, not a policy skip.
+	// It has no case.start/finish or test outcome and is delivered after the
+	// native subtest ends. Observers must not register cleanup on its T.
+	EventTypeCaseExcluded EventType = "case.excluded"
 
 	// EventTypeStepStart records entry into a named step, before its hooks run.
 	EventTypeStepStart EventType = "step.start"
