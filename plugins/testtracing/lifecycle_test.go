@@ -134,8 +134,8 @@ func TestPluginRetryProbe(t *testing.T) {
 		axiom.WithCaseName("retried"),
 		axiom.WithCasePlugins(testtracing.Plugin(trace)),
 	), func(cfg *axiom.Config) {
-		cfg.Event(axiom.Event{Type: axiom.EventTypeLog, Message: strconv.Itoa(cfg.Execution.Attempt)})
-		if cfg.Execution.Attempt == 1 {
+		cfg.Event(axiom.Event{Type: axiom.EventTypeLog, Message: strconv.Itoa(cfg.Attempt.Number)})
+		if cfg.Attempt.Number == 1 {
 			assert.Fail(cfg.T(), "intentional first attempt failure")
 		}
 	})
