@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// Attempt describes one prepared test attempt. RunID and Number identify it;
-// Decision is fixed before the engine starts it. Outcome is nil on a prepared
+// Attempt identifies one test attempt. RunID and Number identify it; Decision
+// is fixed before the engine starts it. Outcome is nil on the prepared value in
 // Config and populated only on the terminal value sent to attempt sinks.
 // Excluded and unselected attempts have no Outcome.
 type Attempt struct {
