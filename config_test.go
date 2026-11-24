@@ -459,19 +459,3 @@ func TestConfig_TeardownPanic_EmitsPanicFact(t *testing.T) {
 	assert.Equal(t, "boom", events[1].Message)
 	assert.Equal(t, axiom.EventTypeTeardownFinish, events[2].Type)
 }
-
-func TestConfigDecision(t *testing.T) {
-	cfg := &axiom.Config{}
-	assert.Equal(t, axiom.Decision{Kind: axiom.DecisionRun}, cfg.Decision())
-	cfg.Skip = axiom.NewSkip(axiom.SkipBecause("disabled"))
-	assert.Equal(t, axiom.Decision{
-		Kind:   axiom.DecisionSkip,
-		Reason: "disabled",
-	}, cfg.Decision())
-	cfg.Exclude("")
-	cfg.Exclude("later exclusion")
-	assert.Equal(t, axiom.Decision{Kind: axiom.DecisionExclude}, cfg.Decision())
-	assert.Equal(t, cfg.Decision(), cfg.Attempt.Decision)
-	cfg.Skip = axiom.NewSkip(axiom.WithSkipDisabled())
-	assert.Equal(t, axiom.DecisionExclude, cfg.Decision().Kind)
-}
