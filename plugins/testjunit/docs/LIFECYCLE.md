@@ -14,12 +14,23 @@ Plugin(options...)        -> prepare settings and writer; no Reporter mutation o
 plugin installation      -> register output and recorder; no file I/O
 case.start / case.skip    -> register attempt cleanup
 attempt cleanup          -> record outcome -> publish XML
-parent cleanup           -> correct late failure -> publish XML if changed
+terminal Attempt         -> update the same record -> publish XML if changed
 ```
 
 The attempt cleanup runs after the body, hooks, fixtures, child subtests, and later-registered cleanups.
-Parent cleanup rechecks the child outcome for earlier-registered cleanup failures and race-detector failures.
-Duration ends at attempt recording; it excludes later callbacks and runner resource cleanup.
+This first snapshot is provisional: earlier-registered cleanup callbacks can still fail. The recorder subscribes to
+`EmitAttemptSink` to confirm the native status and timing after completion. It does not register parent cleanup or
+re-read the completed `testing.T`. Confirmation updates the existing collection entry, preserving skip reasons and
+lifecycle error messages; it never adds a second entry. Lifecycle errors still take precedence over a passed status.
+
+Final duration comes from `AttemptOutcome.StartedAt` and `CleanupAt`. It includes native cleanup, including the early
+report publication, but excludes waiting for the parent to deliver the final result and runner resource cleanup.
+A timing change also rewrites XML. Exclusions and native deselections have no record and are ignored by the sink.
+
+For parallel attempts, the final result may arrive only at the parent boundary. Keeping the early publication is
+therefore essential: completed attempts remain on disk if another case later crashes or hits the process timeout.
+If the process stops before final delivery, the early status and duration remain. Configs driven manually through
+raw events without Axiom execution also retain only their early snapshot.
 
 Writes are synchronous. Every publication rewrites the full report; total output work grows roughly quadratically
 with the number of attempts. Explicit final export remains available for large suites that prefer one write.

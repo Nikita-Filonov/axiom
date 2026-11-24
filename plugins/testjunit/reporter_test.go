@@ -25,7 +25,11 @@ func TestReporterSnapshotAndLateFailure(t *testing.T) {
 	assert.Equal(t, "b", first[1].TestName)
 	assert.Equal(t, "later", first[2].TestName)
 	first[0].TestName = "changed"
-	r.markFailed(late)
+	r.update(late, attempt{
+		TestName: "later",
+		Start:    start.Add(time.Second),
+		Status:   statusFailed,
+	})
 	second := r.snapshot()
 	require.Len(t, second, 3)
 	assert.Equal(t, "a", second[0].TestName, "snapshots share data")
@@ -62,7 +66,10 @@ func TestReporterConcurrentSnapshots(t *testing.T) {
 	for i := range 32 {
 		workers.Go(func() {
 			result := r.add(attempt{TestName: fmt.Sprintf("attempt-%02d", i)})
-			r.markFailed(result)
+			r.update(result, attempt{
+				TestName: fmt.Sprintf("attempt-%02d", i),
+				Status:   statusFailed,
+			})
 			var output bytes.Buffer
 			if !assert.NoError(t, r.Write(&output)) {
 				return

@@ -30,13 +30,13 @@ func (r *Reporter) add(result attempt) *attempt {
 	return &result
 }
 
-func (r *Reporter) markFailed(result *attempt) bool {
+func (r *Reporter) update(stored *attempt, result attempt) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if result.Status == statusFailed {
+	if *stored == result {
 		return false
 	}
-	result.Status = statusFailed
+	*stored = result
 	return true
 }
 

@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
@@ -107,24 +107,6 @@ func TestSharedReporterPublishesAllSuitesAndOutputs(t *testing.T) {
 	assert.Len(t, reporter.snapshot().document().Suites, 3)
 }
 
-func TestLateFailureRewritesOutput(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "junit.xml")
-	reporter := NewReporter()
-	Plugin(WithReporter(reporter), WithOutputFile(path))(&axiom.Config{})
-	late := &fixedOutcome{}
-	t.Run("parent", func(t *testing.T) {
-		r := &recorder{
-			cfg:      &axiom.Config{RootT: t},
-			reporter: reporter,
-			attempt:  &attempt{TestName: "child", Start: time.Now()},
-		}
-		r.finish(late)
-		assert.Equal(t, outputTotals{Tests: 1}, readOutput(t, path))
-		late.failed = true
-	})
-	assert.Equal(t, outputTotals{Tests: 1, Failures: 1}, readOutput(t, path))
-}
-
 func TestOutputFailureHandlerCanExportAndRecovery(t *testing.T) {
 	root := t.TempDir()
 	blocked := filepath.Join(root, "blocked")
@@ -144,23 +126,13 @@ func TestOutputFailureHandlerCanExportAndRecovery(t *testing.T) {
 	}))
 	runner := axiom.NewRunner(axiom.WithRunnerPlugins(plugin, duplicate, plugin))
 	runner.RunCase(t, axiom.NewCase(), func(*axiom.Config) {})
-	require.Len(t, failures, 1)
+	require.Len(t, failures, 2)
 	assert.Contains(t, failures[0].Error(), path)
 	assert.Equal(t, 1, readOutput(t, filepath.Join(root, "fallback.xml")).Tests)
 	require.NoError(t, os.Remove(blocked))
 	runner.RunCase(t, axiom.NewCase(), func(*axiom.Config) {})
 	assert.Equal(t, 2, readOutput(t, path).Tests)
-	assert.Len(t, failures, 1)
-}
-
-func TestUnchangedFailureDoesNotPublishAgain(t *testing.T) {
-	reporter := NewReporter()
-	result := reporter.add(attempt{Status: statusFailed})
-	r := &recorder{reporter: reporter}
-	Plugin(WithReporter(reporter), WithOutputFile(filepath.Join(t.TempDir(), "report.xml")))(&axiom.Config{})
-	r.reconcile(&fixedOutcome{failed: true}, result)
-	_, err := os.Stat(reporter.outputs[0].path)
-	assert.ErrorIs(t, err, os.ErrNotExist)
+	assert.Len(t, failures, 2)
 }
 
 func TestConcurrentOutputRegistration(t *testing.T) {
@@ -213,5 +185,68 @@ func TestOutputExitProbe(t *testing.T) {
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("completed")), func(*axiom.Config) {})
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("interrupted")), func(*axiom.Config) {
 		os.Exit(23)
+	})
+}
+
+func TestParallelOutputSurvivesInterruptedSibling(t *testing.T) {
+	for _, mode := range []string{"exit", "panic", "timeout"} {
+		t.Run(mode, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "junit.xml")
+			command := exec.Command(os.Args[0], "-test.run=^TestParallelOutputProbe$", "-test.parallel=2", "-test.timeout=2s")
+			command.Env = append(os.Environ(), "AXIOM_JUNIT_PARALLEL_MODE="+mode, "AXIOM_JUNIT_PARALLEL_PATH="+path)
+			output, err := command.CombinedOutput()
+			require.Error(t, err, "%s", output)
+			require.Contains(t, string(output), "completed attempt persisted before final sink")
+			require.NotContains(t, string(output), "WARNING: DATA RACE")
+			assert.GreaterOrEqual(t, readOutput(t, path).Tests, 1, "completed attempts must survive an interrupted sibling")
+			if mode == "timeout" {
+				assert.Contains(t, string(output), "test timed out")
+			}
+		})
+	}
+}
+
+func TestParallelOutputProbe(t *testing.T) {
+	mode := os.Getenv("AXIOM_JUNIT_PARALLEL_MODE")
+	if mode == "" {
+		return
+	}
+
+	path := os.Getenv("AXIOM_JUNIT_PARALLEL_PATH")
+	published := make(chan struct{})
+	var confirmed atomic.Bool
+	runner := axiom.NewRunner(
+		axiom.WithRunnerParallel(axiom.WithParallelEnabled()),
+		axiom.WithRunnerPlugins(
+			func(cfg *axiom.Config) {
+				if cfg.Case.Name != "completed" {
+					return
+				}
+				cfg.Runtime.EmitEventSink(func(event axiom.Event) {
+					if event.Type == axiom.EventTypeCaseStart {
+						// Registered before the recorder's cleanup, so publication
+						// finishes before the sibling is released.
+						cfg.T().Cleanup(func() { close(published) })
+					}
+				})
+				cfg.Runtime.EmitAttemptSink(func(axiom.Attempt) { confirmed.Store(true) })
+			},
+			Plugin(WithOutputFile(path)),
+		),
+	)
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("completed")), func(*axiom.Config) {})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("interrupted")), func(cfg *axiom.Config) {
+		<-published
+		require.False(cfg.T(), confirmed.Load(), "parent has not reached final result delivery")
+		require.Equal(cfg.T(), outputTotals{Tests: 1}, readOutput(cfg.T(), path))
+		fmt.Println("completed attempt persisted before final sink")
+		switch mode {
+		case "exit":
+			os.Exit(23)
+		case "panic":
+			cfg.T().Cleanup(func() { panic("sibling cleanup panic") })
+		case "timeout":
+			select {}
+		}
 	})
 }

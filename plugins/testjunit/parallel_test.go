@@ -133,3 +133,19 @@ func TestSelectionProbe(t *testing.T) {
 	}
 	assert.Equal(t, 1, readReport(t, reporter).Tests, "excluded case recorded")
 }
+
+func TestExcludedCaseDoesNotProduceJUnitResult(t *testing.T) {
+	reporter := testjunit.NewReporter()
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testjunit.Plugin(testjunit.WithReporter(reporter))))
+	runner.RunCase(t, axiom.NewCase(axiom.WithCasePlugins(func(c *axiom.Config) { c.Attempt.Exclude("CO") })), func(c *axiom.Config) {
+		c.T().Error("excluded body ran")
+	})
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseSkip(axiom.SkipBecause("feature disabled"))), func(c *axiom.Config) {
+		c.T().Error("skipped body ran")
+	})
+	runner.RunCase(t, axiom.NewCase(), func(*axiom.Config) {})
+	report := readReport(t, reporter)
+	assert.Equal(t, 2, report.Tests)
+	assert.Equal(t, 1, report.Skipped)
+	assert.Zero(t, report.Failures)
+}

@@ -49,6 +49,9 @@ func TestFailureReports(t *testing.T) {
 			output, err := cmd.CombinedOutput()
 			require.Error(t, err, "failing test passed: %s", output)
 			require.NotContains(t, string(output), "WARNING: DATA RACE", "data race in failure probe")
+			if probe.mode == "late-cleanup" {
+				require.Contains(t, string(output), "provisional result observed before late failure")
+			}
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "test output: %s", output)
 			var report reportXML
@@ -86,7 +89,16 @@ func TestFailureProbe(t *testing.T) {
 			if mode == "late-cleanup" {
 				cfg.Runtime.EmitEventSink(func(event axiom.Event) {
 					if event.Type == axiom.EventTypeCaseStart {
-						cfg.T().Cleanup(func() { cfg.T().Error("late cleanup") })
+						cfg.T().Cleanup(func() {
+							data, err := os.ReadFile(os.Getenv("AXIOM_JUNIT_PATH"))
+							require.NoError(cfg.T(), err)
+							var early reportXML
+							require.NoError(cfg.T(), xml.Unmarshal(data, &early))
+							require.Equal(cfg.T(), 1, early.Tests, "cleanup must have published the attempt")
+							require.Zero(cfg.T(), early.Failures, "failure is still pending")
+							cfg.T().Log("provisional result observed before late failure")
+							cfg.T().Error("late cleanup")
+						})
 					}
 				})
 			}
@@ -122,7 +134,7 @@ func TestFailureProbe(t *testing.T) {
 		runner.Parallel = axiom.NewParallel(axiom.WithParallelEnabled())
 	}
 	runner.RunCase(t, axiom.NewCase(axiom.WithCaseName("probe")), func(cfg *axiom.Config) {
-		if cfg.Execution.Attempt > 1 {
+		if cfg.Attempt.Number > 1 {
 			if mode == "fail-skip" {
 				cfg.T().Skip("retry skipped")
 			}

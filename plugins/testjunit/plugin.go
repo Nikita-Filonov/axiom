@@ -7,7 +7,7 @@ import "github.com/Nikita-Filonov/axiom"
 // the first installation's suite name applies. Different runners can share a
 // Reporter and use different suite names. Output files belong to the Reporter.
 // WithReporter supplies a shared collector; otherwise Plugin creates its own.
-// WithOutputFile publishes snapshots after attempts and late status corrections.
+// WithOutputFile publishes during cleanup and after final status or timing corrections.
 // Constructing a plugin does not modify its Reporter. Outputs are registered
 // when the plugin is installed on a Config, even if its recorder already exists.
 // A nil Config or option panics.
@@ -30,5 +30,6 @@ func Plugin(options ...Option) axiom.Plugin {
 			suiteName: settings.SuiteName,
 		}
 		cfg.Runtime.EmitEventSink(current.observe)
+		cfg.Runtime.EmitAttemptSink(current.reconcile)
 	}
 }
