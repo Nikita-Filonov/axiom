@@ -6,8 +6,8 @@ import "testing"
 //
 // Bind only attaches the native T; it must not run test work or register cleanup.
 // Around may forward its continuation at most once. Before, Body, After, and
-// Release run only when Decision admits execution. Observe must obey Event's
-// observational contract.
+// Release run only when Decision admits execution. Observe and Complete are
+// observational and may be called after Run returns for a parallel attempt.
 type Spec struct {
 	Name     string
 	Decision Decision
@@ -22,5 +22,6 @@ type Spec struct {
 	After   func()
 	Release func()
 
-	Observe func(Event)
+	Observe  func(Event)
+	Complete func(Result)
 }

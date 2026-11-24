@@ -13,27 +13,15 @@ const (
 
 	// AttemptExecutionFinished closes the executable scope, before native cleanup.
 	AttemptExecutionFinished EventType = "attempt.execution.finished"
-
-	// AttemptFinished carries a selected attempt's final native outcome.
-	AttemptFinished EventType = "attempt.finished"
-
-	// AttemptExcluded records an engine exclusion without a test outcome.
-	AttemptExcluded EventType = "attempt.excluded"
-
-	// AttemptNotSelected means Go never entered the subtest callback (e.g. -run).
-	AttemptNotSelected EventType = "attempt.not-selected"
 )
 
-// Event reports a lifecycle boundary needed by the caller. Decision is the
-// submitted instruction. Message describes a recovered panic. Result is present
-// only on a terminal event, after native completion.
+// Event reports a non-terminal lifecycle boundary. Decision is the submitted
+// instruction. Message describes a recovered panic.
 //
 // Observers must be concurrency-safe and must not run test actions or register
-// cleanup. Parallel results may arrive after Run returns; the native T has then
-// finished. Fatal process termination may prevent terminal delivery.
+// cleanup.
 type Event struct {
 	Type     EventType
-	Result   *Result
 	Message  string
 	Decision Decision
 }

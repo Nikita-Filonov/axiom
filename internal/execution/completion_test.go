@@ -6,16 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTerminalEventType(t *testing.T) {
-	for kind, eventType := range map[ResultKind]EventType{
-		ResultCompleted:   AttemptFinished,
-		ResultExcluded:    AttemptExcluded,
-		ResultNotSelected: AttemptNotSelected,
-	} {
-		assert.Equal(t, eventType, terminalEventType(kind))
-	}
-}
-
 func TestAttemptShouldRetry(t *testing.T) {
 	for _, tc := range []struct {
 		name     string

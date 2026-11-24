@@ -19,6 +19,7 @@ import (
 func TestEngineAttemptLifecycle(t *testing.T) {
 	var calls []string
 	var events []Event
+	var completed []Result
 	var native *testing.T
 	a := &attempt{
 		spec: Spec{
@@ -35,9 +36,10 @@ func TestEngineAttemptLifecycle(t *testing.T) {
 				calls = append(calls, "body")
 				native.Cleanup(func() { calls = append(calls, "native cleanup") })
 			},
-			After:   func() { calls = append(calls, "after") },
-			Release: func() { calls = append(calls, "release") },
-			Observe: func(e Event) { events = append(events, e) },
+			After:    func() { calls = append(calls, "after") },
+			Release:  func() { calls = append(calls, "release") },
+			Observe:  func(e Event) { events = append(events, e) },
+			Complete: func(r Result) { completed = append(completed, r) },
 		},
 	}
 	a.run(t)
@@ -51,8 +53,9 @@ func TestEngineAttemptLifecycle(t *testing.T) {
 	assert.Equal(t, t.Name()+"/attempt", result.Outcome.TestName)
 	assert.False(t, result.Outcome.CleanupAt.Before(result.Outcome.StartedAt))
 	assert.Equal(t, AttemptStarted, events[0].Type)
-	assert.Equal(t, AttemptExecutionFinished, events[len(events)-2].Type)
-	assert.Equal(t, AttemptFinished, events[len(events)-1].Type)
+	assert.Equal(t, AttemptExecutionFinished, events[len(events)-1].Type)
+	require.Len(t, completed, 1)
+	assert.Equal(t, AttemptPassed, completed[0].Outcome.Status)
 
 	// A reader cannot mutate engine state, and late work cannot reopen an attempt.
 	result.Outcome.Status = AttemptFailed
@@ -60,7 +63,8 @@ func TestEngineAttemptLifecycle(t *testing.T) {
 	a.finalize()
 	again, _ := a.result()
 	assert.Equal(t, AttemptPassed, again.Outcome.Status)
-	assert.Len(t, events, 3)
+	assert.Len(t, events, 2)
+	assert.Len(t, completed, 1)
 }
 
 func TestEngineSelectionBranches(t *testing.T) {
@@ -68,6 +72,7 @@ func TestEngineSelectionBranches(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			var wrapped, cleaned bool
 			var events []Event
+			var completed []Result
 			var native *testing.T
 			unexpected := func() { t.Error("execution callback ran") }
 			a := &attempt{
@@ -84,11 +89,12 @@ func TestEngineSelectionBranches(t *testing.T) {
 						native.Cleanup(func() { cleaned = true })
 						next()
 					},
-					Before:  unexpected,
-					Body:    unexpected,
-					After:   unexpected,
-					Release: unexpected,
-					Observe: func(e Event) { events = append(events, e) },
+					Before:   unexpected,
+					Body:     unexpected,
+					After:    unexpected,
+					Release:  unexpected,
+					Observe:  func(e Event) { events = append(events, e) },
+					Complete: func(r Result) { completed = append(completed, r) },
 				},
 			}
 			a.run(t)
@@ -100,17 +106,17 @@ func TestEngineSelectionBranches(t *testing.T) {
 				assert.False(t, cleaned)
 				assert.Equal(t, ResultExcluded, result.Kind)
 				assert.Nil(t, result.Outcome)
-				require.Len(t, events, 1)
-				assert.Equal(t, AttemptExcluded, events[0].Type)
+				assert.Empty(t, events)
 			} else {
 				assert.True(t, wrapped)
 				assert.True(t, cleaned)
 				assert.Equal(t, AttemptSkipped, result.Outcome.Status)
-				require.Len(t, events, 3)
+				require.Len(t, events, 2)
 				assert.Equal(t, AttemptStarted, events[0].Type)
 				assert.Equal(t, AttemptExecutionFinished, events[1].Type)
-				assert.Equal(t, AttemptFinished, events[2].Type)
 			}
+			require.Len(t, completed, 1)
+			assert.Equal(t, result, completed[0])
 		})
 	}
 }
@@ -118,6 +124,7 @@ func TestEngineSelectionBranches(t *testing.T) {
 func TestEngineParallelCompletion(t *testing.T) {
 	var a *attempt
 	var events []Event
+	var completed []Result
 	var cleaned bool
 	t.Run("parent", func(parent *testing.T) {
 		var native *testing.T
@@ -129,6 +136,7 @@ func TestEngineParallelCompletion(t *testing.T) {
 				Bind:     func(t *testing.T) { native = t },
 				Body:     func() { native.Cleanup(func() { cleaned = true }) },
 				Observe:  func(e Event) { events = append(events, e) },
+				Complete: func(r Result) { completed = append(completed, r) },
 			},
 		}
 		a.run(parent)
@@ -137,6 +145,7 @@ func TestEngineParallelCompletion(t *testing.T) {
 		assert.False(parent, ready)
 		assert.False(parent, cleaned)
 		assert.Empty(parent, events, "a paused attempt has not started execution")
+		assert.Empty(parent, completed)
 	})
 
 	result, ready := a.result()
@@ -144,7 +153,9 @@ func TestEngineParallelCompletion(t *testing.T) {
 	assert.True(t, cleaned)
 	assert.Equal(t, AttemptPassed, result.Outcome.Status)
 	assert.Equal(t, AttemptStarted, events[0].Type)
-	assert.Equal(t, AttemptFinished, events[len(events)-1].Type)
+	assert.Equal(t, AttemptExecutionFinished, events[len(events)-1].Type)
+	require.Len(t, completed, 1)
+	assert.Equal(t, result, completed[0])
 }
 
 func TestEngineNativeParallelIsNotAnEarlyPass(t *testing.T) {
@@ -239,47 +250,39 @@ func TestEngineNativeOutcomes(t *testing.T) {
 
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "%s", output)
-			var events []Event
-			require.NoError(t, json.Unmarshal(data, &events))
-			require.NotEmpty(t, events)
+			var snapshot engineProbeSnapshot
+			require.NoError(t, json.Unmarshal(data, &snapshot))
+			require.NotEmpty(t, snapshot.Results)
 
-			last := events[len(events)-1]
+			last := snapshot.Results[len(snapshot.Results)-1]
 			if mode == "filter" {
-				assert.Equal(t, AttemptNotSelected, last.Type)
-				assert.Nil(t, last.Result.Outcome)
+				assert.Equal(t, ResultNotSelected, last.Kind)
+				assert.Nil(t, last.Outcome)
 				return
 			}
-			assert.Equal(t, AttemptFinished, last.Type)
+			assert.Equal(t, ResultCompleted, last.Kind)
 			status := AttemptFailed
 			if mode == "runtime-skip" || mode == "retry" {
 				status = AttemptSkipped
 			} else if mode == "concurrent" {
 				status = AttemptPassed
 			}
-			assert.Equal(t, status, last.Result.Outcome.Status)
+			assert.Equal(t, status, last.Outcome.Status)
 			if mode == "policy-skip-fail" {
-				assert.Equal(t, DecisionSkip, last.Decision.Kind)
-				var attempts int
-				for _, event := range events {
-					if event.Type == AttemptFinished {
-						attempts++
-					}
-				}
-				assert.Equal(t, 1, attempts, "a failed policy skip must not retry")
+				assert.Len(t, snapshot.Results, 1, "a failed policy skip must not retry")
 			}
 			if mode == "retry" {
-				var results []Event
-				for _, event := range events {
-					if event.Type == AttemptFinished {
-						results = append(results, event)
-					}
-				}
-				require.Len(t, results, 2)
-				assert.Equal(t, AttemptFailed, results[0].Result.Outcome.Status)
-				assert.GreaterOrEqual(t, results[1].Result.Outcome.StartedAt.Sub(results[0].Result.Outcome.CleanupAt), time.Millisecond)
+				require.Len(t, snapshot.Results, 2)
+				assert.Equal(t, AttemptFailed, snapshot.Results[0].Outcome.Status)
+				assert.GreaterOrEqual(t, snapshot.Results[1].Outcome.StartedAt.Sub(snapshot.Results[0].Outcome.CleanupAt), time.Millisecond)
 			}
 		})
 	}
+}
+
+type engineProbeSnapshot struct {
+	Events  []Event
+	Results []Result
 }
 
 func TestEngineProbe(t *testing.T) {
@@ -288,11 +291,11 @@ func TestEngineProbe(t *testing.T) {
 		t.Skip("subprocess only")
 	}
 	var mu sync.Mutex
-	var events []Event
+	var snapshot engineProbeSnapshot
 	t.Cleanup(func() {
 		mu.Lock()
 		defer mu.Unlock()
-		data, err := json.Marshal(events)
+		data, err := json.Marshal(snapshot)
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(os.Getenv("AXIOM_ENGINE_OUTPUT"), data, 0600))
 	})
@@ -305,7 +308,12 @@ func TestEngineProbe(t *testing.T) {
 			Bind:     func(t *testing.T) { native = t },
 			Observe: func(e Event) {
 				mu.Lock()
-				events = append(events, e)
+				snapshot.Events = append(snapshot.Events, e)
+				mu.Unlock()
+			},
+			Complete: func(r Result) {
+				mu.Lock()
+				snapshot.Results = append(snapshot.Results, r)
 				mu.Unlock()
 			},
 			Body: func() {

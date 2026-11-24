@@ -8,9 +8,9 @@ func (a *attempt) recordCleanupTime() {
 	a.mu.Unlock()
 }
 
-// finalize must be called only after native completion, either after an
-// awaited t.Run or from its parent's cleanup. Native cleanup alone is too
-// early: testing may still mark cleanup panics or data races as failures.
+// finalize completes the attempt after an awaited t.Run or from its parent's
+// cleanup. Native cleanup alone is too early: testing may still mark cleanup
+// panics or data races as failures.
 func (a *attempt) finalize() {
 	a.mu.Lock()
 	if a.finalResult != nil {
@@ -22,14 +22,12 @@ func (a *attempt) finalize() {
 
 	a.finalResult = &result
 	snapshot := result.clone()
-	event := Event{
-		Type:     terminalEventType(result.Kind),
-		Result:   &snapshot,
-		Decision: a.spec.Decision,
-	}
+	complete := a.spec.Complete
 	a.mu.Unlock()
 
-	a.dispatch(event)
+	if complete != nil {
+		complete(snapshot)
+	}
 }
 
 // result returns an independent snapshot. Not-ready is distinct from passed;
@@ -71,17 +69,6 @@ func (a *attempt) observeResult() Result {
 				CleanupAt: a.cleanupAt,
 			},
 		}
-	}
-}
-
-func terminalEventType(kind ResultKind) EventType {
-	switch kind {
-	case ResultExcluded:
-		return AttemptExcluded
-	case ResultNotSelected:
-		return AttemptNotSelected
-	default:
-		return AttemptFinished
 	}
 }
 
