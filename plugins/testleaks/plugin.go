@@ -13,7 +13,7 @@ func Plugin(options ...Option) axiom.Plugin {
 		if cfg == nil {
 			panic("testleaks: nil config")
 		}
-		if cfg.Execution.ID != "" && cfg.Execution.Attempt == 0 {
+		if cfg.Attempt.RunID != "" && cfg.Attempt.Number == 0 {
 			return
 		}
 		state, installed := installAttempt(cfg)

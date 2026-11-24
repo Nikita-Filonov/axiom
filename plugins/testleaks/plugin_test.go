@@ -204,3 +204,19 @@ func TestLeakFailures(t *testing.T) {
 		})
 	}
 }
+
+func TestPolicySkipBypassesExecutionInstrumentation(t *testing.T) {
+	var outcomes []axiom.Attempt
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(Plugin(WithoutGoroutines(), WithGracePeriod(0))),
+		axiom.WithRunnerRuntime(axiom.WithRuntimeAttemptSink(func(e axiom.Attempt) {
+			outcomes = append(outcomes, e)
+		})),
+	)
+	runner.RunCase(t, axiom.NewCase(axiom.WithCaseSkip(axiom.SkipBecause("disabled"))), func(c *axiom.Config) {
+		c.T().Error("skipped body ran")
+	})
+	if assert.Len(t, outcomes, 1) {
+		assert.Equal(t, axiom.AttemptSkipped, outcomes[0].Outcome.Status)
+	}
+}

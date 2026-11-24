@@ -14,6 +14,10 @@ const labelKey = "github.com/Nikita-Filonov/axiom/plugins/testleaks.attempt"
 func wrapAttempt(state *attemptState, c Config) axiom.WrapTestAction {
 	return func(next axiom.TestAction) axiom.TestAction {
 		return func(current *axiom.Config) {
+			if current.Attempt.Decision.Kind != axiom.DecisionRun {
+				next(current)
+				return
+			}
 			t := current.T()
 			if t == nil {
 				next(current)
@@ -34,8 +38,8 @@ func wrapAttempt(state *attemptState, c Config) axiom.WrapTestAction {
 }
 
 func attemptID(cfg *axiom.Config) string {
-	if cfg.Execution.ID != "" {
-		return cfg.Execution.ID + "/" + strconv.Itoa(cfg.Execution.Attempt)
+	if cfg.Attempt.RunID != "" {
+		return cfg.Attempt.RunID + "/" + strconv.Itoa(cfg.Attempt.Number)
 	}
 	return rand.Text()
 }

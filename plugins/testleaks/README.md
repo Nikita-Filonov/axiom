@@ -19,7 +19,8 @@
 explicitly tracked resources still open after the attempt body and its
 later-registered `testing.T.Cleanup` callbacks. It reports a failure through
 the attempt's `*testing.T`. Retry attempts are checked separately; a case
-skipped during planning does not run a check.
+with a declarative skip does not run a check. The wrapper forwards that skip directly, without starting leak
+instrumentation. Filter-excluded cases never enter the wrapper.
 
 The plugin registers its cleanup callback before invoking the attempt body.
 Cleanups registered by that body run first, in Go's reverse registration order.
