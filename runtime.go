@@ -43,8 +43,9 @@ type SinkAssertAction func(a Assert)
 // It must be concurrency-safe and observational: treat the Attempt and its
 // Outcome as read-only; do not run test actions, call FailNow/SkipNow, or
 // register cleanup. The attempt's T has already finished and parallel results
-// may arrive after RunCase returns. Capture metadata during plugin installation.
-// Fatal process termination may prevent result delivery.
+// may arrive after RunCase returns. A wrapper-owned goroutine may still be
+// running after a timeout. Capture metadata during plugin installation. Fatal
+// process termination may prevent result delivery.
 type SinkAttemptAction func(a Attempt)
 
 // SinkArtefactAction receives an Artefact.
