@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -65,10 +66,11 @@ func TestExecutionAdapterReportsOnlyFinalAttempts(t *testing.T) {
 		StartedAt: started,
 		CleanupAt: ended,
 	}, got.Outcome)
-	assert.Equal(t, got, cfg.Attempt, "Config must expose the terminal attempt before sinks run")
+	assert.Equal(t, axiom.Attempt{RunID: "changed", Number: 9}, cfg.Attempt,
+		"completion must not mutate the prepared Config")
 
 	input.Outcome.Status = execution.AttemptPassed
-	assert.Equal(t, axiom.AttemptFailed, cfg.Attempt.Outcome.Status)
+	assert.Equal(t, axiom.AttemptFailed, got.Outcome.Status)
 }
 
 func TestExecutionAdapterPreservesSelectionDecision(t *testing.T) {
@@ -211,6 +213,43 @@ func TestExecution_PluginSkipOnFirstAttemptStopsRetries(t *testing.T) {
 			assert.Zero(t, actions)
 		})
 	}
+}
+
+func TestExecution_PluginRetryTimesBelowOneRunsOnce(t *testing.T) {
+	for _, times := range []int{0, -1} {
+		t.Run(strconv.Itoa(times), func(t *testing.T) {
+			output, err := runCaseExecutionHelper(
+				t,
+				"TestExecution_PluginRetryTimesBelowOneHelperProcess",
+				"AXIOM_RETRY_TIMES="+strconv.Itoa(times),
+			)
+
+			require.Error(t, err, "the only attempt intentionally fails")
+			assert.Contains(t, output, "invalid retry attempts=1")
+		})
+	}
+}
+
+func TestExecution_PluginRetryTimesBelowOneHelperProcess(t *testing.T) {
+	if os.Getenv(caseExecutionHelperEnv) != "1" {
+		t.Skip("helper process")
+	}
+
+	times, err := strconv.Atoi(os.Getenv("AXIOM_RETRY_TIMES"))
+	require.NoError(t, err)
+
+	var attempts int
+	t.Cleanup(func() { t.Logf("invalid retry attempts=%d", attempts) })
+
+	runner := axiom.NewRunner(axiom.WithRunnerPlugins(func(cfg *axiom.Config) {
+		cfg.Retry = axiom.NewRetry(axiom.WithRetryTimes(times))
+	}))
+	runner.RunCase(t, axiom.NewCase(), func(cfg *axiom.Config) {
+		attempts++
+		if attempts < 3 {
+			cfg.T().Error("intentional failure")
+		}
+	})
 }
 
 func TestExecution_PolicySkipEmitsCaseSkip(t *testing.T) {

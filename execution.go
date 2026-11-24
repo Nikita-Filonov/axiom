@@ -111,8 +111,6 @@ func (c *Config) complete(attempt Attempt, result execution.Result) {
 	}
 
 	attempt.Outcome = newAttemptOutcome(result.Outcome)
-
-	c.Attempt = attempt
 	c.Runtime.attempt(attempt)
 }
 
