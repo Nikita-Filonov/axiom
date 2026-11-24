@@ -25,6 +25,9 @@ The event bus is intentionally dumb:
 
 Consumers decide how to aggregate, filter, or interpret events.
 
+For attempt decisions and final native outcomes, use the [attempt sink](../execution) through `WithRuntimeAttemptSink`.
+Raw `Event` keeps the contract described here.
+
 ---
 
 ## Event Shape
@@ -58,7 +61,7 @@ from any phase.
 
 Lifecycle events follow the `subject.phase.outcome` shape:
 
-- `case.start`, `case.finish`, `case.panic`, `case.skip`
+- `case.start`, `case.finish`, `case.panic`, `case.skip`, `case.excluded`
 - `step.start`, `step.finish`, `step.panic`
 - `setup.start`, `setup.finish`, `setup.panic`
 - `teardown.start`, `teardown.finish`, `teardown.panic`
@@ -69,19 +72,19 @@ Lifecycle events follow the `subject.phase.outcome` shape:
 - `runner.before-all.start`, `runner.before-all.finish`, `runner.before-all.panic`
 - `runner.after-all.start`, `runner.after-all.finish`, `runner.after-all.panic`
 
-`case.skip` reports a policy skip before the test body runs.
-`Message` contains the skip reason; no `case.start` or `case.finish`
-events are emitted. Calling `t.Skip` inside the body follows the normal
-test lifecycle and does not emit `case.skip` or expose its reason
-through events.
+`case.skip` reports a policy skip before entering test wrappers. Those wrappers still run, but their continuation
+skips before test hooks or the body. `Message` contains the skip reason; no `case.start` or `case.finish` events are
+emitted. Calling `t.Skip` inside the body follows the normal test lifecycle and does not emit `case.skip` or expose
+its reason through events. `case.excluded` reports filter exclusion
+instead, after the native subtest has ended; no test outcome or `case.start/finish` accompanies it. Do not register
+cleanup on that finished T. Neither type requires parsing `Message` to identify the decision.
 
 `case.finish` does not guarantee that child subtests and
 `testing.T.Cleanup` callbacks have completed. The event stream does
 not provide a final test status.
 
-Within a Config event sink, use `Config.Execution.ID` to group
-attempts from one `RunCase` invocation and `Config.Execution.Attempt`
-to identify the attempt.
+Within a Config event sink, use `Config.Attempt.RunID` to group attempts from one `RunCase` invocation and
+`Config.Attempt.Number` to identify the attempt.
 
 ### Fact events
 
