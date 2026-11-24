@@ -47,9 +47,11 @@ project author or a designated maintainer.
   and `Config`; fixtures, resources, suites, hooks, retries, metadata,
   parallelism, plugins, and integrations are optional. A new capability must
   not require unrelated setup or change behavior when it is unused.
-- Production files in the root `axiom` package may import only the Go standard
-  library. Third-party packages are allowed in core tests; integrations that
-  need them belong in separately versioned plugin modules.
+- Production files in the core module may import only the Go standard library
+  and its own `internal` packages. Internal packages must not import the root
+  `axiom` package. Keep the execution engine boundary in `execution.go`.
+  Third-party packages are allowed in core tests; integrations that need them
+  belong in separately versioned plugin modules.
 - Preserve backward compatibility by default. A breaking change requires a
   compelling documented reason, maintainer agreement before implementation,
   a migration path, updated documentation and tests, and the appropriate major
