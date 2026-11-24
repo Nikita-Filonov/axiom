@@ -3,6 +3,7 @@
 ## 📑 Table of Contents
 
 - [Merge semantics](#merge-semantics)
+- [Skip versus exclusion](#skip-versus-exclusion)
 - [Example](#example)
 
 ---
@@ -10,8 +11,9 @@
 `Skip` allows marking a test as skipped, either statically or dynamically. A skip definition may include an optional
 reason, and may be applied at both `Runner` and `Case` level. Case-level skip overrides Runner-level skip.
 
-A skipped test does not execute its action, fixtures, steps, or test hooks. Plugin installation still runs because a
-plugin may contribute skip rules or reporting configuration.
+A declaratively skipped test does not execute its action, fixtures, steps, or test hooks. Plugin installation and
+TestWrap reporting wrappers still run. Wrapper defers and native cleanup can release the wrapper's own state;
+wrappers should not acquire Axiom fixtures on this path.
 
 This model enables:
 
@@ -58,6 +60,18 @@ c := axiom.NewCase(
 ```
 
 ---
+
+## Skip versus exclusion
+
+`WithCaseSkip(SkipBecause("feature disabled"))` means a selected case should appear as skipped in reporting.
+A metadata filter uses `cfg.Attempt.Exclude(reason)` during plugin installation instead: the case runs no wrappers or
+test hooks and contributes no Allure, JUnit, or teststats test result. It remains visible as a skipped native Go
+subtest. Exclusion wins over skip, so disabling an inherited Runner skip cannot bypass a tag filter.
+
+During plugin installation, filters call `cfg.Attempt.Exclude(reason)`. After installation, wrappers and sinks use the
+frozen `cfg.Attempt.Decision.Kind` without parsing reasons. Calling `cfg.T().Skip(...)` from the body is different:
+execution already began, so deferred AfterTest and fixture teardown still run. The final outcome is skipped unless the
+native test also failed. See [execution](../execution) for the full lifecycle.
 
 ## Example
 
