@@ -7,8 +7,8 @@ Where:
 - `Runner` defines global infrastructure,
 - `Case` describes the logical test scenario,
 
-`Config` is the **fully merged, normalized snapshot** of everything needed to execute the test: metadata, context,
-policies, hooks, fixtures, and middleware.
+`Config` starts as the **fully merged, normalized snapshot** of everything needed to execute the test: metadata,
+context, policies, hooks, fixtures, and middleware. Plugins can then configure that snapshot before execution.
 
 Every retry attempt receives a **fresh** `Config`, ensuring deterministic test behavior and clean fixture lifecycle.
 
@@ -49,11 +49,12 @@ Everything that happens **during** a test run flows through `Config`.
 
 ## Attempt lifecycle
 
-`RunCase` builds every Config with an `Execution`: an `ID` shared by all Configs
-of that invocation and a one-based `Attempt` number. The planning Config, which
-decides skip, retry, and parallel policy, has attempt zero. Plugins use
-`cfg.Execution` to correlate retries without relying on optional Case IDs or
-subtest names. A Config constructed outside `RunCase` has the zero `Execution`.
+`RunCase` builds every Config with an `Attempt`: a `RunID` shared by all Configs of that invocation and a one-based
+`Number`. The planning Config, which resolves the case name and retry/parallel scheduling, has number zero. Every actual
+skip, run, or exclusion uses a fresh one-based attempt Config. `Decision` is fixed before the attempt is submitted. The
+Config keeps this prepared snapshot immutable, so its `Outcome` remains nil; terminal attempt sinks receive a separate
+value with the native outcome. Plugins use `cfg.Attempt` to correlate retries without relying on optional Case IDs or
+subtest names. A Config constructed outside `RunCase` has the zero `Attempt`.
 
 Each attempt runs inside runtime test middleware:
 
@@ -176,7 +177,7 @@ func TestConfigExample(t *testing.T) {
 execution.
 
 Use [`Local`](../local) for low-level typed values. Use [`Toolset`](../toolset) when a group of helpers should be built
-in `BeforeTest` and consumed as `cfg.Tools` inside the test body.
+in `BeforeTest` and consumed through `ConfigWithTools.Tools` inside the test body.
 
 ---
 
