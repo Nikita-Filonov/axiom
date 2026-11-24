@@ -17,16 +17,18 @@ runner resources, see the [plugin and resource index](../../plugins).
 An `axiom.Plugin` is a `func(*axiom.Config)`. A Runner applies its plugins first, followed by the Case plugins, in
 registration order. Each invocation configures the given `Config`: it can change merged settings or register Runtime
 wrappers and sinks. Test actions, steps, and fixtures run later. Keep installation cheap and free of irreversible work.
+Plugins that directly replace a normalized policy such as `Retry` are responsible for preserving that policy's
+documented invariants; Axiom does not silently normalize plugin mutations after installation.
 
-Axiom applies plugins to a planning `Config` to decide skip, retry, and parallel policy. It then builds a fresh
-`Config` and applies plugins again for each attempt. A policy skip may have no attempt `Config`. Each attempt gets its
+Axiom applies plugins to a planning `Config` to determine retry and parallel scheduling. It then builds a fresh
+`Config` and applies plugins again for each attempt, including skips and exclusions. Each attempt gets its
 own `Local` state and fixture cache; the Runner and any collectors captured by plugin closures may be shared.
 
 ## Example: timing a test body
 
 This example registers a wrapper during installation. The clock starts only when an attempt executes, and `defer`
 reports its duration even if the body panics. The duration ends when `next` returns; it does not include later
-`testing.T.Cleanup` callbacks. Policy skips do not execute test wrappers.
+`testing.T.Cleanup` callbacks. Policy skips also execute test wrappers; exclusions do not.
 
 ```go
 package example_test
@@ -90,20 +92,26 @@ one prefix rather than an accumulating series of prefixes; the declared Case nam
 | Change metadata or skip policy before execution  | Mutate the current `Config` during installation.              |
 | Surround a test, step, setup, or teardown action | Register the corresponding `cfg.Runtime.Emit*Wrap` callback.  |
 | Observe events, logs, assertions, or artefacts   | Register the corresponding `cfg.Runtime.Emit*Sink` callback.  |
+| Observe final outcomes and selection decisions   | Register `cfg.Runtime.EmitAttemptSink`.                       |
+| Exclude a case by a filter                       | Call `cfg.Attempt.Exclude(reason)` during installation.       |
 | Share a lazy value across a Runner's tests       | Define a [runner resource](../resource) rather than a plugin. |
 
 The [Runtime guide](../runtime) describes the wrapper and sink signatures. Earlier wrappers are outermost; sinks
 receive values in registration order. Calling `cfg.Step`, `cfg.Setup`, or other test actions during installation runs
-them too early. A sink or wrapper can use them later, when the attempt is executing.
+them too early. Execution wrappers can use them later. Attempt sinks are observational and must not run test actions
+or register cleanup; terminal attempts can arrive after the attempt's T has finished.
 
 For complete implementations, see [teststats' event recorder](../../plugins/teststats/plugin.go) and
 [testtracing's test wrapper](../../plugins/testtracing/plugin.go).
 
 ## Lifecycle and state
 
-- **Planning versus attempts.** `cfg.Execution.Attempt` is zero on the planning `Config` and one-based on attempts.
+- **Planning versus attempts.** `cfg.Attempt.Number` is zero on the planning `Config` and one-based on attempts.
   `cfg.T()` can return the root `*testing.T` during planning, so it does not identify a running attempt. An event sink
-  can observe a policy `case.skip` on the planning `Config`; a test wrapper cannot observe it.
+  and test wrapper observe a policy skip on a fresh, one-based attempt Config. Planning emits no attempt events.
+- **Prepared versus terminal attempts.** During installation, a filter may call `cfg.Attempt.Exclude`. After
+  installation, the submitted `cfg.Attempt` is an immutable prepared snapshot and its `Outcome` remains nil. Consume
+  final status from the `Attempt` passed to an attempt sink; do not wait for or poll it through `Config`.
 - **Repeated installation.** Applying the same plugin at Runner and Case level can register callbacks twice on one
   `Config`. Decide and document whether that is intentional. If one registration is required, keep a typed
   `Config.Local` marker in `installation.go`, named with the full plugin import path. Scope it to the collector too
@@ -115,6 +123,11 @@ For complete implementations, see [teststats' event recorder](../../plugins/test
 - **Timing and failures.** The body may panic or call `FailNow` or `SkipNow`. Use `defer` or cleanup for state that must
   be released. A failure reported after a plugin's final cleanup cannot change a result that it already published;
   reporting plugins should document that limit.
+
+Execution-only wrappers must bypass instrumentation for a policy skip. Check the decision inside the returned
+action, after all plugins have configured the attempt; then forward to `next` without starting workers or acquiring
+fixtures. Reporting wrappers can surround that continuation and register their own native cleanup. See the
+[execution contract and migration notes](../execution) for the complete skip, exclusion, and outcome protocol.
 
 For plugins that observe both Runner and Case scopes, test the order and option precedence explicitly. The first
 installation may win for one collector, while two different collectors may both be valid.
