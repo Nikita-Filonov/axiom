@@ -85,69 +85,6 @@ func TestConfig_Step_WrapsCalled(t *testing.T) {
 	)
 }
 
-func TestConfig_Test_WrapsCalled(t *testing.T) {
-	var order []string
-
-	rt := axiom.NewRuntime(
-		axiom.WithRuntimeTestWrap(
-			func(next axiom.TestAction) axiom.TestAction {
-				return func(c *axiom.Config) {
-					order = append(order, "wrap1")
-					next(c)
-				}
-			},
-		),
-		axiom.WithRuntimeTestWrap(
-			func(next axiom.TestAction) axiom.TestAction {
-				return func(c *axiom.Config) {
-					order = append(order, "wrap2")
-					next(c)
-				}
-			},
-		),
-	)
-
-	cfg := &axiom.Config{
-		Runtime: rt,
-		SubT:    t,
-	}
-
-	cfg.Test(func(_ *axiom.Config) {
-		order = append(order, "body")
-	})
-
-	assert.Equal(t,
-		[]string{"wrap1", "wrap2", "body"},
-		order,
-	)
-}
-
-func TestConfig_Test_HooksOrder(t *testing.T) {
-	var calls []string
-
-	cfg := &axiom.Config{
-		Case: &axiom.Case{Name: "T"},
-		Hooks: axiom.Hooks{
-			BeforeTest: []axiom.TestHook{
-				func(_ *axiom.Config) { calls = append(calls, "before") },
-			},
-			AfterTest: []axiom.TestHook{
-				func(_ *axiom.Config) { calls = append(calls, "after") },
-			},
-		},
-		SubT: t,
-	}
-
-	cfg.Test(func(_ *axiom.Config) {
-		calls = append(calls, "body")
-	})
-
-	assert.Equal(t,
-		[]string{"before", "body", "after"},
-		calls,
-	)
-}
-
 func TestConfig_ApplyPlugins_OrderAndRunnerCase(t *testing.T) {
 	var calls []string
 
@@ -369,45 +306,6 @@ func TestConfig_Event_DelegatesAsIs(t *testing.T) {
 	assert.Equal(t, axiom.Event{Type: axiom.EventTypeLog, Message: "raw"}, events[0])
 }
 
-func TestConfig_Test_EmitsStartAndFinishFacts(t *testing.T) {
-	var events []axiom.Event
-	cfg := &axiom.Config{
-		Runtime: axiom.NewRuntime(
-			axiom.WithRuntimeEventSink(func(e axiom.Event) {
-				events = append(events, e)
-			}),
-		),
-		SubT: t,
-	}
-
-	cfg.Test(func(_ *axiom.Config) {})
-
-	require.Len(t, events, 2)
-	assert.Equal(t, axiom.EventTypeCaseStart, events[0].Type)
-	assert.Equal(t, axiom.EventTypeCaseFinish, events[1].Type)
-}
-
-func TestConfig_TestPanic_EmitsPanicFact(t *testing.T) {
-	var events []axiom.Event
-	cfg := &axiom.Config{
-		Case: &axiom.Case{Name: "case"},
-		Runtime: axiom.NewRuntime(
-			axiom.WithRuntimeEventSink(func(e axiom.Event) {
-				events = append(events, e)
-			}),
-		),
-		SubT: &testing.T{},
-	}
-
-	cfg.Test(func(_ *axiom.Config) { panic("boom") })
-
-	require.Len(t, events, 3)
-	assert.Equal(t, axiom.EventTypeCaseStart, events[0].Type)
-	assert.Equal(t, axiom.EventTypeCasePanic, events[1].Type)
-	assert.Equal(t, "boom", events[1].Message)
-	assert.Equal(t, axiom.EventTypeCaseFinish, events[2].Type)
-}
-
 func TestConfig_StepFinish_DoesNotInferStatusFromTestingT(t *testing.T) {
 	fakeT := &testing.T{}
 	fakeT.Fail()
@@ -560,4 +458,20 @@ func TestConfig_TeardownPanic_EmitsPanicFact(t *testing.T) {
 	assert.Equal(t, axiom.EventTypeTeardownPanic, events[1].Type)
 	assert.Equal(t, "boom", events[1].Message)
 	assert.Equal(t, axiom.EventTypeTeardownFinish, events[2].Type)
+}
+
+func TestConfigDecision(t *testing.T) {
+	cfg := &axiom.Config{}
+	assert.Equal(t, axiom.Decision{Kind: axiom.DecisionRun}, cfg.Decision())
+	cfg.Skip = axiom.NewSkip(axiom.SkipBecause("disabled"))
+	assert.Equal(t, axiom.Decision{
+		Kind:   axiom.DecisionSkip,
+		Reason: "disabled",
+	}, cfg.Decision())
+	cfg.Exclude("")
+	cfg.Exclude("later exclusion")
+	assert.Equal(t, axiom.Decision{Kind: axiom.DecisionExclude}, cfg.Decision())
+	assert.Equal(t, cfg.Decision(), cfg.Attempt.Decision)
+	cfg.Skip = axiom.NewSkip(axiom.WithSkipDisabled())
+	assert.Equal(t, axiom.DecisionExclude, cfg.Decision().Kind)
 }

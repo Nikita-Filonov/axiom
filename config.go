@@ -19,6 +19,10 @@ type Config struct {
 	Runner *Runner
 	// Case is the attempt's copy of the declarative case.
 	Case *Case
+	// Attempt describes the RunCase invocation and current attempt. Its Outcome
+	// is nil until native completion. It is the zero value on a Config
+	// constructed outside RunCase.
+	Attempt Attempt
 
 	Meta     Meta
 	Skip     Skip
@@ -29,13 +33,6 @@ type Config struct {
 	Runtime  Runtime
 	Parallel Parallel
 	Fixtures Fixtures
-	// Execution identifies the RunCase invocation and attempt. It is the zero
-	// value on a Config constructed outside RunCase.
-	Execution Execution
-}
-
-type testLifecyclePanic struct {
-	value any
 }
 
 // T returns the active subtest's *testing.T, or RootT when no subtest is active.
@@ -75,42 +72,6 @@ func (c *Config) Step(name string, fn func(), options ...OperationOption) {
 
 	c.Hooks.applyBeforeStep(c, name)
 	c.Runtime.step(operation, fn)
-}
-
-// test runs one attempt through runtime test wraps, hooks, and fixture cleanup.
-// AfterTest hooks run before fixture cleanups, which run in reverse setup order.
-func (c *Config) test(action TestAction) {
-	c.Event(NewEvent(EventTypeCaseStart))
-	defer func() {
-		if r := recover(); r != nil {
-			if lifecyclePanic, ok := r.(testLifecyclePanic); ok {
-				panic(lifecyclePanic.value)
-			}
-
-			c.Event(NewEvent(EventTypeCasePanic, WithEventMessage(r)))
-			if c.SubT != nil {
-				c.SubT.Helper()
-				c.SubT.Errorf("panic in test %q: %v", c.Case.Name, r)
-			}
-		}
-
-		c.Event(NewEvent(EventTypeCaseFinish))
-	}()
-
-	c.Runtime.test(c, func(current *Config) {
-		defer func() {
-			defer func() {
-				if r := recover(); r != nil {
-					panic(testLifecyclePanic{value: r})
-				}
-			}()
-			defer current.Fixtures.teardown(current)
-			current.Hooks.applyAfterTest(current)
-		}()
-
-		current.Hooks.applyBeforeTest(current)
-		action(current)
-	})
 }
 
 // Event dispatches e to runtime event sinks.
@@ -178,18 +139,5 @@ func (c *Config) applyPlugins() {
 	}
 	for _, p := range c.Case.Plugins {
 		p(c)
-	}
-}
-
-func (c *Config) applySkipPolicy() {
-	if c.Skip.Enabled {
-		c.Event(NewEvent(EventTypeCaseSkip, WithEventMessage(c.Skip.Reason)))
-		c.T().Skip(c.Skip.Reason)
-	}
-}
-
-func (c *Config) applyParallelPolicy() {
-	if c.Parallel.Enabled {
-		c.T().Parallel()
 	}
 }
