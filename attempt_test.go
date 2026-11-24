@@ -18,7 +18,13 @@ func TestAttemptExcludeKeepsFirstReason(t *testing.T) {
 
 func TestAttempt_IdentifiesRunCaseInvocationAndNumber(t *testing.T) {
 	var configs []*axiom.Config
-	runner := axiom.NewRunner(axiom.WithRunnerPlugins(func(cfg *axiom.Config) { configs = append(configs, cfg) }))
+	var outcomes []axiom.Attempt
+	runner := axiom.NewRunner(
+		axiom.WithRunnerPlugins(func(cfg *axiom.Config) { configs = append(configs, cfg) }),
+		axiom.WithRunnerRuntime(axiom.WithRuntimeAttemptSink(func(attempt axiom.Attempt) {
+			outcomes = append(outcomes, attempt)
+		})),
+	)
 	c := axiom.NewCase(axiom.WithCaseName("same"))
 
 	runner.RunCase(t, c, func(*axiom.Config) {})
@@ -34,8 +40,12 @@ func TestAttempt_IdentifiesRunCaseInvocationAndNumber(t *testing.T) {
 	assert.Equal(t, axiom.DecisionRun, planning.Decision.Kind)
 	assert.Equal(t, axiom.DecisionRun, attempt.Decision.Kind)
 	assert.Nil(t, planning.Outcome)
-	require.NotNil(t, attempt.Outcome)
-	assert.Equal(t, axiom.AttemptPassed, attempt.Outcome.Status)
+	assert.Nil(t, attempt.Outcome)
+	require.Len(t, outcomes, 2)
+	assert.Equal(t, attempt.RunID, outcomes[0].RunID)
+	assert.Equal(t, attempt.Number, outcomes[0].Number)
+	require.NotNil(t, outcomes[0].Outcome)
+	assert.Equal(t, axiom.AttemptPassed, outcomes[0].Outcome.Status)
 }
 
 func TestAttempt_DoesNotInheritPlanningDecision(t *testing.T) {
