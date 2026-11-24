@@ -14,9 +14,10 @@
 // parallel test can outlive Run; Complete receives its final result at a safe
 // parent boundary. Callers must not wait for it while holding its parent open.
 //
-// Observe receives non-terminal lifecycle facts; Complete receives exactly one
-// terminal Result. Both callbacks receive snapshots, must be concurrency-safe,
-// and must not perform test actions. The caller owns correlation and any public
-// event translation. The engine does not replace testing.T or intercept
-// arbitrary calls to it.
+// Observe receives non-terminal lifecycle facts; Complete receives at most one
+// terminal Result after confirmed native completion or selection. Fatal process
+// termination can prevent delivery. Both callbacks receive snapshots, must be
+// concurrency-safe, and must not perform test actions. The caller owns
+// correlation and any public event translation. The engine does not replace
+// testing.T or intercept arbitrary calls to it.
 package execution
