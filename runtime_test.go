@@ -419,16 +419,16 @@ func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
 	assert.Len(t, cp.ArtefactSinks, 2)
 }
 
-func TestAttemptSinksCopyJoinAndSnapshotIsolation(t *testing.T) {
+func TestAttemptSinksCopyAndJoin(t *testing.T) {
+	var calls []string
 	var received []axiom.Attempt
-	runtime := axiom.NewRuntime(axiom.WithRuntimeAttemptSink(func(e axiom.Attempt) {
-		if e.Outcome != nil {
-			e.Outcome.Status = axiom.AttemptFailed
-		}
+	runtime := axiom.NewRuntime(axiom.WithRuntimeAttemptSink(func(axiom.Attempt) {
+		calls = append(calls, "first")
 	}))
 	runtime.EmitAttemptSink(nil)
 	joined := runtime.Join(axiom.NewRuntime(
 		axiom.WithRuntimeAttemptSink(func(e axiom.Attempt) {
+			calls = append(calls, "second")
 			received = append(received, e)
 		}),
 	))
@@ -440,6 +440,7 @@ func TestAttemptSinksCopyJoinAndSnapshotIsolation(t *testing.T) {
 	))
 	runner.RunCase(t, axiom.NewCase(), func(*axiom.Config) {})
 	require.NotEmpty(t, received)
+	assert.Equal(t, []string{"first", "second"}, calls)
 	assert.Equal(t, axiom.AttemptPassed, received[len(received)-1].Outcome.Status)
 }
 

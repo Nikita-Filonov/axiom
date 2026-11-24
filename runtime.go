@@ -40,10 +40,11 @@ type SinkEventAction func(e Event)
 type SinkAssertAction func(a Assert)
 
 // SinkAttemptAction receives an attempt after native completion or selection.
-// It must be concurrency-safe and observational: do not run test actions, call
-// FailNow/SkipNow, or register cleanup. The attempt's T has already finished and
-// parallel results may arrive after RunCase returns. Capture metadata during
-// plugin installation. Fatal process termination may prevent result delivery.
+// It must be concurrency-safe and observational: treat the Attempt and its
+// Outcome as read-only; do not run test actions, call FailNow/SkipNow, or
+// register cleanup. The attempt's T has already finished and parallel results
+// may arrive after RunCase returns. Capture metadata during plugin installation.
+// Fatal process termination may prevent result delivery.
 type SinkAttemptAction func(a Attempt)
 
 // SinkArtefactAction receives an Artefact.
@@ -257,10 +258,10 @@ func (r *Runtime) assert(a Assert) {
 	}
 }
 
-// attempt sends independent terminal snapshots to registered sinks.
+// attempt sends a terminal attempt to registered sinks.
 func (r *Runtime) attempt(a Attempt) {
 	for _, sink := range r.AttemptSinks {
-		sink(a.clone())
+		sink(a)
 	}
 }
 
