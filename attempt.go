@@ -16,6 +16,19 @@ type Attempt struct {
 	Decision Decision
 }
 
+// Exclude removes this attempt from execution and test reporting. Call it
+// during plugin installation. The first reason wins, including an empty one.
+func (a *Attempt) Exclude(reason string) {
+	if a.Decision.Kind == DecisionExclude {
+		return
+	}
+
+	a.Decision = Decision{
+		Kind:   DecisionExclude,
+		Reason: reason,
+	}
+}
+
 // AttemptStatus is the final native status. Failure takes precedence over skip.
 type AttemptStatus string
 
@@ -43,14 +56,4 @@ type AttemptOutcome struct {
 // newAttempt starts a RunCase invocation at its planning attempt.
 func newAttempt() Attempt {
 	return Attempt{RunID: rand.Text()}
-}
-
-// clone isolates the outcome between attempt consumers.
-func (a Attempt) clone() Attempt {
-	if a.Outcome != nil {
-		outcome := *a.Outcome
-		a.Outcome = &outcome
-	}
-
-	return a
 }
