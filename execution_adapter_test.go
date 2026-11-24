@@ -38,23 +38,16 @@ func TestExecutionAdapterReportsOnlyFinalAttempts(t *testing.T) {
 
 	started := time.Now()
 	ended := started.Add(time.Second)
-	input := execution.Event{
-		Type: execution.AttemptFinished,
-		Decision: execution.Decision{
-			Kind:   execution.DecisionSkip,
-			Reason: "disabled",
-		},
-		Result: &execution.Result{
-			Kind: execution.ResultCompleted,
-			Outcome: &execution.Outcome{
-				Status:    execution.AttemptFailed,
-				TestName:  "Test/attempt",
-				StartedAt: started,
-				CleanupAt: ended,
-			},
+	input := execution.Result{
+		Kind: execution.ResultCompleted,
+		Outcome: &execution.Outcome{
+			Status:    execution.AttemptFailed,
+			TestName:  "Test/attempt",
+			StartedAt: started,
+			CleanupAt: ended,
 		},
 	}
-	spec.Observe(input)
+	spec.Complete(input)
 	require.Len(t, received, 1)
 	got := received[0]
 	assert.Equal(t, submitted.RunID, got.RunID)
@@ -68,7 +61,7 @@ func TestExecutionAdapterReportsOnlyFinalAttempts(t *testing.T) {
 	}, got.Outcome)
 	assert.Equal(t, got, cfg.Attempt, "Config must expose the terminal attempt before sinks run")
 
-	input.Result.Outcome.Status = execution.AttemptPassed
+	input.Outcome.Status = execution.AttemptPassed
 	assert.Equal(t, AttemptFailed, cfg.Attempt.Outcome.Status)
 }
 
@@ -90,10 +83,7 @@ func TestExecutionAdapterPreservesSelectionDecision(t *testing.T) {
 				})),
 			}
 			spec := cfg.spec(func(*Config) {})
-			spec.Observe(execution.Event{
-				Decision: execution.Decision{Kind: execution.DecisionKind(tc.decision)},
-				Result:   &execution.Result{Kind: tc.result},
-			})
+			spec.Complete(execution.Result{Kind: tc.result})
 			require.Len(t, received, 1)
 			assert.Equal(t, tc.decision, received[0].Decision.Kind)
 			assert.Nil(t, received[0].Outcome)

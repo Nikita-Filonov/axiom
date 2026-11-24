@@ -79,8 +79,47 @@ func (c *Config) spec(action TestAction) execution.Spec {
 		After:   func() { current.Hooks.applyAfterTest(current) },
 		Release: func() { current.Fixtures.teardown(current) },
 
-		Observe: func(event execution.Event) {
-			c.observe(attempt, event)
-		},
+		Observe:  func(event execution.Event) { c.observe(event) },
+		Complete: func(result execution.Result) { c.complete(attempt, result) },
 	}
+}
+
+// observe translates non-terminal engine facts into Axiom events.
+func (c *Config) observe(event execution.Event) {
+	switch event.Type {
+	case execution.AttemptStarted:
+		if event.Decision.Kind == execution.DecisionSkip {
+			c.Event(NewEvent(EventTypeCaseSkip, WithEventMessage(event.Decision.Reason)))
+		} else {
+			c.Event(NewEvent(EventTypeCaseStart))
+		}
+
+	case execution.AttemptPanicRecovered:
+		c.Event(NewEvent(EventTypeCasePanic, WithEventMessage(event.Message)))
+
+	case execution.AttemptExecutionFinished:
+		if event.Decision.Kind == execution.DecisionRun {
+			c.Event(NewEvent(EventTypeCaseFinish))
+		}
+	}
+}
+
+// complete publishes one terminal attempt after native completion.
+func (c *Config) complete(attempt Attempt, result execution.Result) {
+	if result.Kind == execution.ResultExcluded {
+		c.Event(NewEvent(EventTypeCaseExcluded, WithEventMessage(attempt.Decision.Reason)))
+	}
+
+	c.Attempt = attempt
+	c.Attempt.Outcome = nil
+	if outcome := result.Outcome; outcome != nil {
+		c.Attempt.Outcome = &AttemptOutcome{
+			Status:    AttemptStatus(outcome.Status),
+			TestName:  outcome.TestName,
+			StartedAt: outcome.StartedAt,
+			CleanupAt: outcome.CleanupAt,
+		}
+	}
+
+	c.Runtime.attempt(c.Attempt)
 }
