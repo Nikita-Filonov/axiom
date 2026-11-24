@@ -141,3 +141,19 @@ func (c *Config) applyPlugins() {
 		p(c)
 	}
 }
+
+// applyDecision freezes the instruction submitted to the execution engine.
+// A plugin exclusion takes precedence over the merged skip policy.
+func (c *Config) applyDecision() {
+	if c.Attempt.Decision.Kind == DecisionExclude {
+		return
+	}
+
+	decision := Decision{Kind: DecisionRun}
+	if c.Skip.Enabled {
+		decision.Kind = DecisionSkip
+		decision.Reason = c.Skip.Reason
+	}
+
+	c.Attempt.Decision = decision
+}
