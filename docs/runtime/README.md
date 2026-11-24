@@ -42,16 +42,17 @@ such as `EmitStepWrap` and `EmitLogSink`.
 
 ## Wrappers and sinks
 
-| Registration              | Receives                           | Purpose                                     |
-|---------------------------|------------------------------------|---------------------------------------------|
-| `WithRuntimeTestWrap`     | `next TestAction`                  | Surround the attempt's executable lifecycle |
-| `WithRuntimeStepWrap`     | `Operation`, `next StepAction`     | Surround a `cfg.Step` action                |
-| `WithRuntimeSetupWrap`    | `Operation`, `next SetupAction`    | Surround a `cfg.Setup` action               |
-| `WithRuntimeTeardownWrap` | `Operation`, `next TeardownAction` | Surround a `cfg.Teardown` action            |
-| `WithRuntimeLogSink`      | `Log`                              | Receive structured messages                 |
-| `WithRuntimeAssertSink`   | `Assert`                           | Receive assertion facts                     |
-| `WithRuntimeArtefactSink` | `Artefact`                         | Receive attachments and other outputs       |
-| `WithRuntimeEventSink`    | `Event`                            | Receive raw execution facts                 |
+| Registration              | Receives                           | Purpose                                           |
+|---------------------------|------------------------------------|---------------------------------------------------|
+| `WithRuntimeTestWrap`     | `next TestAction`                  | Surround the attempt's executable lifecycle       |
+| `WithRuntimeStepWrap`     | `Operation`, `next StepAction`     | Surround a `cfg.Step` action                      |
+| `WithRuntimeSetupWrap`    | `Operation`, `next SetupAction`    | Surround a `cfg.Setup` action                     |
+| `WithRuntimeTeardownWrap` | `Operation`, `next TeardownAction` | Surround a `cfg.Teardown` action                  |
+| `WithRuntimeLogSink`      | `Log`                              | Receive structured messages                       |
+| `WithRuntimeAssertSink`   | `Assert`                           | Receive assertion facts                           |
+| `WithRuntimeArtefactSink` | `Artefact`                         | Receive attachments and other outputs             |
+| `WithRuntimeEventSink`    | `Event`                            | Receive raw execution facts                       |
+| `WithRuntimeAttemptSink`  | `Attempt`                          | Receive terminal attempts and selection decisions |
 
 A wrapper returns an action and calls `next` inside it. Use `defer` for work that must run when the action exits,
 including during panic or `FailNow`:
@@ -86,6 +87,16 @@ case.start event
   TestWrap exit
 case.finish event
 ```
+
+For a declarative skip, `case.skip` replaces `case.start/finish`. TestWrap still runs, but its continuation calls
+`t.Skip` before hooks, the body, or fixture teardown. Wrapper defers and registered native cleanup execute normally.
+Excluded cases execute no wrappers or hooks. See [execution](../execution) for decisions and final attempt results.
+
+`case.finish` closes the executable scope, before native children and cleanup necessarily finish. Use
+`WithRuntimeAttemptSink` and `Attempt.Outcome` for final native outcomes. Attempt sinks are observational: they
+must not run test actions, call FailNow/SkipNow, or register cleanup, and must be safe across parallel attempts.
+The attempt passed to the sink is a separate terminal value; `cfg.Attempt` remains the immutable prepared snapshot
+with a nil `Outcome`.
 
 This keeps attempt-level instrumentation active while hooks and cleanups emit steps or artefacts. `AfterTest` and
 fixture cleanup run even if the body or `BeforeTest` panics. Axiom records a recovered body or `BeforeTest` panic as a
