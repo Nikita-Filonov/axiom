@@ -33,9 +33,10 @@ for an external tracing pipeline.
   `RunCase` share the `axiom.execution.id` attribute and have distinct
   `axiom.execution.attempt` numbers. The span starts when the attempt runs and
   ends after its `testing.T.Cleanup` callbacks.
-- A policy skip creates one span marked `skipped`, even when Axiom skips on its
-  planning Config before starting retries. A passing attempt is marked
-  `passed`; a failing attempt is marked `failed` and gets OTel error status.
+- A policy skip creates one span marked `skipped` for its fresh, one-based
+  attempt, including when parallel retry settings are present. A passing attempt
+  is marked `passed`; a failing attempt is marked `failed` and gets OTel error
+  status.
 - Step, setup, teardown, and fixture lifecycle events become span events.
   Their names are exported as `axiom.event.name` when present. Case ID, case
   name, and Go test name are span attributes.

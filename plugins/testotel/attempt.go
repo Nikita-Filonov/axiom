@@ -72,10 +72,10 @@ func (a *attempt) begin(t *testing.T, skipped bool) {
 	}
 	attrs := []attribute.KeyValue{
 		attribute.String(attributeTestName, t.Name()),
-		attribute.Int(attributeExecutionAttempt, max(a.cfg.Execution.Attempt, 1)),
+		attribute.Int(attributeExecutionAttempt, max(a.cfg.Attempt.Number, 1)),
 	}
-	if a.cfg.Execution.ID != "" {
-		attrs = append(attrs, attribute.String(attributeExecutionID, a.cfg.Execution.ID))
+	if a.cfg.Attempt.RunID != "" {
+		attrs = append(attrs, attribute.String(attributeExecutionID, a.cfg.Attempt.RunID))
 	}
 	if a.cfg.Case != nil {
 		attrs = append(attrs, attribute.String(attributeCaseName, a.cfg.Case.Name))

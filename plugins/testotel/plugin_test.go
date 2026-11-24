@@ -129,7 +129,7 @@ func TestBodySkipSpan(t *testing.T) {
 	require.NotContains(t, fmt.Sprint(spans[0].Attributes(), spans[0].Events()), "secret runtime reason")
 }
 
-func TestParallelRetryPolicySkipUsesPlanningConfig(t *testing.T) {
+func TestParallelRetryPolicySkipUsesFirstAttemptConfig(t *testing.T) {
 	provider, recorder := recordedProvider(t)
 	runner := axiom.NewRunner(axiom.WithRunnerPlugins(testotel.Plugin(testotel.WithTracerProvider(provider))))
 	t.Run("group", func(group *testing.T) {
