@@ -4,14 +4,14 @@ package execution
 type ResultKind string
 
 const (
-	// AttemptResultCompleted has a non-nil Outcome.
-	AttemptResultCompleted ResultKind = "completed"
+	// ResultCompleted has a non-nil Outcome.
+	ResultCompleted ResultKind = "completed"
 
-	// AttemptResultExcluded has no Outcome: a caller filter excluded the case.
-	AttemptResultExcluded ResultKind = "excluded"
+	// ResultExcluded has no Outcome: a caller filter excluded the case.
+	ResultExcluded ResultKind = "excluded"
 
-	// AttemptResultNotSelected has no Outcome: Go did not enter the subtest.
-	AttemptResultNotSelected ResultKind = "not-selected"
+	// ResultNotSelected has no Outcome: Go did not enter the subtest.
+	ResultNotSelected ResultKind = "not-selected"
 )
 
 // Result is a terminal result. Only Completed carries a test Outcome.

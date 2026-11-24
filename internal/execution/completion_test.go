@@ -8,9 +8,9 @@ import (
 
 func TestTerminalEventType(t *testing.T) {
 	for kind, eventType := range map[ResultKind]EventType{
-		AttemptResultCompleted:   AttemptFinished,
-		AttemptResultExcluded:    AttemptExcluded,
-		AttemptResultNotSelected: AttemptNotSelected,
+		ResultCompleted:   AttemptFinished,
+		ResultExcluded:    AttemptExcluded,
+		ResultNotSelected: AttemptNotSelected,
 	} {
 		assert.Equal(t, eventType, terminalEventType(kind))
 	}
@@ -30,7 +30,7 @@ func TestAttemptShouldRetry(t *testing.T) {
 		{
 			name: "passed",
 			result: &Result{
-				Kind:    AttemptResultCompleted,
+				Kind:    ResultCompleted,
 				Outcome: &Outcome{Status: AttemptPassed},
 			},
 			decision: DecisionRun,
@@ -39,7 +39,7 @@ func TestAttemptShouldRetry(t *testing.T) {
 			name: "failed",
 			want: true,
 			result: &Result{
-				Kind:    AttemptResultCompleted,
+				Kind:    ResultCompleted,
 				Outcome: &Outcome{Status: AttemptFailed},
 			},
 			decision: DecisionRun,
@@ -47,7 +47,7 @@ func TestAttemptShouldRetry(t *testing.T) {
 		{
 			name: "runtime skip",
 			result: &Result{
-				Kind:    AttemptResultCompleted,
+				Kind:    ResultCompleted,
 				Outcome: &Outcome{Status: AttemptSkipped},
 			},
 			decision: DecisionRun,
@@ -55,19 +55,19 @@ func TestAttemptShouldRetry(t *testing.T) {
 		{
 			name: "policy skip with cleanup failure",
 			result: &Result{
-				Kind:    AttemptResultCompleted,
+				Kind:    ResultCompleted,
 				Outcome: &Outcome{Status: AttemptFailed},
 			},
 			decision: DecisionSkip,
 		},
 		{
 			name:     "excluded",
-			result:   &Result{Kind: AttemptResultExcluded},
+			result:   &Result{Kind: ResultExcluded},
 			decision: DecisionExclude,
 		},
 		{
 			name:     "native deselection",
-			result:   &Result{Kind: AttemptResultNotSelected},
+			result:   &Result{Kind: ResultNotSelected},
 			decision: DecisionRun,
 		},
 	} {

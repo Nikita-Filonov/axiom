@@ -49,10 +49,10 @@ func (a *attempt) result() (Result, bool) {
 func (a *attempt) observeResult() Result {
 	switch {
 	case a.t == nil:
-		return Result{Kind: AttemptResultNotSelected}
+		return Result{Kind: ResultNotSelected}
 
 	case a.spec.Decision.Kind == DecisionExclude:
-		return Result{Kind: AttemptResultExcluded}
+		return Result{Kind: ResultExcluded}
 
 	default:
 		status := AttemptPassed
@@ -63,7 +63,7 @@ func (a *attempt) observeResult() Result {
 		}
 
 		return Result{
-			Kind: AttemptResultCompleted,
+			Kind: ResultCompleted,
 			Outcome: &Outcome{
 				Status:    status,
 				TestName:  a.t.Name(),
@@ -76,9 +76,9 @@ func (a *attempt) observeResult() Result {
 
 func terminalEventType(kind ResultKind) EventType {
 	switch kind {
-	case AttemptResultExcluded:
+	case ResultExcluded:
 		return AttemptExcluded
-	case AttemptResultNotSelected:
+	case ResultNotSelected:
 		return AttemptNotSelected
 	default:
 		return AttemptFinished
@@ -93,7 +93,7 @@ func (a *attempt) shouldRetry() bool {
 	}
 
 	result, ready := a.result()
-	if !ready || result.Kind != AttemptResultCompleted {
+	if !ready || result.Kind != ResultCompleted {
 		return false
 	}
 

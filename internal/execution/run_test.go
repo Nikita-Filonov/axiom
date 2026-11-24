@@ -98,7 +98,7 @@ func TestEngineSelectionBranches(t *testing.T) {
 			if kind == DecisionExclude {
 				assert.False(t, wrapped)
 				assert.False(t, cleaned)
-				assert.Equal(t, AttemptResultExcluded, result.Kind)
+				assert.Equal(t, ResultExcluded, result.Kind)
 				assert.Nil(t, result.Outcome)
 				require.Len(t, events, 1)
 				assert.Equal(t, AttemptExcluded, events[0].Type)
