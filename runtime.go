@@ -12,7 +12,10 @@ type SetupAction func()
 // TeardownAction is the body of one named teardown operation.
 type TeardownAction func()
 
-// WrapTestAction wraps a test action before it executes.
+// WrapTestAction surrounds a selected attempt, including a declarative skip.
+// Its continuation enters hooks and the body for DecisionRun, or calls native
+// Skip for DecisionSkip. Excluded attempts never enter wrappers. Forward next
+// at most once; use defer or native cleanup for work that must survive Goexit.
 type WrapTestAction func(next TestAction) TestAction
 
 // WrapStepAction wraps a named step action before it executes.
@@ -36,6 +39,13 @@ type SinkEventAction func(e Event)
 // SinkAssertAction receives a structured Assert.
 type SinkAssertAction func(a Assert)
 
+// SinkAttemptAction receives an attempt after native completion or selection.
+// It must be concurrency-safe and observational: do not run test actions, call
+// FailNow/SkipNow, or register cleanup. The attempt's T has already finished and
+// parallel results may arrive after RunCase returns. Capture metadata during
+// plugin installation. Fatal process termination may prevent result delivery.
+type SinkAttemptAction func(a Attempt)
+
 // SinkArtefactAction receives an Artefact.
 type SinkArtefactAction func(a Artefact)
 
@@ -51,6 +61,7 @@ type Runtime struct {
 	LogSinks      []SinkLogAction
 	EventSinks    []SinkEventAction
 	AssertSinks   []SinkAssertAction
+	AttemptSinks  []SinkAttemptAction
 	ArtefactSinks []SinkArtefactAction
 }
 
@@ -68,7 +79,7 @@ func NewRuntime(options ...RuntimeOption) Runtime {
 	return r
 }
 
-// WithRuntimeTestWrap appends a wrapper around test actions.
+// WithRuntimeTestWrap appends a wrapper around selected attempts, including skips.
 func WithRuntimeTestWrap(w WrapTestAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitTestWrap(w) }
 }
@@ -101,6 +112,12 @@ func WithRuntimeEventSink(s SinkEventAction) RuntimeOption {
 // WithRuntimeAssertSink appends a receiver for assertion facts.
 func WithRuntimeAssertSink(s SinkAssertAction) RuntimeOption {
 	return func(r *Runtime) { r.EmitAssertSink(s) }
+}
+
+// WithRuntimeAttemptSink appends a receiver of terminal attempts, including
+// exclusions and native deselections. It does not receive execution phases.
+func WithRuntimeAttemptSink(s SinkAttemptAction) RuntimeOption {
+	return func(r *Runtime) { r.EmitAttemptSink(s) }
 }
 
 // WithRuntimeArtefactSink appends a receiver for artefacts.
@@ -162,6 +179,15 @@ func (r *Runtime) EmitAssertSink(s SinkAssertAction) {
 		return
 	}
 	r.AssertSinks = append(r.AssertSinks, s)
+}
+
+// EmitAttemptSink appends a non-nil attempt receiver. Sinks receive independent
+// snapshots in registration order and must obey SinkAttemptAction's contract.
+func (r *Runtime) EmitAttemptSink(s SinkAttemptAction) {
+	if s == nil {
+		return
+	}
+	r.AttemptSinks = append(r.AttemptSinks, s)
 }
 
 // EmitArtefactSink appends a non-nil artefact sink.
@@ -231,6 +257,13 @@ func (r *Runtime) assert(a Assert) {
 	}
 }
 
+// attempt sends independent terminal snapshots to registered sinks.
+func (r *Runtime) attempt(a Attempt) {
+	for _, sink := range r.AttemptSinks {
+		sink(a.clone())
+	}
+}
+
 // artefact sends an artefact to registered sinks.
 func (r *Runtime) artefact(a Artefact) {
 	for _, sink := range r.ArtefactSinks {
@@ -264,6 +297,9 @@ func (r *Runtime) Copy() Runtime {
 	if r.AssertSinks != nil {
 		result.AssertSinks = append([]SinkAssertAction{}, r.AssertSinks...)
 	}
+	if r.AttemptSinks != nil {
+		result.AttemptSinks = append([]SinkAttemptAction{}, r.AttemptSinks...)
+	}
 	if r.ArtefactSinks != nil {
 		result.ArtefactSinks = append([]SinkArtefactAction{}, r.ArtefactSinks...)
 	}
@@ -284,6 +320,7 @@ func (r *Runtime) Join(other Runtime) Runtime {
 		LogSinks:      append(result.LogSinks, other.LogSinks...),
 		EventSinks:    append(result.EventSinks, other.EventSinks...),
 		AssertSinks:   append(result.AssertSinks, other.AssertSinks...),
+		AttemptSinks:  append(result.AttemptSinks, other.AttemptSinks...),
 		ArtefactSinks: append(result.ArtefactSinks, other.ArtefactSinks...),
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nikita-Filonov/axiom"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRuntime_Defaults(t *testing.T) {
@@ -416,4 +417,40 @@ func TestRuntimeCopy_SlicesAreIndependent(t *testing.T) {
 	assert.Len(t, cp.EventSinks, 2)
 	assert.Len(t, cp.AssertSinks, 2)
 	assert.Len(t, cp.ArtefactSinks, 2)
+}
+
+func TestAttemptSinksCopyJoinAndSnapshotIsolation(t *testing.T) {
+	var received []axiom.Attempt
+	runtime := axiom.NewRuntime(axiom.WithRuntimeAttemptSink(func(e axiom.Attempt) {
+		if e.Outcome != nil {
+			e.Outcome.Status = axiom.AttemptFailed
+		}
+	}))
+	runtime.EmitAttemptSink(nil)
+	joined := runtime.Join(axiom.NewRuntime(
+		axiom.WithRuntimeAttemptSink(func(e axiom.Attempt) {
+			received = append(received, e)
+		}),
+	))
+	assert.Len(t, runtime.AttemptSinks, 1)
+	assert.Len(t, joined.AttemptSinks, 2)
+	runner := axiom.NewRunner(axiom.WithRunnerRuntime(
+		axiom.WithRuntimeAttemptSink(joined.AttemptSinks[0]),
+		axiom.WithRuntimeAttemptSink(joined.AttemptSinks[1]),
+	))
+	runner.RunCase(t, axiom.NewCase(), func(*axiom.Config) {})
+	require.NotEmpty(t, received)
+	assert.Equal(t, axiom.AttemptPassed, received[len(received)-1].Outcome.Status)
+}
+
+func TestTestWrapperCanForwardAnotherConfig(t *testing.T) {
+	var received *axiom.Config
+	alternate := &axiom.Config{SubT: t}
+	runner := axiom.NewRunner(axiom.WithRunnerRuntime(
+		axiom.WithRuntimeTestWrap(func(next axiom.TestAction) axiom.TestAction {
+			return func(*axiom.Config) { next(alternate) }
+		}),
+	))
+	runner.RunCase(t, axiom.NewCase(), func(c *axiom.Config) { received = c })
+	assert.Same(t, alternate, received)
 }
