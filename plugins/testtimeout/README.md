@@ -26,7 +26,7 @@ configured, so it is safe to install unconditionally.
 
 ## What the plugin does
 
-At runtime, for every case, the plugin:
+At runtime, for every running attempt, the plugin:
 
 - runs the test body under a wall-clock timer
 - on timeout, marks the case as failed with a clear message (`testtimeout: case exceeded <budget>`)
@@ -35,6 +35,8 @@ At runtime, for every case, the plugin:
 - re-raises any panic from the body on the test goroutine, preserving Axiom's lifecycle panic handling
 
 Without `WithContextDeadline()`, a case that finishes within the budget has no observable change.
+Declarative skips are forwarded directly on the test goroutine without timers, workers, or derived deadlines.
+Filter-excluded cases never enter the wrapper.
 
 ---
 
@@ -65,6 +67,8 @@ export AXIOM_TEST_TIMEOUT=10s
 ## Semantics and caveats
 
 - `WithTimeout(d)` marks the attempt as failed after `d`. Its goroutine may keep running.
+- The continuing body keeps its prepared `cfg.Attempt`; final status is delivered separately to attempt sinks and
+  does not mutate that Config.
 - `WithContextDeadline()` gives `Raw`, `DB`, `MQ`, and `RPC` that same deadline, measured from the start of the attempt
   (after any parallel-test pause). Earlier parent deadlines still apply.
 - The contexts are canceled when the attempt finishes or times out. This is a limit for the whole attempt, not a fresh

@@ -16,6 +16,10 @@ func Plugin(options ...ConfigOption) axiom.Plugin {
 
 		e.Runtime.EmitTestWrap(func(next axiom.TestAction) axiom.TestAction {
 			return func(c *axiom.Config) {
+				if c.Attempt.Decision.Kind != axiom.DecisionRun {
+					next(c)
+					return
+				}
 				runWithTimeout(c, cfg, next)
 			}
 		})
