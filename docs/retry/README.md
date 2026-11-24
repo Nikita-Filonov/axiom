@@ -32,15 +32,18 @@ This model enables:
 ## Semantics
 
 - Retry is **disabled by default** (`Times = 1`, `Delay = 0`)
-- `Times` is always normalized to a minimum of `1`
-- `Delay` is always normalized to a minimum of `0`
+- Runner and Case `Times` options are normalized to a minimum of `1`
+- Runner and Case `Delay` options are normalized to a minimum of `0`
 - Case-level retry settings override Runner-level settings **per field**
 - Unset fields inherit values from the Runner
 - When Retry and Parallel are both enabled, the Case runs in parallel while its attempts run sequentially
 - A failure already reported to Go's `testing.T` remains part of the final test result even if a later attempt passes
+- A policy skip, exclusion, or native `-run` deselection stops retries; a skipped case still has attempt number one
+- Retry decisions use completed native outcomes, including child subtests and cleanup failures
 
-Normalization guarantees that retries are always safe and deterministic, even when invalid values are explicitly
-provided.
+Normalization guarantees that retries configured through Runner and Case options are safe and deterministic, even
+when invalid values are explicitly provided. A plugin that overwrites `cfg.Retry` directly is responsible for keeping
+the policy valid; the execution loop only guards against an invalid maximum becoming unbounded.
 
 ## Parallel Cases
 
@@ -58,6 +61,11 @@ parallel case
 
 Different Cases can still run concurrently. Hooks, plugins, Config, local fixtures, and fixture cleanup are recreated or
 applied for every attempt as they are for a sequential retry.
+
+A first-attempt skip or exclusion bypasses the parallel container and does not call `t.Parallel`. Use Axiom's
+Parallel option when combining parallelism with Retry. A manual `cfg.T().Parallel()` can suspend an attempt before
+the retry decision; the engine observes its eventual result but does not start further retries. See
+[execution](../execution) for the pending-versus-completed contract.
 
 Go does not allow a failed `testing.T` to become successful again. Retry therefore re-executes the Case lifecycle, but
 does not erase a failure already reported by an earlier attempt.
