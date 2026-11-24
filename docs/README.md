@@ -16,9 +16,10 @@ framework. Each subfolder provides focused reference material and examples.
 - [./config](./config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./local](./local) — per-attempt typed local state stored on Config
 - [./cache](./cache) — standalone concurrent typed cache with coordinated creation and explicit ownership
-- [./toolset](./toolset) — typed helper bundles built into Local and consumed as cfg.Tools
+- [./toolset](./toolset) — typed helper bundles built into Local and consumed through ConfigWithTools
 - [./runtime](./runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./events](./events) — raw event stream for facts that hooks and wraps cannot observe directly
+- [./execution](./execution) — execution decisions, terminal outcomes, and engine boundaries
 - [./fixture](./fixture) — lazy resource lifecycle, dependency model, cleanup, typed keys and definitions
 - [./resource](./resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown, typed keys
 - [./meta](./meta) — tags, labels, severity, epics, features, stories, layers

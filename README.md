@@ -179,9 +179,10 @@ following folders:
 - [./docs/config](./docs/config) — merged runtime state for each test attempt (steps, wraps, hooks, fixtures, metadata)
 - [./docs/local](./docs/local) — per-attempt typed local state stored on Config
 - [./docs/cache](./docs/cache) — standalone concurrent typed cache with coordinated creation and explicit ownership
-- [./docs/toolset](./docs/toolset) — typed helper bundles built into Local and consumed as cfg.Tools
+- [./docs/toolset](./docs/toolset) — typed helper bundles built into Local and consumed through ConfigWithTools
 - [./docs/runtime](./docs/runtime) — execution runtime: wraps, logs, artefacts, sinks
 - [./docs/events](./docs/events) — raw execution events for lifecycle and emitted facts
+- [./docs/execution](./docs/execution) — execution decisions, terminal outcomes, and engine boundaries
 - [./docs/fixture](./docs/fixture) — lazy resource lifecycle, fixture dependencies, automatic cleanup, typed keys and definitions
 - [./docs/resource](./docs/resource) — runner-scoped shared resources, lifecycle, concurrency, deterministic teardown, typed keys
 - [./docs/meta](./docs/meta) — metadata: tags, labels, severity, epics, features, stories, layers
