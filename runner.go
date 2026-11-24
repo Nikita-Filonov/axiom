@@ -257,14 +257,9 @@ func (r *Runner) RunCase(t *testing.T, c Case, action TestAction) {
 	r.runCase(t, c, action)
 }
 
-func (r *Runner) runCase(t *testing.T, c Case, action TestAction) {
-	execution := newCaseExecution(r, t, c, action)
-	execution.run()
-}
-
-// buildConfig merges runner and case settings into a Config for execution e.
+// buildConfig merges runner and case settings into a Config for attempt a.
 // It does not run plugins or the test action. It panics if t or c is nil.
-func (r *Runner) buildConfig(t *testing.T, c *Case, e Execution) *Config {
+func (r *Runner) buildConfig(t *testing.T, c *Case, a Attempt) *Config {
 	if t == nil {
 		panic("config: nil *testing.T")
 	}
@@ -282,18 +277,18 @@ func (r *Runner) buildConfig(t *testing.T, c *Case, e Execution) *Config {
 	fixtures := r.Fixtures.Join(c.Fixtures)
 
 	cfg := &Config{
-		Case:      c,
-		Skip:      skip,
-		Meta:      meta,
-		Retry:     retry,
-		Hooks:     hooks,
-		RootT:     t,
-		Runner:    r,
-		Context:   context,
-		Runtime:   runtime,
-		Parallel:  parallel,
-		Fixtures:  fixtures,
-		Execution: e,
+		Case:     c,
+		Skip:     skip,
+		Meta:     meta,
+		Retry:    retry,
+		Hooks:    hooks,
+		RootT:    t,
+		Runner:   r,
+		Context:  context,
+		Runtime:  runtime,
+		Attempt:  a,
+		Parallel: parallel,
+		Fixtures: fixtures,
 	}
 
 	cfg.Meta.Normalize()
