@@ -19,9 +19,10 @@ type Config struct {
 	Runner *Runner
 	// Case is the attempt's copy of the declarative case.
 	Case *Case
-	// Attempt describes the RunCase invocation and current attempt. Its Outcome
-	// is nil until native completion. It is the zero value on a Config
-	// constructed outside RunCase.
+	// Attempt describes the RunCase invocation and current attempt. It is an
+	// immutable prepared snapshot, so Outcome remains nil; terminal attempt
+	// sinks receive a separate value with the native outcome. It is the zero
+	// value on a Config constructed outside RunCase.
 	Attempt Attempt
 
 	Meta     Meta
